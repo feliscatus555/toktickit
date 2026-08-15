@@ -6,8 +6,8 @@
 ## Pull Requests I authored (reviewed by my partner)
 | PR | Branch | Reviewer verdict |
 |----|--------|------------------|
-|  foundation of the project, front end and back end starts succesfully  | feature/1-project-foundation | Approved |
-|    | feature/2-health-check |  |
+| foundation of the project, front end and back end starts succesfully  | feature/1-project-foundation | Approved |
+| Health check working | feature/2-health-check | Looks good, approved  |
 |    | feature/3-category-seed |  |
 |    | feature/4-category-list |  |
 
