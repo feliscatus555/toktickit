@@ -52,6 +52,25 @@ export default function App() {
 
       {/* TODO(Issue 4): render loading / success (Online + categories) / error (Offline) states. */}
 
+      {/*success state*/}
+      {state === "success" && (
+        <div className="mt-4">
+          <div className="alert alert-success" role="alert">
+            <h5 className="alert-heading mb-0">Status: Online</h5>
+          </div>
+
+          <h6 className="fw-bold mt-3">Catergories({categories.length}): </h6>
+          <ul className="list-group mt-2">
+            {categories.map((category) => (
+              <li key={category.id} className="list-group-item d-flex justify-content-between align-items-center">
+                <span>{category.name}</span>
+                <span className="badge bg-secondary rounded-pill">ID: {category.id}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
     </div>
   );
 }
