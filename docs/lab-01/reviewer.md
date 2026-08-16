@@ -16,5 +16,5 @@ Reviewer comment I received: Looks good, approved
 How I responded: Thank you for checking.
 
 ## Pull Requests I reviewed for my partner
-My comment: <...>
+My comment: < for example, "Addresses everything correctly for issue 3, good job.", most of my commpents to my partner are comments of approval, so I havent had the chance to request a fix. >
 Partner's response: <...>
