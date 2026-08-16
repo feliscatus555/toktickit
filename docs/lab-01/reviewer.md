@@ -10,6 +10,7 @@
 | Health check working #7 | feature/2-health-check | Looks good, approved  |
 | Prisma category model creation and seeding #8 | feature/3-category-seed | All in order, approved. |
 | Feature/4 category list #9 | feature/4-category-list | Approved, well done |
+| Lab 1 release #10 | lab1-staging | Approved |
 
 Reviewer comment Why not remove this commented line?
 
