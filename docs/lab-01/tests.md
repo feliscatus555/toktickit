@@ -11,3 +11,9 @@ All test files live under server/tests/lab-01/ and client/tests/lab-01/.
 | 5 | Vitest | Error state shows Offline + message | |
 
 Paste your passing terminal output / screenshot below.
+
+Tests: #1, #2
+![alt text](image.png)
+
+Tests: #3,#4,#5
+![alt text](image-1.png)
