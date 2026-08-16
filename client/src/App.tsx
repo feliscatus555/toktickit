@@ -64,7 +64,7 @@ export default function App() {
             {categories.map((category) => (
               <li key={category.id} className="list-group-item d-flex justify-content-between align-items-center">
                 <span>{category.name}</span>
-                <span className="badge bg-secondary rounded-pill">ID: {category.id}</span>
+                {/* <span className="badge bg-secondary rounded-pill">ID: {category.id}</span> */}
               </li>
             ))}
           </ul>
