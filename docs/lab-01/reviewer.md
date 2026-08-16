@@ -1,7 +1,7 @@
 # Lab 1 — Peer Review Record  (fill this in)
 
-**Author:** <Iris French> — <67070503478> — GitHub: @<feliscatus555>
-**Peer reviewer:** <Maimoona Aziz> — <67070503473> — GitHub: @<Wiggle-Ryutsuki>
+**Author:** <Iris French> — <67070503478> — GitHub: @feliscatus555  
+**Peer reviewer:** <Maimoona Aziz> — <67070503473> — GitHub: @Wiggle-Ryutsuki
 
 ## Pull Requests I authored (reviewed by my partner)
 | PR | Branch | Reviewer verdict |
@@ -12,6 +12,7 @@
 |    | feature/4-category-list |  |
 
 Reviewer comment I received: Looks good, approved
+
 How I responded: Thank you for checking.
 
 ## Pull Requests I reviewed for my partner
