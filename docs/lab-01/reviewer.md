@@ -12,7 +12,7 @@
 | Feature/4 category list #9 | feature/4-category-list | Approved, well done |
 | Lab 1 release #10 | lab1-staging | Approved |
 
-Reviewer comment Why not remove this commented line?
+Reviewer comment: Why not remove this commented line?
 
 How I responded: I intentionally left the comment as it's not something i need right now, but might potentially need in the future.
 
