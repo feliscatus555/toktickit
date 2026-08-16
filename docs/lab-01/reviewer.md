@@ -11,8 +11,8 @@
 | Prisma category model creation and seeding   | feature/3-category-seed | All in order, approved. |
 |    | feature/4-category-list |  |
 
-Reviewer comment I received: <Looks good, approved>
-How I responded: <Thank you for checking.>
+Reviewer comment I received: Looks good, approved
+How I responded: Thank you for checking.
 
 ## Pull Requests I reviewed for my partner
 My comment: <...>

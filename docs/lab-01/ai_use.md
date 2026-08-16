@@ -17,4 +17,4 @@
 Two or three sentences: what made your prompts better, and one place you had to
 correct or reject what the agent produced.
 
-    Most of my prompts worked, but the problem is that sometimes the information given wasn't enough for me to understand, so I had to prompt again for more details. There was one place I had to reject what the agent produced, because I forgot to add "Do not write any code" in the prompt. Other than that, my prompts has gotten abit better as I try to be more consise and detailed in my prompts.
+    Most of my prompts worked, but the problem is that sometimes the information given wasn't enough for me to understand, so I had to prompt again for more details. There was one place I had to reject what the agent produced, because I forgot to add "Do not write any code" in the prompt. Other than that, my prompts has gotten abit better as I try to be more concise and detailed in my prompts.
