@@ -11,9 +11,11 @@
 | Prisma category model creation and seeding #8 | feature/3-category-seed | All in order, approved. |
 | Feature/4 category list #9 | feature/4-category-list | Approved, well done |
 
-Reviewer comment I received: Looks good, approved
+Reviewer comment Why not remove this commented line?
 
-How I responded: Thank you for checking.
+How I responded: I intentionally left the comment as it's not something i need right now, but might potentially need in the future.
+
+![alt text](image-2.png)
 
 ## Pull Requests I reviewed for my partner
 My comment: < The appropriate code has been made for issue 2, well done. >
