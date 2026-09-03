@@ -142,7 +142,7 @@ The IT department requires a professional, responsive, end-user-facing ticketing
 * **Endpoints**:
   * `GET /api/v1/categories` (200)
   * `GET /api/v1/related-systems` (200)
-  * `GET /api/v1/requesters` (200)
+  * `GET /api/requesters/active` (200)
   * `POST /api/v1/tickets` (201, 400, 422, 500)
   * `GET /api/v1/tickets` (200, 400, 500)
   * `GET /api/v1/tickets/:id` (200, 403, 404, 500)

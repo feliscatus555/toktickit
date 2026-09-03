@@ -77,7 +77,7 @@
   ]
   ```
 
-#### 3. `GET /api/v1/requesters`
+#### 3. `GET /api/requesters/active`
 * **Purpose**: Retrieve active Development Requesters for the identity selection dropdown. Excludes inactive requesters (`isActive = false`) (`docs/lab-02/Lab_02_labsheet.pdf`, Section 5.3).
 * **Response `200 OK`**:
   ```json
