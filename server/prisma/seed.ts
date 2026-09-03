@@ -20,6 +20,25 @@ async function main() {
     })
   }
   console.log("Categories seeded successfully");
+
+  //feature 5 of lab 2
+  const requesters = [
+    { email: "somchai.p@kmutt.ac.th", displayName: "Somchai Pattana", isActive: true },
+    { email: "ananya.s@kmutt.ac.th", displayName: "Ananya Srisuk", isActive: true },
+    { email: "chattarin.k@kmutt.ac.th", displayName: "Chattarin Kiat", isActive: true },
+    { email: "nattaya.w@kmutt.ac.th", displayName: "Nattaya Wong", isActive: true },
+    { email: "inactive.test@kmutt.ac.th", displayName: "Inactive Test User", isActive: false },
+  ];
+
+  for (const r of requesters) {
+    await prisma.requesterUser.upsert({
+      where: { email: r.email },
+      update: { displayName: r.displayName, isActive: r.isActive },
+      create: r,
+    });
+  }
+  console.log("Requesters seeded successfully");
+
 }
 
 main()

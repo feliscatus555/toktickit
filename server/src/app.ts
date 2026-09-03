@@ -51,4 +51,26 @@ app.get("/api/categories", async (_req: Request, res: Response) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// Feature 5 — Active requesters list
+// Add: GET /api/requesters/active
+//   -> query active requesters from DB
+//   -> return { id, email, displayName } sorted by email
+//   -> handle errors with 500 and a safe message
+// ---------------------------------------------------------------------------
+app.get("/api/requesters/active", async (_req: Request, res: Response) => {
+  try {
+    const prisma = getPrisma();
+    const requesters = await prisma.requesterUser.findMany({
+      where: { isActive: true },
+      select: { id: true, email: true, displayName: true },
+      orderBy: { email: "asc" },
+    });
+    res.status(200).json(requesters);
+  } catch (error) {
+    console.error("Error fetching active requesters", error);
+    res.status(500).json({ error: "Failed to fetch active requesters." });
+  }
+});
+
 export default app;

@@ -1,21 +1,41 @@
-import { useState } from "react";
-import { checkSystem, Category } from "./api.js";
+import { useState, useEffect } from "react";
+import { checkSystem, Category, RequesterUser } from "./api.js";
+import RequesterSelector from "./RequesterSelector.js";
 
-// UI states you must handle for Issue 4: idle, loading, success, error.
 type UiState = "idle" | "loading" | "success" | "error";
+
+const STORAGE_KEY = "toktickit_selected_requester";
+const DEFAULT_REQUESTER: RequesterUser = {
+  id: 1,
+  email: "somchai.p@kmutt.ac.th",
+  displayName: "Somchai Pattana",
+};
 
 export default function App() {
   const [state, setState] = useState<UiState>("idle");
   const [categories, setCategories] = useState<Category[]>([]);
-  void categories;
   const [error, setError] = useState<string | null>(null);
-  void error;
 
+  const [currentRequester, setCurrentRequester] = useState<RequesterUser>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    }
+    return DEFAULT_REQUESTER;
+  });
+  const [showSelectorModal, setShowSelectorModal] = useState<boolean>(false);
+
+  function handleSelectRequester(requester: RequesterUser) {
+    setCurrentRequester(requester);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(requester));
+    setShowSelectorModal(false);
+  }
 
   async function handleCheck() {
-    // TODO(Issue 4): set loading, call checkSystem(), then either
-    //   - success: store categories and show Online + the list, or
-    //   - error: show Offline + a useful message.
     setState("loading");
     setError(null);
     try {
@@ -29,48 +49,92 @@ export default function App() {
   }
 
   return (
-    <div className="container py-5" style={{ maxWidth: 640 }}>
-      <h1 className="h3 mb-4">
-        TokTickIT <span className="text-success">IT Service Desk</span>
-      </h1>
+    <div className="min-vh-100" style={{ backgroundColor: "#F5F7F6" }}>
+      {/* Zen Green Top Header */}
+      <header className="py-3 px-4 text-white shadow-sm" style={{ backgroundColor: "#006B3C" }}>
+        <div className="container d-flex justify-content-between align-items-center">
+          <h1 className="h4 mb-0 fw-bold">
+            TokTickIT <span className="badge fs-6 ms-2" style={{ backgroundColor: "#0B7A46" }}>IT Service Desk</span>
+          </h1>
 
-      <button className="btn btn-success" onClick={handleCheck} disabled={state === "loading"}>
-        {state === "loading" ? "Loading…" : "Check System"}
-      </button>
-
-      {/*Useful error message for issue 2*/}
-      {state === "error" && (
-        <div className="alert alert-danger mt-4" role="alert">
-          <h5 className="alert-heading mb-1">
-            Status: Offline
-          </h5>
-          <p className="mb=0">
-            {error ?? "Unable to connect to TokTickIT API server"}
-          </p>
-        </div>
-      )}
-
-      {/* TODO(Issue 4): render loading / success (Online + categories) / error (Offline) states. */}
-
-      {/*success state*/}
-      {state === "success" && (
-        <div className="mt-4">
-          <div className="alert alert-success" role="alert">
-            <h5 className="alert-heading mb-0">Status: Online</h5>
+          <div className="d-flex align-items-center gap-3">
+            {currentRequester ? (
+              <div className="d-flex align-items-center gap-2">
+                <span className="badge bg-light text-dark py-2 px-3 fs-6">
+                  👤 {currentRequester.displayName} ({currentRequester.email})
+                </span>
+                <button
+                  className="btn btn-sm text-white fw-semibold"
+                  style={{ backgroundColor: "#0B7A46", border: "1px solid #EAF6EF" }}
+                  onClick={() => setShowSelectorModal(true)}
+                >
+                  Change Requester
+                </button>
+              </div>
+            ) : (
+              <button
+                className="btn btn-sm btn-light fw-bold"
+                onClick={() => setShowSelectorModal(true)}
+              >
+                Select Requester
+              </button>
+            )}
           </div>
-
-          <h6 className="fw-bold mt-3">Catergories({categories.length}): </h6>
-          <ul className="list-group mt-2">
-            {categories.map((category) => (
-              <li key={category.id} className="list-group-item d-flex justify-content-between align-items-center">
-                <span>{category.name}</span>
-                {/* <span className="badge bg-secondary rounded-pill">ID: {category.id}</span> */}
-              </li>
-            ))}
-          </ul>
         </div>
-      )}
+      </header>
 
+      {/* Main Content Body */}
+      <main className="container py-5" style={{ maxWidth: 720 }}>
+        {/* If no Requester is selected, display Selector prominently */}
+        {!currentRequester || showSelectorModal ? (
+          <RequesterSelector
+            onSelectRequester={handleSelectRequester}
+            onClose={currentRequester ? () => setShowSelectorModal(false) : undefined}
+            currentRequesterId={currentRequester?.id}
+          />
+        ) : (
+          <div className="card shadow-sm border-0 p-4">
+            <div className="d-flex justify-content-between align-items-center mb-4">
+              <h2 className="h4 mb-0 text-dark">System Status Baseline</h2>
+              <button
+                className="btn text-white px-4 fw-semibold"
+                style={{ backgroundColor: "#006B3C" }}
+                onClick={handleCheck}
+                disabled={state === "loading"}
+              >
+                {state === "loading" ? "Loading…" : "Check System"}
+              </button>
+            </div>
+
+            {state === "error" && (
+              <div className="alert alert-danger" role="alert">
+                <h5 className="alert-heading mb-1">Status: Offline</h5>
+                <p className="mb-0">{error ?? "Unable to connect to TokTickIT API server"}</p>
+              </div>
+            )}
+
+            {state === "success" && (
+              <div className="mt-2">
+                <div className="alert alert-success" role="alert">
+                  <h5 className="alert-heading mb-0">Status: Online</h5>
+                </div>
+
+                <h6 className="fw-bold mt-4">Categories ({categories.length}):</h6>
+                <ul className="list-group mt-2">
+                  {categories.map((category) => (
+                    <li
+                      key={category.id}
+                      className="list-group-item d-flex justify-content-between align-items-center py-3"
+                    >
+                      <span className="fw-medium">{category.name}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+      </main>
     </div>
   );
 }
