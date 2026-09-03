@@ -48,15 +48,15 @@ The IT department requires a professional, responsive, end-user-facing ticketing
   * *Branch Name*: `feature/5-dev-requester-context` (or `feature/12-dev-requester-context`)
 * **Issue 6 (or Issue 13)**: `Ticket creation form, validation, and official number generation`
   * *Feature*: Feature-6
-  * *Scope*: Ticket creation API (`POST /api/v1/tickets`), Ticket model migration, form UI, validation, `TKT-YYYY-NNNNN` generator.
+  * *Scope*: Ticket creation API (`POST /api/tickets`), Ticket model migration, form UI, validation, `TKT-YYYY-NNNNN` generator.
   * *Branch Name*: `feature/6-ticket-creation` (or `feature/13-ticket-creation`)
 * **Issue 7 (or Issue 14)**: `My Tickets list with search, filtering, sorting, and pagination`
   * *Feature*: Feature-7
-  * *Scope*: Ticket list API (`GET /api/v1/tickets`), pagination/search/filtering/sorting, desktop/mobile responsive UI.
+  * *Scope*: Ticket list API (`GET /api/tickets`), pagination/search/filtering/sorting, desktop/mobile responsive UI.
   * *Branch Name*: `feature/7-my-tickets-list` (or `feature/14-my-tickets-list`)
 * **Issue 8 (or Issue 15)**: `Requester Ticket Detail view and attachment lifecycle`
   * *Feature*: Feature-8
-  * *Scope*: Ticket detail API (`GET /api/v1/tickets/:id`), Attachment upload/download/soft-remove APIs, detail view UI, attachment section UI.
+  * *Scope*: Ticket detail API (`GET /api/tickets/:id`), Attachment upload/download/soft-remove APIs, detail view UI, attachment section UI.
   * *Branch Name*: `feature/8-ticket-detail-and-attachments` (or `feature/15-ticket-detail-and-attachments`)
 
 ### Branch Flow & Integration Sequence
@@ -138,18 +138,18 @@ The IT department requires a professional, responsive, end-user-facing ticketing
 
 ## 9. API Contract Summary
 * Reference: [`docs/lab-02/api-spec.md`](file:///home/iris/Documents/toktickit/docs/lab-02/api-spec.md)
-* **Base Path**: `/api/v1`
+* **Base Path**: `/api`
 * **Endpoints**:
-  * `GET /api/v1/categories` (200)
-  * `GET /api/v1/related-systems` (200)
+  * `GET /api/categories` (200)
+  * `GET /api/related-systems` (200)
   * `GET /api/requesters/active` (200)
-  * `POST /api/v1/tickets` (201, 400, 422, 500)
-  * `GET /api/v1/tickets` (200, 400, 500)
-  * `GET /api/v1/tickets/:id` (200, 403, 404, 500)
-  * `POST /api/v1/tickets/:id/attachments` (201, 400, 403, 404, 422, 500)
-  * `GET /api/v1/attachments/:id` (200, 403, 404, 500)
-  * `GET /api/v1/attachments/:id/download` (200, 403, 404, 410, 500)
-  * `DELETE /api/v1/attachments/:id` (200, 400, 403, 404, 500)
+  * `POST /api/tickets` (201, 400, 422, 500)
+  * `GET /api/tickets` (200, 400, 500)
+  * `GET /api/tickets/:id` (200, 403, 404, 500)
+  * `POST /api/tickets/:id/attachments` (201, 400, 403, 404, 422, 500)
+  * `GET /api/attachments/:id` (200, 403, 404, 500)
+  * `GET /api/attachments/:id/download` (200, 403, 404, 410, 500)
+  * `DELETE /api/attachments/:id` (200, 400, 403, 404, 500)
 
 ---
 
@@ -198,4 +198,4 @@ The IT department requires a professional, responsive, end-user-facing ticketing
 | Ticket Summary Length | Proposed Decision | 5 to 120 characters | `specification.md` Section 6 |
 | Ticket Description Length | Proposed Decision | 10 to 2000 characters | `specification.md` Section 6 |
 | Removal Reason Length | Proposed Decision | 1 to 255 characters | `specification.md` Section 6 |
-| API Versioning Base | Proposed Decision | `/api/v1` with legacy root fallback | `api-spec.md` Section 1 |
+| API Versioning Base | Proposed Decision | `/api` | `api-spec.md` Section 1 |

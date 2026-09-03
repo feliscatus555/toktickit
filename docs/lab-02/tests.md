@@ -28,11 +28,11 @@ TokTickIT applies Test-Driven Development (TDD) and Test-Driven Specification (T
 | **UNIT-01** | Unit | BR-01, FR-06 | Ticket Number generator format | Returns `TKT-YYYY-NNNNN` with current year and padded sequence | `server/tests/lab-02/ticket-number.unit.test.ts` | Planned |
 | **UNIT-02** | Unit | BR-08, BR-09 | Input trimming and length validator | Trims whitespace; rejects summary < 5 or > 120 chars | `server/tests/lab-02/validation.unit.test.ts` | Planned |
 | **UNIT-03** | Unit | BR-04 | Attachment file extension & size checker | Accepts PDF/PNG/JPG <= 5MB; rejects `.exe` or > 5MB | `server/tests/lab-02/attachment-validator.unit.test.ts` | Planned |
-| **API-01** | API | AC-01, FR-06 | Valid ticket creation (`POST /api/v1/tickets`) | Returns HTTP 201 Created with saved record & `TKT-YYYY-NNNNN` | `server/tests/lab-02/create-ticket.api.test.ts` | Planned |
+| **API-01** | API | AC-01, FR-06 | Valid ticket creation (`POST /api/tickets`) | Returns HTTP 201 Created with saved record & `TKT-YYYY-NNNNN` | `server/tests/lab-02/create-ticket.api.test.ts` | Planned |
 | **API-02** | API | AC-01, FR-08 | Ticket creation missing summary | Returns HTTP 422 Unprocessable Entity with `fieldErrors` array | `server/tests/lab-02/create-ticket.api.test.ts` | Planned |
-| **API-03** | API | AC-02, FR-01 | Retrieve active requesters (`GET /api/v1/requesters`) | Returns HTTP 200 OK with active requesters; excludes inactive | `server/tests/lab-02/requesters.api.test.ts` | Planned |
-| **API-04** | API | AC-03, FR-16 | Unauthorized ticket access (`GET /api/v1/tickets/:id`) | Requester B accessing Requester A's ticket returns HTTP 403 | `server/tests/lab-02/ticket-detail.api.test.ts` | Planned |
-| **API-05** | API | AC-07, FR-11 | Ticket search & filter (`GET /api/v1/tickets?search=laptop`) | Returns HTTP 200 OK with matching owned tickets only | `server/tests/lab-02/my-tickets.api.test.ts` | Planned |
+| **API-03** | API | AC-02, FR-01 | Retrieve active requesters (`GET /api/requesters/active`) | Returns HTTP 200 OK with active requesters; excludes inactive | `server/tests/lab-02/requesters_api.test.ts` | Planned |
+| **API-04** | API | AC-03, FR-16 | Unauthorized ticket access (`GET /api/tickets/:id`) | Requester B accessing Requester A's ticket returns HTTP 403 | `server/tests/lab-02/ticket-detail.api.test.ts` | Planned |
+| **API-05** | API | AC-07, FR-11 | Ticket search & filter (`GET /api/tickets?search=laptop`) | Returns HTTP 200 OK with matching owned tickets only | `server/tests/lab-02/my-tickets.api.test.ts` | Planned |
 | **API-06** | API | AC-04, FR-09 | Oversized attachment upload | Upload > 5 MB returns HTTP 422 with `INVALID_ATTACHMENT` | `server/tests/lab-02/attachments.api.test.ts` | Planned |
 | **API-07** | API | AC-05, FR-09 | Exceeding 5 active attachments limit | 6th attachment upload returns HTTP 422 limit error | `server/tests/lab-02/attachments.api.test.ts` | Planned |
 | **API-08** | API | AC-06, FR-15 | Soft removal of attachment | Returns HTTP 200 OK; sets `deletedAt`; binary deleted | `server/tests/lab-02/attachments.api.test.ts` | Planned |
