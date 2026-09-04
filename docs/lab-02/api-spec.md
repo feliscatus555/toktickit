@@ -2,7 +2,7 @@
 
 ## Document Control & Citation Reference
 * **Document Status**: Approved API Design Baseline
-* **Target Version**: `/api/v1`
+* **Target Version**: `/api`
 * **Base References**:
   * `TokTickIT-System-Level-SDS-v1.0.pdf` (Section *API Design Standards*, Section *Security Architecture*)
   * `docs/lab-02/Lab_02_labsheet.pdf` (Section 6 *Required REST API Contract*)
@@ -11,7 +11,7 @@
 
 ## 1. General Principles & Conventions
 
-* **Base Endpoint Path**: All new application API endpoints are rooted under `/api/v1` (`TokTickIT-System-Level-SDS-v1.0.pdf`, Section *API Design Standards*, line 1001). Legacy Lab 1 endpoints `/api/health` and `/api/categories` remain accessible for backward compatibility.
+* **Base Endpoint Path**: All application API endpoints are rooted under `/api`. Legacy Lab 1 endpoints `/api/health` and `/api/categories` remain accessible for backward compatibility.
 * **Content Negotiation**: All request payloads and response bodies use JSON (`application/json`), except file upload endpoints (`multipart/form-data`) and file download endpoints (`binary stream`).
 * **Property Naming**: Request and response fields use `camelCase`.
 * **Date & Time Format**: All timestamps are formatted as UTC ISO 8601 strings (e.g. `2026-09-03T12:00:00.000Z`).
@@ -51,7 +51,7 @@
 
 ### 3.1 Reference Data Endpoints
 
-#### 1. `GET /api/v1/categories`
+#### 1. `GET /api/categories`
 * **Purpose**: Retrieve active ticket categories.
 * **Response `200 OK`**:
   ```json
@@ -63,7 +63,7 @@
   ]
   ```
 
-#### 2. `GET /api/v1/related-systems`
+#### 2. `GET /api/related-systems`
 * **Purpose**: Retrieve active related systems for ticket classification.
 * **Response `200 OK`**:
   ```json
@@ -77,7 +77,7 @@
   ]
   ```
 
-#### 3. `GET /api/v1/requesters`
+#### 3. `GET /api/requesters/active`
 * **Purpose**: Retrieve active Development Requesters for the identity selection dropdown. Excludes inactive requesters (`isActive = false`) (`docs/lab-02/Lab_02_labsheet.pdf`, Section 5.3).
 * **Response `200 OK`**:
   ```json
@@ -93,7 +93,7 @@
 
 ### 3.2 Ticket Management Endpoints
 
-#### 4. `POST /api/v1/tickets`
+#### 4. `POST /api/tickets`
 * **Purpose**: Create a new IT support ticket for the selected Development Requester.
 * **Request Headers**: `X-Development-Requester-Id: 1` (or request body `requesterId: 1`)
 * **Request Body**:
@@ -138,7 +138,7 @@
   }
   ```
 
-#### 5. `GET /api/v1/tickets`
+#### 5. `GET /api/tickets`
 * **Purpose**: Retrieve a paginated list of tickets owned by the selected Development Requester.
 * **Query Parameters**:
   * `requesterId` (required, Int): ID of active requester context.
@@ -176,7 +176,7 @@
   }
   ```
 
-#### 6. `GET /api/v1/tickets/:id`
+#### 6. `GET /api/tickets/:id`
 * **Purpose**: Retrieve detailed information for a single owned ticket.
 * **Headers / Parameters**: `X-Development-Requester-Id: 1`
 * **Response `200 OK`**:
@@ -220,7 +220,7 @@
 
 ### 3.3 Attachment Endpoints
 
-#### 7. `POST /api/v1/tickets/:id/attachments`
+#### 7. `POST /api/tickets/:id/attachments`
 * **Purpose**: Upload an attachment file to an existing owned ticket.
 * **Content-Type**: `multipart/form-data`
 * **Form Fields**: `file` (Binary), `uploaderId` (Int)
@@ -246,7 +246,7 @@
   }
   ```
 
-#### 8. `GET /api/v1/attachments/:id/download`
+#### 8. `GET /api/attachments/:id/download`
 * **Purpose**: Download binary attachment content.
 * **Response `200 OK`**: Streams file binary with `Content-Type: application/pdf` or `image/png` and `Content-Disposition: attachment; filename="battery_diagnostics.pdf"`.
 * **Response `410 Gone`** (Soft-Removed Attachment):
@@ -260,7 +260,7 @@
   }
   ```
 
-#### 9. `DELETE /api/v1/attachments/:id`
+#### 9. `DELETE /api/attachments/:id`
 * **Purpose**: Soft-remove an attachment owned by the selected requester.
 * **Request Body**:
   ```json

@@ -5,9 +5,23 @@ export interface Category {
   name: string;
 }
 
+export interface RequesterUser {
+  id: number;
+  email: string;
+  displayName: string;
+}
+
 export interface SystemStatus {
   online: boolean;
   categories: Category[];
+}
+
+export async function fetchActiveRequesters(): Promise<RequesterUser[]> {
+  const res = await fetch(`${API_URL}/api/requesters/active`);
+  if (!res.ok) {
+    throw new Error("Failed to fetch active development requesters");
+  }
+  return res.json();
 }
 
 // Issue 2 + Issue 4 — call the backend.
@@ -32,3 +46,4 @@ export async function checkSystem(): Promise<SystemStatus> {
 
   return { online: true, categories };
 }
+

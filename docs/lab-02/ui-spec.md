@@ -65,7 +65,7 @@
   * Central container on `#F5F7F6` background.
   * Headline: "Development Requester Selection".
   * Explanatory Alert: "Select a Development Requester to test requester-specific ticket behavior. This is not a login screen. Authentication and role-based access will be introduced in Lab 3." (`docs/lab-02/Lab_02_labsheet.pdf`, Section 8.1).
-  * Dropdown selector loading active requesters from API (`GET /api/v1/requesters`).
+  * Dropdown selector loading active requesters from API (`GET /api/requesters/active`).
   * "Continue" primary button.
 
 ### 3.2 Create Ticket Screen (Create Mode)
