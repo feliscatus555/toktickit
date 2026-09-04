@@ -55,10 +55,55 @@ export default function App() {
     <div className="min-vh-100" style={{ backgroundColor: "#F5F7F6" }}>
       {/* Zen Green Top Header */}
       <header className="py-3 px-4 text-white shadow-sm" style={{ backgroundColor: "#006B3C" }}>
-        <div className="container d-flex justify-content-between align-items-center">
-          <h1 className="h4 mb-0 fw-bold">
-            TokTickIT <span className="badge fs-6 ms-2" style={{ backgroundColor: "#0B7A46" }}>IT Service Desk</span>
-          </h1>
+        <div className="container d-flex justify-content-between align-items-center flex-wrap gap-3">
+          <div className="d-flex align-items-center gap-3">
+            <h1 className="h4 mb-0 fw-bold d-flex align-items-center gap-2">
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#FFFFFF"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <circle cx="12" cy="12" r="10" />
+                <polyline points="12 6 12 12 16 14" />
+              </svg>
+              <span>TokTickIT</span>
+              <span className="badge fs-6 ms-1" style={{ backgroundColor: "#0B7A46" }}>IT Service Desk</span>
+            </h1>
+
+            {currentRequester && !showSelectorModal && (
+              <div className="d-flex ms-2 gap-2">
+                <button
+                  onClick={() => setActiveTab("create-ticket")}
+                  className="btn btn-sm text-white fw-semibold"
+                  style={{
+                    backgroundColor: activeTab === "create-ticket" ? "#0B7A46" : "transparent",
+                    border: activeTab === "create-ticket" ? "1px solid #EAF6EF" : "1px solid transparent",
+                    borderRadius: "6px",
+                    padding: "0.4rem 0.8rem",
+                  }}
+                >
+                  <span style={{ color: "#FFFFFF", fontWeight: "bold", marginRight: "4px" }}>+</span> Create Ticket
+                </button>
+                <button
+                  onClick={() => setActiveTab("system-status")}
+                  className="btn btn-sm text-white fw-semibold"
+                  style={{
+                    backgroundColor: activeTab === "system-status" ? "#0B7A46" : "transparent",
+                    border: activeTab === "system-status" ? "1px solid #EAF6EF" : "1px solid transparent",
+                    borderRadius: "6px",
+                    padding: "0.4rem 0.8rem",
+                  }}
+                >
+                  ⚙️ System Status
+                </button>
+              </div>
+            )}
+          </div>
 
           <div className="d-flex align-items-center gap-3">
             {currentRequester ? (
@@ -85,42 +130,6 @@ export default function App() {
           </div>
         </div>
       </header>
-
-      {/* Primary Tab Navigation */}
-      {currentRequester && !showSelectorModal && (
-        <nav style={{ backgroundColor: "#FFFFFF", borderBottom: "1px solid #E0E0E0" }}>
-          <div className="container d-flex gap-4">
-            <button
-              onClick={() => setActiveTab("create-ticket")}
-              style={{
-                background: "none",
-                border: "none",
-                padding: "1rem 0.5rem",
-                fontWeight: 600,
-                color: activeTab === "create-ticket" ? "#006B3C" : "#666",
-                borderBottom: activeTab === "create-ticket" ? "3px solid #006B3C" : "3px solid transparent",
-                cursor: "pointer",
-              }}
-            >
-              ➕ Create Ticket
-            </button>
-            <button
-              onClick={() => setActiveTab("system-status")}
-              style={{
-                background: "none",
-                border: "none",
-                padding: "1rem 0.5rem",
-                fontWeight: 600,
-                color: activeTab === "system-status" ? "#006B3C" : "#666",
-                borderBottom: activeTab === "system-status" ? "3px solid #006B3C" : "3px solid transparent",
-                cursor: "pointer",
-              }}
-            >
-              ⚙️ System Status
-            </button>
-          </div>
-        </nav>
-      )}
 
       {/* Main Content Body */}
       <main className="container py-4">
