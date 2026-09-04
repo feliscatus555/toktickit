@@ -39,6 +39,25 @@ async function main() {
   }
   console.log("Requesters seeded successfully");
 
+  // Feature 6 of Lab 2 - Related Systems
+  const relatedSystems = [
+    { name: "Email", description: "Campus Email System", isActive: true },
+    { name: "Campus Wi-Fi", description: "Wireless Network Access", isActive: true },
+    { name: "VPN", description: "Remote Access Service", isActive: true },
+    { name: "LEB2 App", description: "Learning Management System", isActive: true },
+    { name: "Grade Submission App", description: "Faculty Grading Portal", isActive: true },
+    { name: "Printer", description: "Network Printing Services", isActive: true },
+  ];
+
+  for (const sys of relatedSystems) {
+    await prisma.relatedSystem.upsert({
+      where: { name: sys.name },
+      update: { description: sys.description, isActive: sys.isActive },
+      create: sys,
+    });
+  }
+  console.log("Related systems seeded successfully");
+
 }
 
 main()

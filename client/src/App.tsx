@@ -1,8 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { checkSystem, Category, RequesterUser } from "./api.js";
 import RequesterSelector from "./RequesterSelector.js";
+import CreateTicket from "./CreateTicket.js";
 
 type UiState = "idle" | "loading" | "success" | "error";
+type ActiveTab = "create-ticket" | "system-status";
 
 const STORAGE_KEY = "toktickit_selected_requester";
 const DEFAULT_REQUESTER: RequesterUser = {
@@ -15,6 +17,7 @@ export default function App() {
   const [state, setState] = useState<UiState>("idle");
   const [categories, setCategories] = useState<Category[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<ActiveTab>("system-status");
 
   const [currentRequester, setCurrentRequester] = useState<RequesterUser>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -83,17 +86,56 @@ export default function App() {
         </div>
       </header>
 
+      {/* Primary Tab Navigation */}
+      {currentRequester && !showSelectorModal && (
+        <nav style={{ backgroundColor: "#FFFFFF", borderBottom: "1px solid #E0E0E0" }}>
+          <div className="container d-flex gap-4">
+            <button
+              onClick={() => setActiveTab("create-ticket")}
+              style={{
+                background: "none",
+                border: "none",
+                padding: "1rem 0.5rem",
+                fontWeight: 600,
+                color: activeTab === "create-ticket" ? "#006B3C" : "#666",
+                borderBottom: activeTab === "create-ticket" ? "3px solid #006B3C" : "3px solid transparent",
+                cursor: "pointer",
+              }}
+            >
+              ➕ Create Ticket
+            </button>
+            <button
+              onClick={() => setActiveTab("system-status")}
+              style={{
+                background: "none",
+                border: "none",
+                padding: "1rem 0.5rem",
+                fontWeight: 600,
+                color: activeTab === "system-status" ? "#006B3C" : "#666",
+                borderBottom: activeTab === "system-status" ? "3px solid #006B3C" : "3px solid transparent",
+                cursor: "pointer",
+              }}
+            >
+              ⚙️ System Status
+            </button>
+          </div>
+        </nav>
+      )}
+
       {/* Main Content Body */}
-      <main className="container py-5" style={{ maxWidth: 720 }}>
-        {/* If no Requester is selected, display Selector prominently */}
+      <main className="container py-4">
         {!currentRequester || showSelectorModal ? (
-          <RequesterSelector
-            onSelectRequester={handleSelectRequester}
-            onClose={currentRequester ? () => setShowSelectorModal(false) : undefined}
-            currentRequesterId={currentRequester?.id}
-          />
+          <div style={{ maxWidth: 720, margin: "0 auto" }}>
+            <RequesterSelector
+              onSelectRequester={handleSelectRequester}
+              onClose={currentRequester ? () => setShowSelectorModal(false) : undefined}
+              currentRequesterId={currentRequester?.id}
+            />
+          </div>
+        ) : activeTab === "create-ticket" ? (
+          <CreateTicket activeRequester={currentRequester} />
         ) : (
-          <div className="card shadow-sm border-0 p-4">
+          <div className="card shadow-sm border-0 p-4" style={{ maxWidth: 720, margin: "0 auto" }}>
             <div className="d-flex justify-content-between align-items-center mb-4">
               <h2 className="h4 mb-0 text-dark">System Status Baseline</h2>
               <button
@@ -138,3 +180,4 @@ export default function App() {
     </div>
   );
 }
+
