@@ -72,7 +72,6 @@ export default function App() {
                 <polyline points="12 6 12 12 16 14" />
               </svg>
               <span>TokTickIT</span>
-              <span className="badge fs-6 ms-1" style={{ backgroundColor: "#0B7A46" }}>IT Service Desk</span>
             </h1>
 
             {currentRequester && !showSelectorModal && (
