@@ -26,7 +26,7 @@ export default function CreateTicket({ activeRequester, onSuccess }: CreateTicke
   // Form State
   const [categoryId, setCategoryId] = useState<string>("");
   const [relatedSystemId, setRelatedSystemId] = useState<string>("");
-  const [requestedPriority, setRequestedPriority] = useState<string>("MEDIUM");
+  const [requestedPriority, setRequestedPriority] = useState<string>("");
   const [summary, setSummary] = useState<string>("");
   const [description, setDescription] = useState<string>("");
 
@@ -40,8 +40,6 @@ export default function CreateTicket({ activeRequester, onSuccess }: CreateTicke
         ]);
         setCategories(cats);
         setRelatedSystems(systems);
-        if (cats.length > 0) setCategoryId(String(cats[0].id));
-        if (systems.length > 0) setRelatedSystemId(String(systems[0].id));
       } catch (err: any) {
         setGeneralError("Failed to load reference data for ticket creation.");
       } finally {
@@ -115,6 +113,9 @@ export default function CreateTicket({ activeRequester, onSuccess }: CreateTicke
 
   const handleReset = () => {
     setCreatedTicket(null);
+    setCategoryId("");
+    setRelatedSystemId("");
+    setRequestedPriority("");
     setSummary("");
     setDescription("");
     setFieldErrors({});
@@ -223,6 +224,7 @@ export default function CreateTicket({ activeRequester, onSuccess }: CreateTicke
               fontSize: "1rem",
             }}
           >
+            <option value="" disabled hidden>-- Select Category --</option>
             {categories.map((cat) => (
               <option key={cat.id} value={cat.id}>
                 {cat.name}
@@ -252,6 +254,7 @@ export default function CreateTicket({ activeRequester, onSuccess }: CreateTicke
               fontSize: "1rem",
             }}
           >
+            <option value="" disabled hidden>-- Select Related System --</option>
             {relatedSystems.map((sys) => (
               <option key={sys.id} value={sys.id}>
                 {sys.name} {sys.description ? `(${sys.description})` : ""}
@@ -281,6 +284,7 @@ export default function CreateTicket({ activeRequester, onSuccess }: CreateTicke
               fontSize: "1rem",
             }}
           >
+            <option value="" disabled hidden>-- Select Requested Priority --</option>
             <option value="LOW">Low</option>
             <option value="MEDIUM">Medium</option>
             <option value="HIGH">High</option>

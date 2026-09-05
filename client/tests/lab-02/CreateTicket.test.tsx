@@ -74,6 +74,11 @@ describe("CreateTicket Component", () => {
       expect(screen.getByPlaceholderText(/Brief summary of the issue/i)).toBeInTheDocument();
     });
 
+    const selects = screen.getAllByRole("combobox");
+    fireEvent.change(selects[0], { target: { value: "1" } });
+    fireEvent.change(selects[1], { target: { value: "1" } });
+    fireEvent.change(selects[2], { target: { value: "HIGH" } });
+
     fireEvent.change(screen.getByPlaceholderText(/Brief summary of the issue/i), {
       target: { value: "Valid summary for ticket testing" },
     });
