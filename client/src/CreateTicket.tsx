@@ -166,7 +166,6 @@ export default function CreateTicket({ activeRequester, onSuccess, onCancel }: C
       });
 
       setCreatedTicket(ticket);
-      if (onSuccess) onSuccess(ticket);
     } catch (err: any) {
       if (err.fieldErrors && Array.isArray(err.fieldErrors)) {
         const errorsMap: Record<string, string> = {};
@@ -204,43 +203,159 @@ export default function CreateTicket({ activeRequester, onSuccess, onCancel }: C
   }
 
   if (createdTicket) {
+    const selectedCategory = categories.find((c) => c.id === createdTicket.categoryId);
+    const selectedSystem = relatedSystems.find((s) => s.id === createdTicket.relatedSystemId);
+
     return (
       <div
         style={{
-          maxWidth: "680px",
+          maxWidth: "760px",
           margin: "2rem auto",
-          padding: "2rem",
-          borderRadius: "8px",
-          backgroundColor: "#EAF6EF",
-          border: "1px solid #006B3C",
-          color: "#004B29",
+          padding: "2.5rem 2rem",
+          borderRadius: "10px",
+          backgroundColor: "#FFFFFF",
+          border: "1px solid #B5D5C5",
+          boxShadow: "0 6px 18px rgba(0,0,0,0.06)",
+          textAlign: "center",
         }}
       >
-        <h2 style={{ marginTop: 0, color: "#006B3C" }}>Ticket Created Successfully!</h2>
-        <p style={{ fontSize: "1.1rem" }}>
-          Official Ticket Number: <strong>{createdTicket.ticketNo}</strong>
-        </p>
-        <div style={{ margin: "1.5rem 0", padding: "1rem", backgroundColor: "#FFFFFF", borderRadius: "6px" }}>
-          <p style={{ margin: "0.25rem 0" }}><strong>Summary:</strong> {createdTicket.summary}</p>
-          <p style={{ margin: "0.25rem 0" }}><strong>Status:</strong> {createdTicket.status}</p>
-          <p style={{ margin: "0.25rem 0" }}><strong>Requested Priority:</strong> {createdTicket.requestedPriority}</p>
-        </div>
-        <button
-          type="button"
-          onClick={handleReset}
+        {/* Success Header Icon & Title */}
+        <div
           style={{
-            backgroundColor: "#006B3C",
-            color: "#FFFFFF",
-            padding: "0.75rem 1.5rem",
-            border: "none",
-            borderRadius: "6px",
-            fontSize: "1rem",
-            fontWeight: 600,
-            cursor: "pointer",
+            width: "64px",
+            height: "64px",
+            backgroundColor: "#EAF6EF",
+            color: "#006B3C",
+            borderRadius: "50%",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "2rem",
+            marginBottom: "1rem",
+            border: "2px solid #006B3C",
           }}
         >
-          Create Another Ticket
-        </button>
+          ✓
+        </div>
+
+        <h2 style={{ marginTop: 0, color: "#006B3C", fontSize: "1.75rem", marginBottom: "0.5rem" }}>
+          Ticket Created Successfully!
+        </h2>
+        <p style={{ color: "#5B6573", fontSize: "1rem", marginBottom: "1.5rem" }}>
+          Your IT support request has been registered in TokTickIT.
+        </p>
+
+        {/* Ticket Number Highlight Badge */}
+        <div
+          style={{
+            backgroundColor: "#EAF6EF",
+            border: "1px solid #0B7A46",
+            borderRadius: "8px",
+            padding: "1rem 1.5rem",
+            display: "inline-block",
+            marginBottom: "1.75rem",
+          }}
+        >
+          <div style={{ fontSize: "0.8rem", fontWeight: 700, textTransform: "uppercase", color: "#0B7A46", letterSpacing: "0.5px" }}>
+            Official Ticket Number
+          </div>
+          <div style={{ fontSize: "1.5rem", fontWeight: 800, color: "#006B3C", marginTop: "0.2rem" }}>
+            {createdTicket.ticketNo}
+          </div>
+        </div>
+
+        {/* Details Summary Card */}
+        <div
+          style={{
+            textAlign: "left",
+            margin: "0 auto 2rem auto",
+            padding: "1.25rem 1.5rem",
+            backgroundColor: "#F5F7F6",
+            borderRadius: "8px",
+            border: "1px solid #E0E0E0",
+          }}
+        >
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", fontSize: "0.95rem" }}>
+            <div style={{ gridColumn: "span 2" }}>
+              <span style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", color: "#5B6573", marginBottom: "0.2rem" }}>
+                Summary
+              </span>
+              <div style={{ fontWeight: 600, color: "#1F2937" }}>{createdTicket.summary}</div>
+            </div>
+
+            <div>
+              <span style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", color: "#5B6573", marginBottom: "0.2rem" }}>
+                Status
+              </span>
+              <div style={{ fontWeight: 600, color: "#006B3C" }}>● {createdTicket.status}</div>
+            </div>
+
+            <div>
+              <span style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", color: "#5B6573", marginBottom: "0.2rem" }}>
+                Requested Priority
+              </span>
+              <div style={{ fontWeight: 600, color: "#1F2937" }}>{createdTicket.requestedPriority}</div>
+            </div>
+
+            {selectedCategory && (
+              <div>
+                <span style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", color: "#5B6573", marginBottom: "0.2rem" }}>
+                  Category
+                </span>
+                <div style={{ fontWeight: 500, color: "#374151" }}>{selectedCategory.name}</div>
+              </div>
+            )}
+
+            {selectedSystem && (
+              <div>
+                <span style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", color: "#5B6573", marginBottom: "0.2rem" }}>
+                  Related System
+                </span>
+                <div style={{ fontWeight: 500, color: "#374151" }}>{selectedSystem.name}</div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div style={{ display: "flex", justifyContent: "center", gap: "1rem", flexWrap: "wrap" }}>
+          {onSuccess && (
+            <button
+              type="button"
+              onClick={() => onSuccess(createdTicket)}
+              style={{
+                backgroundColor: "#006B3C",
+                color: "#FFFFFF",
+                padding: "0.75rem 1.5rem",
+                border: "none",
+                borderRadius: "6px",
+                fontSize: "1rem",
+                fontWeight: 600,
+                cursor: "pointer",
+                boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+              }}
+            >
+              📋 View My Tickets
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={handleReset}
+            style={{
+              backgroundColor: "#EAF6EF",
+              color: "#006B3C",
+              border: "1px solid #0B7A46",
+              padding: "0.75rem 1.5rem",
+              borderRadius: "6px",
+              fontSize: "1rem",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
+          >
+            ➕ Create Another Ticket
+          </button>
+        </div>
       </div>
     );
   }

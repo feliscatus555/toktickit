@@ -675,7 +675,7 @@ export default function MyTickets({
       ) : (
         /* Data Presentation */
         <>
-          {/* Desktop Table View (visible >= 768px via custom style) */}
+          {/* Desktop Table View */}
           <div style={{ overflowX: "auto" }}>
             <table
               style={{
@@ -802,6 +802,8 @@ export default function MyTickets({
               </tbody>
             </table>
           </div>
+
+
 
           {/* Pagination Controls */}
           <div
