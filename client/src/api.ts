@@ -120,6 +120,7 @@ export interface TicketListItem {
   requestedPriority: string;
   category: { id: number; name: string };
   relatedSystem: { id: number; name: string };
+  requester?: { id: number; displayName: string; email: string };
   attachmentCount: number;
   createdAt: string;
   updatedAt: string;

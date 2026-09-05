@@ -56,7 +56,7 @@ export default function App() {
     <div className="min-vh-100" style={{ backgroundColor: "#F5F7F6" }}>
       {/* Zen Green Top Header */}
       <header className="py-3 px-4 text-white shadow-sm" style={{ backgroundColor: "#006B3C" }}>
-        <div className="container d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div className="container-fluid px-3 px-md-5 d-flex justify-content-between align-items-center flex-wrap gap-3">
           <div className="d-flex align-items-center gap-3">
             <h1 className="h4 mb-0 fw-bold d-flex align-items-center gap-2">
               <svg
@@ -144,7 +144,7 @@ export default function App() {
       </header>
 
       {/* Main Content Body */}
-      <main className="container py-4">
+      <main className="container-fluid px-3 px-md-5 py-4">
         {!currentRequester || showSelectorModal ? (
           <div style={{ maxWidth: 720, margin: "0 auto" }}>
             <RequesterSelector
@@ -162,6 +162,7 @@ export default function App() {
           <CreateTicket
             activeRequester={currentRequester}
             onSuccess={() => setActiveTab("my-tickets")}
+            onCancel={() => setActiveTab("my-tickets")}
           />
         ) : (
           <div className="card shadow-sm border-0 p-4" style={{ maxWidth: 720, margin: "0 auto" }}>

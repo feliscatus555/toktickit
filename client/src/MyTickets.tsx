@@ -104,6 +104,58 @@ export default function MyTickets({
     setPage(1);
   };
 
+  const [currentSortField, currentSortOrder] = sortOption.split(":");
+
+  const handleHeaderSort = (field: string) => {
+    let nextOrder: "asc" | "desc" = "asc";
+    if (currentSortField === field) {
+      nextOrder = currentSortOrder === "asc" ? "desc" : "asc";
+    } else if (field === "createdAt" || field === "requestedPriority") {
+      nextOrder = "desc";
+    }
+    setSortOption(`${field}:${nextOrder}`);
+    setPage(1);
+  };
+
+  const renderSortHeader = (label: string, field: string, align: "left" | "center" | "right" = "left") => {
+    const isActive = currentSortField === field;
+    return (
+      <th
+        onClick={() => handleHeaderSort(field)}
+        style={{
+          padding: "0.75rem 0.8rem",
+          fontWeight: 700,
+          whiteSpace: "nowrap",
+          textAlign: align,
+          cursor: "pointer",
+          userSelect: "none",
+          color: "#FFFFFF",
+        }}
+        title={`Sort by ${label} (${isActive ? (currentSortOrder === "asc" ? "Ascending" : "Descending") : "Click to sort"})`}
+      >
+        <div
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: align === "center" ? "center" : align === "right" ? "flex-end" : "flex-start",
+            gap: "0.35rem",
+          }}
+        >
+          <span>{label}</span>
+          <span
+            style={{
+              fontSize: "0.85rem",
+              fontWeight: "bold",
+              color: isActive ? "#FDE047" : "rgba(255, 255, 255, 0.65)",
+            }}
+          >
+            {isActive ? (currentSortOrder === "asc" ? "▲" : "▼") : "↕"}
+          </span>
+        </div>
+      </th>
+    );
+  };
+
   const renderPriorityBadge = (p: string) => {
     switch (p.toUpperCase()) {
       case "LOW":
@@ -285,11 +337,29 @@ export default function MyTickets({
   const startRange = totalItems === 0 ? 0 : (page - 1) * limit + 1;
   const endRange = Math.min(page * limit, totalItems);
 
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (page <= 4) {
+        pages.push(1, 2, 3, 4, 5, "...", totalPages);
+      } else if (page >= totalPages - 3) {
+        pages.push(1, "...", totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+      } else {
+        pages.push(1, "...", page - 1, page, page + 1, "...", totalPages);
+      }
+    }
+    return pages;
+  };
+
   return (
     <div
       style={{
-        maxWidth: "1080px",
-        margin: "1.5rem auto",
+        maxWidth: "100%",
+        margin: "1rem auto",
         padding: "1.5rem",
         backgroundColor: "#FFFFFF",
         borderRadius: "8px",
@@ -366,23 +436,43 @@ export default function MyTickets({
             <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, color: "#5B6573", marginBottom: "0.25rem" }}>
               Search Summary or Ticket #
             </label>
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
-              placeholder="Search by summary or ticket #..."
-              style={{
-                width: "100%",
-                padding: "0.5rem 0.75rem",
-                borderRadius: "6px",
-                border: "1px solid #D1D5DB",
-                fontSize: "0.9rem",
-                boxSizing: "border-box",
-              }}
-            />
+            <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#6B7280"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                style={{
+                  position: "absolute",
+                  left: "0.75rem",
+                  pointerEvents: "none",
+                }}
+              >
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+              </svg>
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
+                placeholder="Search by summary or ticket #..."
+                style={{
+                  width: "100%",
+                  padding: "0.5rem 0.75rem 0.5rem 2.25rem",
+                  borderRadius: "6px",
+                  border: "1px solid #D1D5DB",
+                  fontSize: "0.9rem",
+                  boxSizing: "border-box",
+                }}
+              />
+            </div>
           </div>
 
           {/* Category Filter */}
@@ -470,34 +560,7 @@ export default function MyTickets({
             </select>
           </div>
 
-          {/* Sort Selector */}
-          <div>
-            <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, color: "#5B6573", marginBottom: "0.25rem" }}>
-              Sort Order
-            </label>
-            <select
-              value={sortOption}
-              onChange={(e) => {
-                setSortOption(e.target.value);
-                setPage(1);
-              }}
-              style={{
-                width: "100%",
-                padding: "0.5rem 0.75rem",
-                borderRadius: "6px",
-                border: "1px solid #D1D5DB",
-                fontSize: "0.9rem",
-                backgroundColor: "#FFFFFF",
-              }}
-            >
-              <option value="createdAt:desc">Newest First</option>
-              <option value="createdAt:asc">Oldest First</option>
-              <option value="ticketNo:asc">Ticket # (A-Z)</option>
-              <option value="ticketNo:desc">Ticket # (Z-A)</option>
-              <option value="requestedPriority:desc">Priority (High to Low)</option>
-              <option value="summary:asc">Summary (A-Z)</option>
-            </select>
-          </div>
+
         </div>
 
         {hasActiveFilters && (
@@ -625,19 +688,21 @@ export default function MyTickets({
               <thead>
                 <tr
                   style={{
-                    backgroundColor: "#F5F7F6",
-                    borderBottom: "2px solid #E0E0E0",
-                    color: "#5B6573",
+                    backgroundColor: "#006B3C",
+                    borderBottom: "2px solid #0B7A46",
+                    color: "#FFFFFF",
                   }}
                 >
-                  <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, whiteSpace: "nowrap" }}>Ticket #</th>
-                  <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, whiteSpace: "nowrap" }}>Created Date</th>
+                  {renderSortHeader("Ticket #", "ticketNo")}
+                  {renderSortHeader("Created Date", "createdAt")}
                   <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, whiteSpace: "nowrap" }}>Summary</th>
                   <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, whiteSpace: "nowrap" }}>Category</th>
                   <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, whiteSpace: "nowrap" }}>System</th>
                   <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, whiteSpace: "nowrap", textAlign: "center" }}>Requested Priority</th>
                   <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, whiteSpace: "nowrap" }}>Status</th>
-                  <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, textAlign: "right", whiteSpace: "nowrap" }}>Actions</th>
+                  <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, whiteSpace: "nowrap" }}>Ticket Owner</th>
+                  <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, whiteSpace: "nowrap" }}>Last Updated</th>
+                  <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, textAlign: "left", whiteSpace: "nowrap" }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -697,7 +762,22 @@ export default function MyTickets({
                     <td style={{ padding: "0.75rem 0.8rem", whiteSpace: "nowrap", verticalAlign: "middle" }}>
                       {renderStatusBadge(t.status)}
                     </td>
-                    <td style={{ padding: "0.75rem 0.8rem", textAlign: "right", whiteSpace: "nowrap", verticalAlign: "middle" }}>
+                    <td style={{ padding: "0.75rem 0.8rem", color: "#1F2937", fontWeight: 500, whiteSpace: "nowrap", verticalAlign: "middle" }}>
+                      👤 {t.requester?.displayName || activeRequester.displayName}
+                    </td>
+                    <td
+                      title={new Date(t.updatedAt || t.createdAt).toLocaleString("en-US", { dateStyle: "full", timeStyle: "medium" })}
+                      style={{ padding: "0.75rem 0.8rem", color: "#6B7280", fontSize: "0.85rem", whiteSpace: "nowrap", verticalAlign: "middle" }}
+                    >
+                      {new Date(t.updatedAt || t.createdAt).toLocaleString("en-US", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </td>
+                    <td style={{ padding: "0.75rem 0.8rem", textAlign: "left", whiteSpace: "nowrap", verticalAlign: "middle" }}>
                       <button
                         type="button"
                         onClick={() => {
@@ -740,7 +820,7 @@ export default function MyTickets({
               Showing <strong>{startRange}</strong> to <strong>{endRange}</strong> of <strong>{totalItems}</strong> tickets
             </div>
 
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", flexWrap: "wrap" }}>
               <button
                 type="button"
                 disabled={page <= 1}
@@ -749,7 +829,7 @@ export default function MyTickets({
                   backgroundColor: page <= 1 ? "#F3F4F6" : "#EAF6EF",
                   color: page <= 1 ? "#9CA3AF" : "#006B3C",
                   border: page <= 1 ? "1px solid #D1D5DB" : "1px solid #0B7A46",
-                  padding: "0.4rem 0.9rem",
+                  padding: "0.4rem 0.8rem",
                   borderRadius: "6px",
                   fontSize: "0.85rem",
                   fontWeight: 600,
@@ -759,9 +839,38 @@ export default function MyTickets({
                 ← Previous
               </button>
 
-              <span style={{ fontSize: "0.85rem", fontWeight: 600, color: "#1F2937", padding: "0 0.4rem" }}>
-                Page {page} of {totalPages}
-              </span>
+              {getPageNumbers().map((p, idx) => {
+                if (typeof p === "string") {
+                  return (
+                    <span key={idx} style={{ padding: "0 0.25rem", color: "#6B7280", fontSize: "0.85rem", fontWeight: 600 }}>
+                      {p}
+                    </span>
+                  );
+                }
+                const isActive = p === page;
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setPage(p)}
+                    style={{
+                      backgroundColor: isActive ? "#006B3C" : "#FFFFFF",
+                      color: isActive ? "#FFFFFF" : "#006B3C",
+                      border: isActive ? "1px solid #006B3C" : "1px solid #D1D5DB",
+                      padding: "0.4rem 0.75rem",
+                      borderRadius: "6px",
+                      fontSize: "0.85rem",
+                      fontWeight: isActive ? 700 : 600,
+                      cursor: isActive ? "default" : "pointer",
+                      minWidth: "36px",
+                      textAlign: "center",
+                      transition: "all 0.15s ease",
+                    }}
+                  >
+                    {p}
+                  </button>
+                );
+              })}
 
               <button
                 type="button"

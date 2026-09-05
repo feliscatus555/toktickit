@@ -12,9 +12,10 @@ import {
 interface CreateTicketProps {
   activeRequester: RequesterUser;
   onSuccess?: (ticket: Ticket) => void;
+  onCancel?: () => void;
 }
 
-export default function CreateTicket({ activeRequester, onSuccess }: CreateTicketProps) {
+export default function CreateTicket({ activeRequester, onSuccess, onCancel }: CreateTicketProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [relatedSystems, setRelatedSystems] = useState<RelatedSystem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -248,7 +249,7 @@ export default function CreateTicket({ activeRequester, onSuccess }: CreateTicke
   return (
     <div
       style={{
-        maxWidth: "760px",
+        maxWidth: "960px",
         margin: "1.5rem auto",
         padding: "2rem",
         backgroundColor: "#FFFFFF",
@@ -651,7 +652,7 @@ export default function CreateTicket({ activeRequester, onSuccess }: CreateTicke
         >
           <button
             type="button"
-            onClick={handleReset}
+            onClick={onCancel ? onCancel : handleReset}
             disabled={submitting}
             style={{
               backgroundColor: "#EAF6EF",
@@ -664,7 +665,7 @@ export default function CreateTicket({ activeRequester, onSuccess }: CreateTicke
               cursor: submitting ? "not-allowed" : "pointer",
             }}
           >
-            Reset Form
+            Cancel
           </button>
           <button
             type="submit"

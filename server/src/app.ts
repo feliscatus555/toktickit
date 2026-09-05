@@ -266,7 +266,7 @@ app.get("/api/tickets", async (req: Request, res: Response) => {
     const priority = typeof req.query.priority === "string" ? req.query.priority.trim() : undefined;
 
     // Sorting params
-    const allowedSortFields = ["createdAt", "ticketNo", "requestedPriority", "summary"];
+    const allowedSortFields = ["createdAt", "ticketNo", "requestedPriority", "summary", "category", "system", "relatedSystem", "status"];
     let sortBy = typeof req.query.sortBy === "string" ? req.query.sortBy.trim() : "createdAt";
     if (!allowedSortFields.includes(sortBy)) {
       sortBy = "createdAt";
@@ -321,7 +321,16 @@ app.get("/api/tickets", async (req: Request, res: Response) => {
     }
     const skip = (targetPage - 1) * limit;
 
-    const orderBy: any[] = [{ [sortBy]: sortOrder }];
+    let sortClause: any;
+    if (sortBy === "category") {
+      sortClause = { category: { name: sortOrder } };
+    } else if (sortBy === "system" || sortBy === "relatedSystem") {
+      sortClause = { relatedSystem: { name: sortOrder } };
+    } else {
+      sortClause = { [sortBy]: sortOrder };
+    }
+
+    const orderBy: any[] = [sortClause];
     if (sortBy !== "id") {
       orderBy.push({ id: "desc" });
     }
@@ -344,6 +353,13 @@ app.get("/api/tickets", async (req: Request, res: Response) => {
           select: {
             id: true,
             name: true,
+          },
+        },
+        requester: {
+          select: {
+            id: true,
+            displayName: true,
+            email: true,
           },
         },
         createdAt: true,
