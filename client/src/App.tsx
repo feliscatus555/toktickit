@@ -2,9 +2,10 @@ import { useState } from "react";
 import { checkSystem, Category, RequesterUser } from "./api.js";
 import RequesterSelector from "./RequesterSelector.js";
 import CreateTicket from "./CreateTicket.js";
+import MyTickets from "./MyTickets.js";
 
 type UiState = "idle" | "loading" | "success" | "error";
-type ActiveTab = "create-ticket" | "system-status";
+type ActiveTab = "my-tickets" | "create-ticket" | "system-status";
 
 const STORAGE_KEY = "toktickit_selected_requester";
 const DEFAULT_REQUESTER: RequesterUser = {
@@ -77,6 +78,18 @@ export default function App() {
             {currentRequester && !showSelectorModal && (
               <div className="d-flex ms-2 gap-2">
                 <button
+                  onClick={() => setActiveTab("my-tickets")}
+                  className="btn btn-sm text-white fw-semibold"
+                  style={{
+                    backgroundColor: activeTab === "my-tickets" ? "#0B7A46" : "transparent",
+                    border: activeTab === "my-tickets" ? "1px solid #EAF6EF" : "1px solid transparent",
+                    borderRadius: "6px",
+                    padding: "0.4rem 0.8rem",
+                  }}
+                >
+                  📋 My Tickets
+                </button>
+                <button
                   onClick={() => setActiveTab("create-ticket")}
                   className="btn btn-sm text-white fw-semibold"
                   style={{
@@ -140,8 +153,16 @@ export default function App() {
               currentRequesterId={currentRequester?.id}
             />
           </div>
+        ) : activeTab === "my-tickets" ? (
+          <MyTickets
+            activeRequester={currentRequester}
+            onCreateTicketClick={() => setActiveTab("create-ticket")}
+          />
         ) : activeTab === "create-ticket" ? (
-          <CreateTicket activeRequester={currentRequester} />
+          <CreateTicket
+            activeRequester={currentRequester}
+            onSuccess={() => setActiveTab("my-tickets")}
+          />
         ) : (
           <div className="card shadow-sm border-0 p-4" style={{ maxWidth: 720, margin: "0 auto" }}>
             <div className="d-flex justify-content-between align-items-center mb-4">

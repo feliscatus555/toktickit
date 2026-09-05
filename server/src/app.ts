@@ -197,33 +197,36 @@ app.post("/api/tickets", async (req: Request, res: Response) => {
       return;
     }
 
-    const newTicket = await prisma.$transaction(async (tx) => {
-      let attempts = 0;
-      while (attempts < 5) {
-        try {
-          const ticketNo = await generateTicketNo(tx);
-          return await tx.ticket.create({
-            data: {
-              ticketNo,
-              summary: trimmedSummary,
-              description: trimmedDescription,
-              requestedPriority,
-              status: "New",
-              requesterId,
-              categoryId,
-              relatedSystemId,
-            },
-          });
-        } catch (err: any) {
-          attempts++;
-          if (err?.code === "P2002" && attempts < 5) {
-            continue;
-          }
-          throw err;
+    let attempts = 0;
+    let newTicket;
+    while (attempts < 5) {
+      try {
+        const ticketNo = await generateTicketNo(prisma);
+        newTicket = await prisma.ticket.create({
+          data: {
+            ticketNo,
+            summary: trimmedSummary,
+            description: trimmedDescription,
+            requestedPriority,
+            status: "New",
+            requesterId,
+            categoryId,
+            relatedSystemId,
+          },
+        });
+        break;
+      } catch (err: any) {
+        attempts++;
+        if (err?.code === "P2002" && attempts < 5) {
+          continue;
         }
+        throw err;
       }
+    }
+
+    if (!newTicket) {
       throw new Error("Failed to generate unique ticket number after multiple attempts.");
-    });
+    }
 
     res.status(201).json(newTicket);
   } catch (error) {
