@@ -76,6 +76,27 @@ describe("POST /api/tickets", () => {
     expect(summaryError).toBeDefined();
   });
 
+  it("returns 422 Unprocessable Entity when summary exceeds 120 chars", async () => {
+    const payload = {
+      requesterId: 1,
+      categoryId: 1,
+      relatedSystemId: 1,
+      requestedPriority: "MEDIUM",
+      summary: "A".repeat(121),
+      description: "Detailed description of the issue that is sufficiently long.",
+    };
+
+    const res = await request(app).post("/api/tickets").send(payload);
+
+    expect(res.status).toBe(422);
+    expect(res.body.error.code).toBe("VALIDATION_FAILED");
+
+    const summaryError = res.body.error.fieldErrors.find(
+      (fe: { field: string }) => fe.field === "summary"
+    );
+    expect(summaryError).toBeDefined();
+  });
+
   it("returns 422 Unprocessable Entity when description is too short (< 10 chars)", async () => {
     const payload = {
       requesterId: 1,
@@ -95,5 +116,65 @@ describe("POST /api/tickets", () => {
       (fe: { field: string }) => fe.field === "description"
     );
     expect(descError).toBeDefined();
+  });
+
+  it("returns 422 Unprocessable Entity when description exceeds 2000 chars", async () => {
+    const payload = {
+      requesterId: 1,
+      categoryId: 1,
+      relatedSystemId: 1,
+      requestedPriority: "MEDIUM",
+      summary: "Valid ticket summary here",
+      description: "A".repeat(2001),
+    };
+
+    const res = await request(app).post("/api/tickets").send(payload);
+
+    expect(res.status).toBe(422);
+    expect(res.body.error.code).toBe("VALIDATION_FAILED");
+
+    const descError = res.body.error.fieldErrors.find(
+      (fe: { field: string }) => fe.field === "description"
+    );
+    expect(descError).toBeDefined();
+  });
+
+  it("returns 422 Unprocessable Entity when categoryId or relatedSystemId is missing", async () => {
+    const payload = {
+      requesterId: 1,
+      requestedPriority: "LOW",
+      summary: "Valid ticket summary here",
+      description: "Detailed description of the issue that is sufficiently long.",
+    };
+
+    const res = await request(app).post("/api/tickets").send(payload);
+
+    expect(res.status).toBe(422);
+    expect(res.body.error.code).toBe("VALIDATION_FAILED");
+
+    const catError = res.body.error.fieldErrors.find(
+      (fe: { field: string }) => fe.field === "categoryId"
+    );
+    const sysError = res.body.error.fieldErrors.find(
+      (fe: { field: string }) => fe.field === "relatedSystemId"
+    );
+    expect(catError).toBeDefined();
+    expect(sysError).toBeDefined();
+  });
+
+  it("returns 422 Unprocessable Entity when foreign keys do not exist in database", async () => {
+    const payload = {
+      requesterId: 99999,
+      categoryId: 99999,
+      relatedSystemId: 99999,
+      requestedPriority: "URGENT",
+      summary: "Valid ticket summary here",
+      description: "Detailed description of the issue that is sufficiently long.",
+    };
+
+    const res = await request(app).post("/api/tickets").send(payload);
+
+    expect(res.status).toBe(422);
+    expect(res.body.error.code).toBe("VALIDATION_FAILED");
   });
 });

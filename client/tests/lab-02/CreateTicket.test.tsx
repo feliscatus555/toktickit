@@ -35,7 +35,7 @@ describe("CreateTicket Component", () => {
     expect(screen.getByPlaceholderText(/Brief summary of the issue/i)).toBeInTheDocument();
   });
 
-  it("displays field-level validation errors when submitting empty form", async () => {
+  it("displays field-level validation errors when submitting empty form without dropdown selections", async () => {
     vi.spyOn(api, "fetchCategories").mockResolvedValue([{ id: 1, name: "Hardware" }]);
     vi.spyOn(api, "fetchRelatedSystems").mockResolvedValue([{ id: 1, name: "Email" }]);
 
@@ -47,7 +47,10 @@ describe("CreateTicket Component", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /Submit Ticket/i }));
 
-    expect(await screen.findByText(/Summary must be between 5 and 120 characters long/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Category is required/i)).toBeInTheDocument();
+    expect(screen.getByText(/Related system is required/i)).toBeInTheDocument();
+    expect(screen.getByText(/Requested priority is required/i)).toBeInTheDocument();
+    expect(screen.getByText(/Summary must be between 5 and 120 characters long/i)).toBeInTheDocument();
     expect(screen.getByText(/Description must be between 10 and 2000 characters long/i)).toBeInTheDocument();
   });
 
