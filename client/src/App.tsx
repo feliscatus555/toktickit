@@ -189,7 +189,7 @@ export default function App() {
           {/* Mobile Navigation Bar Tabs */}
           {currentRequester && !showSelectorModal && (
             <div
-              className="d-flex d-md-none gap-1 mt-2 pt-2 border-top w-100"
+              className="d-flex flex-wrap d-md-none gap-2 mt-2 pt-2 border-top w-100"
               style={{
                 borderColor: "rgba(255, 255, 255, 0.2)",
               }}
@@ -202,11 +202,9 @@ export default function App() {
                   backgroundColor: activeTab === "my-tickets" ? "#0B7A46" : "transparent",
                   border: activeTab === "my-tickets" ? "1px solid #EAF6EF" : "1px solid transparent",
                   borderRadius: "6px",
-                  padding: "0.4rem 0.25rem",
-                  fontSize: "0.82rem",
+                  padding: "0.4rem 0.6rem",
+                  fontSize: "0.85rem",
                   whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
                 }}
               >
                 📋 My Tickets
@@ -219,14 +217,12 @@ export default function App() {
                   backgroundColor: activeTab === "create-ticket" ? "#0B7A46" : "transparent",
                   border: activeTab === "create-ticket" ? "1px solid #EAF6EF" : "1px solid transparent",
                   borderRadius: "6px",
-                  padding: "0.4rem 0.25rem",
-                  fontSize: "0.82rem",
+                  padding: "0.4rem 0.6rem",
+                  fontSize: "0.85rem",
                   whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
                 }}
               >
-                <span style={{ color: "#FFFFFF", fontWeight: "bold", marginRight: "2px" }}>+</span> Create Ticket
+                <span style={{ color: "#FFFFFF", fontWeight: "bold", marginRight: "4px" }}>+</span> Create Ticket
               </button>
               <button
                 type="button"
@@ -236,11 +232,9 @@ export default function App() {
                   backgroundColor: activeTab === "system-status" ? "#0B7A46" : "transparent",
                   border: activeTab === "system-status" ? "1px solid #EAF6EF" : "1px solid transparent",
                   borderRadius: "6px",
-                  padding: "0.4rem 0.25rem",
-                  fontSize: "0.82rem",
+                  padding: "0.4rem 0.6rem",
+                  fontSize: "0.85rem",
                   whiteSpace: "nowrap",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
                 }}
               >
                 ⚙️ System Status

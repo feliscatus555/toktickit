@@ -475,7 +475,7 @@ export default function MyTickets({
           }}
         >
           {/* Search Input */}
-          <div style={{ flex: "1 1 240px", maxWidth: "340px", minWidth: "200px" }}>
+          <div style={{ flex: "1 1 220px", minWidth: "180px" }}>
             <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, color: "#5B6573", marginBottom: "0.25rem" }}>
               Search Summary or Ticket #
             </label>
@@ -519,7 +519,7 @@ export default function MyTickets({
           </div>
 
           {/* Category Filter */}
-          <div style={{ flex: "1 1 150px", maxWidth: "220px", minWidth: "140px" }}>
+          <div style={{ flex: "0 0 160px", minWidth: "130px" }}>
             <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, color: "#5B6573", marginBottom: "0.25rem" }}>
               Category
             </label>
@@ -548,7 +548,7 @@ export default function MyTickets({
           </div>
 
           {/* Status Filter */}
-          <div style={{ flex: "1 1 140px", maxWidth: "180px", minWidth: "130px" }}>
+          <div style={{ flex: "0 0 140px", minWidth: "120px" }}>
             <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, color: "#5B6573", marginBottom: "0.25rem" }}>
               Status
             </label>
@@ -579,7 +579,7 @@ export default function MyTickets({
           </div>
 
           {/* Requested Priority Filter */}
-          <div style={{ flex: "1 1 140px", maxWidth: "180px", minWidth: "130px" }}>
+          <div style={{ flex: "0 0 145px", minWidth: "120px" }}>
             <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, color: "#5B6573", marginBottom: "0.25rem" }}>
               Requested Priority
             </label>
@@ -607,7 +607,7 @@ export default function MyTickets({
           </div>
 
           {/* IT Priority Filter */}
-          <div style={{ flex: "1 1 140px", maxWidth: "180px", minWidth: "130px" }}>
+          <div style={{ flex: "0 0 145px", minWidth: "120px" }}>
             <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, color: "#5B6573", marginBottom: "0.25rem" }}>
               IT Priority
             </label>
