@@ -30,6 +30,75 @@ export default function CreateTicket({ activeRequester, onSuccess }: CreateTicke
   const [summary, setSummary] = useState<string>("");
   const [description, setDescription] = useState<string>("");
 
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState<boolean>(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+  const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+  const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".pdf"];
+
+  const processFiles = (filesList: File[]) => {
+    setAttachmentError(null);
+    if (filesList.length === 0) return;
+
+    if (attachments.length + filesList.length > 5) {
+      setAttachmentError("Maximum 5 attachments allowed per ticket.");
+      return;
+    }
+
+    const validFiles: File[] = [];
+    for (const file of filesList) {
+      const ext = "." + file.name.split(".").pop()?.toLowerCase();
+      if (!ALLOWED_TYPES.includes(file.type) && !ALLOWED_EXTENSIONS.includes(ext)) {
+        setAttachmentError(`Invalid file format "${file.name}". Allowed formats: JPG, PNG, WEBP, PDF.`);
+        return;
+      }
+      if (file.size > MAX_FILE_SIZE) {
+        setAttachmentError(`File "${file.name}" exceeds the 5 MB limit (${(file.size / (1024 * 1024)).toFixed(2)} MB).`);
+        return;
+      }
+      validFiles.push(file);
+    }
+
+    setAttachments((prev) => [...prev, ...validFiles]);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (attachments.length < 5) {
+      setIsDragging(true);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    if (attachments.length >= 5) return;
+    const droppedFiles = Array.from(e.dataTransfer.files);
+    processFiles(droppedFiles);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(e.target.files || []);
+    processFiles(selectedFiles);
+    e.target.value = "";
+  };
+
+  const handleRemoveAttachment = (index: number) => {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
+    setAttachmentError(null);
+  };
+
   useEffect(() => {
     async function loadFormData() {
       try {
@@ -118,6 +187,8 @@ export default function CreateTicket({ activeRequester, onSuccess }: CreateTicke
     setRequestedPriority("");
     setSummary("");
     setDescription("");
+    setAttachments([]);
+    setAttachmentError(null);
     setFieldErrors({});
     setGeneralError(null);
   };
@@ -349,6 +420,116 @@ export default function CreateTicket({ activeRequester, onSuccess }: CreateTicke
           )}
         </div>
 
+        {/* Attachments Section */}
+        <div style={{ marginBottom: "1.75rem" }}>
+          <label style={{ display: "block", fontWeight: 600, marginBottom: "0.4rem", color: "#222" }}>
+            Attachments (Optional)
+          </label>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept=".jpg,.jpeg,.png,.webp,.pdf"
+            onChange={handleFileChange}
+            style={{ display: "none" }}
+          />
+
+          <div
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onClick={() => {
+              if (attachments.length < 5 && fileInputRef.current) {
+                fileInputRef.current.click();
+              }
+            }}
+            style={{
+              border: isDragging ? "2px dashed #006B3C" : "2px dashed #B5D5C5",
+              backgroundColor: isDragging ? "#DDF2E6" : "#EAF6EF",
+              borderRadius: "8px",
+              padding: "1.75rem 1rem",
+              textAlign: "center",
+              cursor: attachments.length >= 5 ? "not-allowed" : "pointer",
+              transition: "all 0.2s ease",
+              boxSizing: "border-box",
+            }}
+          >
+            <div style={{ fontSize: "2rem", marginBottom: "0.4rem", color: "#006B3C" }}>
+              📂
+            </div>
+            <div style={{ fontWeight: 600, color: "#006B3C", fontSize: "1rem", marginBottom: "0.25rem" }}>
+              {attachments.length >= 5 ? "Maximum attachment limit reached (5/5)" : "Drag & drop files here, or click to browse"}
+            </div>
+            <div style={{ fontSize: "0.85rem", color: "#555" }}>
+              Supported formats: JPG, PNG, WEBP, PDF • Max file size: 5 MB • Max 5 files
+            </div>
+          </div>
+
+          {attachmentError && (
+            <div style={{ color: "#B3261E", fontSize: "0.85rem", marginTop: "0.4rem" }}>
+              ⚠️ {attachmentError}
+            </div>
+          )}
+
+          {attachments.length > 0 && (
+            <div style={{ marginTop: "1rem" }}>
+              <div style={{ fontWeight: 600, fontSize: "0.95rem", marginBottom: "0.5rem", color: "#1F2937" }}>
+                Selected Attachments ({attachments.length}/5):
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                {attachments.map((file, idx) => {
+                  const isPdf = file.name.toLowerCase().endsWith(".pdf");
+                  return (
+                    <div
+                      key={idx}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        padding: "0.6rem 0.9rem",
+                        backgroundColor: "#FFFFFF",
+                        border: "1px solid #E0E0E0",
+                        borderRadius: "6px",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+                      }}
+                    >
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", overflow: "hidden" }}>
+                        <span style={{ fontSize: "1.2rem" }}>{isPdf ? "📄" : "🖼️"}</span>
+                        <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          <div style={{ fontWeight: 600, fontSize: "0.9rem", color: "#1F2937" }}>{file.name}</div>
+                          <div style={{ fontSize: "0.8rem", color: "#6B7280" }}>
+                            {(file.size / (1024 * 1024)).toFixed(2)} MB
+                          </div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveAttachment(idx);
+                        }}
+                        style={{
+                          backgroundColor: "transparent",
+                          color: "#B3261E",
+                          border: "none",
+                          fontWeight: 600,
+                          fontSize: "0.85rem",
+                          cursor: "pointer",
+                          padding: "0.25rem 0.5rem",
+                          borderRadius: "4px",
+                        }}
+                      >
+                        ✕ Remove
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Submit Button */}
         <button
           type="submit"
@@ -373,3 +554,5 @@ export default function CreateTicket({ activeRequester, onSuccess }: CreateTicke
     </div>
   );
 }
+
+
