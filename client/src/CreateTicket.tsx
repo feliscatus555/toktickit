@@ -6,8 +6,10 @@ import {
   fetchCategories,
   fetchRelatedSystems,
   createTicket,
+  uploadAttachment,
   Ticket,
 } from "./api.js";
+
 
 interface CreateTicketProps {
   activeRequester: RequesterUser;
@@ -165,7 +167,18 @@ export default function CreateTicket({ activeRequester, onSuccess, onCancel }: C
         description: description.trim(),
       });
 
+      if (attachments.length > 0) {
+        for (const file of attachments) {
+          try {
+            await uploadAttachment(ticket.id, file, activeRequester.id);
+          } catch (uploadErr) {
+            console.error("Failed to upload attachment during ticket creation:", uploadErr);
+          }
+        }
+      }
+
       setCreatedTicket(ticket);
+
     } catch (err: any) {
       if (err.fieldErrors && Array.isArray(err.fieldErrors)) {
         const errorsMap: Record<string, string> = {};
