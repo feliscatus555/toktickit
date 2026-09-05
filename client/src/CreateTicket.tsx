@@ -189,7 +189,7 @@ export default function CreateTicket({ activeRequester, onSuccess }: CreateTicke
       </h2>
 
       <div style={{ marginBottom: "1.5rem", fontSize: "0.9rem", color: "#555" }}>
-        Submitting on behalf of: <strong>{activeRequester.displayName}</strong> ({activeRequester.email})
+        Requester: <strong>{activeRequester.displayName}</strong> ({activeRequester.email})
       </div>
 
       {generalError && (
