@@ -44,10 +44,13 @@ enum RequestedPriority {
 }
 
 enum TicketStatus {
-  Pending
-  Open
+  New
   InProgress
+  Assigned
+  Pending
   Resolved
+  Closed
+  Cancelled
 }
 
 model RelatedSystem {
@@ -64,7 +67,7 @@ model Ticket {
   ticketNo          String            @unique
   summary           String
   description       String
-  status            TicketStatus      @default(Pending)
+  status            TicketStatus      @default(New)
   requestedPriority RequestedPriority
   requesterId       Int
   requester         RequesterUser     @relation(fields: [requesterId], references: [id])

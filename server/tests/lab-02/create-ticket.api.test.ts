@@ -46,7 +46,7 @@ describe("POST /api/tickets", () => {
     expect(res.body.ticketNo).toMatch(/^TKT-\d{4}-\d{5}$/);
     expect(res.body.summary).toBe(payload.summary);
     expect(res.body.description).toBe(payload.description);
-    expect(res.body.status).toBe("Pending");
+    expect(res.body.status).toBe("New");
     expect(res.body.requestedPriority).toBe("HIGH");
     expect(res.body.requesterId).toBe(requesterId);
     expect(res.body.categoryId).toBe(categoryId);

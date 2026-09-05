@@ -208,7 +208,7 @@ app.post("/api/tickets", async (req: Request, res: Response) => {
             summary: trimmedSummary,
             description: trimmedDescription,
             requestedPriority,
-            status: "Pending",
+            status: "New",
             requesterId,
             categoryId,
             relatedSystemId,
@@ -264,6 +264,7 @@ app.get("/api/tickets", async (req: Request, res: Response) => {
     const categoryId = req.query.categoryId ? Number(req.query.categoryId) : undefined;
     const status = typeof req.query.status === "string" ? req.query.status.trim() : undefined;
     const priority = typeof req.query.priority === "string" ? req.query.priority.trim() : undefined;
+    const itPriority = typeof req.query.itPriority === "string" ? req.query.itPriority.trim() : undefined;
 
     // Sorting params
     const allowedSortFields = ["createdAt", "updatedAt", "ticketNo", "requestedPriority", "summary", "category", "system", "relatedSystem", "status"];
@@ -308,8 +309,9 @@ app.get("/api/tickets", async (req: Request, res: Response) => {
       }
     }
 
-    if (priority) {
-      where.requestedPriority = priority;
+    const targetPriority = itPriority || priority;
+    if (targetPriority) {
+      where.requestedPriority = targetPriority;
     }
 
     const totalItems = await prisma.ticket.count({ where });

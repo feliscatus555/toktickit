@@ -49,7 +49,7 @@ describe("MyTickets Component", () => {
     await waitFor(() => {
       expect(screen.getByText("TKT-2026-00001")).toBeInTheDocument();
       expect(screen.getByText("Laptop battery issue after OS update")).toBeInTheDocument();
-      expect(screen.getByText("↑ High")).toBeInTheDocument();
+      expect(screen.getAllByText("↑ High")[0]).toBeInTheDocument();
       expect(screen.getByText("● Pending")).toBeInTheDocument();
     });
   });

@@ -28,6 +28,7 @@ export default function MyTickets({
   const [categoryId, setCategoryId] = useState<string>("");
   const [status, setStatus] = useState<string>("");
   const [priority, setPriority] = useState<string>("");
+  const [itPriority, setItPriority] = useState<string>("");
   const [sortOption, setSortOption] = useState<string>("createdAt:desc");
   const [page, setPage] = useState<number>(1);
   const limit = 10;
@@ -69,6 +70,7 @@ export default function MyTickets({
           categoryId: categoryId ? Number(categoryId) : undefined,
           status: status || undefined,
           priority: priority || undefined,
+          itPriority: itPriority || undefined,
           sortBy,
           sortOrder,
           page,
@@ -91,15 +93,16 @@ export default function MyTickets({
     return () => {
       isMounted = false;
     };
-  }, [activeRequester.id, search, categoryId, status, priority, sortOption, page]);
+  }, [activeRequester.id, search, categoryId, status, priority, itPriority, sortOption, page]);
 
-  const hasActiveFilters = Boolean(search || categoryId || status || priority);
+  const hasActiveFilters = Boolean(search || categoryId || status || priority || itPriority);
 
   const handleClearFilters = () => {
     setSearch("");
     setCategoryId("");
     setStatus("");
     setPriority("");
+    setItPriority("");
     setSortOption("createdAt:desc");
     setPage(1);
   };
@@ -258,6 +261,26 @@ export default function MyTickets({
         </span>
       );
     }
+    if (statusKey === "Assigned") {
+      return (
+        <span
+          style={{
+            backgroundColor: "#E0F2FE",
+            color: "#0369A1",
+            padding: "0.25rem 0.6rem",
+            borderRadius: "12px",
+            fontSize: "0.8rem",
+            fontWeight: 600,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "0.3rem",
+            border: "1px solid #7DD3FC",
+          }}
+        >
+          👤 Assigned
+        </span>
+      );
+    }
     if (statusKey === "Open" || statusKey === "New") {
       return (
         <span
@@ -315,6 +338,26 @@ export default function MyTickets({
           }}
         >
           ✓ Resolved
+        </span>
+      );
+    }
+    if (statusKey === "Closed") {
+      return (
+        <span
+          style={{
+            backgroundColor: "#F1F5F9",
+            color: "#475569",
+            padding: "0.25rem 0.6rem",
+            borderRadius: "12px",
+            fontSize: "0.8rem",
+            fontWeight: 600,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "0.3rem",
+            border: "1px solid #CBD5E1",
+          }}
+        >
+          ✖ Closed
         </span>
       );
     }
@@ -525,14 +568,17 @@ export default function MyTickets({
               }}
             >
               <option value="">All Statuses</option>
-              <option value="Pending">Pending</option>
-              <option value="Open">Open</option>
+              <option value="New">New</option>
+              <option value="Assigned">Assigned</option>
               <option value="InProgress">In Progress</option>
+              <option value="Pending">Pending</option>
               <option value="Resolved">Resolved</option>
+              <option value="Closed">Closed</option>
+              <option value="Cancelled">Cancelled</option>
             </select>
           </div>
 
-          {/* Priority Filter */}
+          {/* Requested Priority Filter */}
           <div>
             <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, color: "#5B6573", marginBottom: "0.25rem" }}>
               Requested Priority
@@ -541,6 +587,34 @@ export default function MyTickets({
               value={priority}
               onChange={(e) => {
                 setPriority(e.target.value);
+                setPage(1);
+              }}
+              style={{
+                width: "100%",
+                padding: "0.5rem 0.75rem",
+                borderRadius: "6px",
+                border: "1px solid #D1D5DB",
+                fontSize: "0.9rem",
+                backgroundColor: "#FFFFFF",
+              }}
+            >
+              <option value="">All Priorities</option>
+              <option value="LOW">Low</option>
+              <option value="MEDIUM">Medium</option>
+              <option value="HIGH">High</option>
+              <option value="URGENT">Urgent</option>
+            </select>
+          </div>
+
+          {/* IT Priority Filter */}
+          <div>
+            <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, color: "#5B6573", marginBottom: "0.25rem" }}>
+              IT Priority
+            </label>
+            <select
+              value={itPriority}
+              onChange={(e) => {
+                setItPriority(e.target.value);
                 setPage(1);
               }}
               style={{
@@ -697,10 +771,11 @@ export default function MyTickets({
                   {renderSortHeader("Created Date", "createdAt")}
                   <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, whiteSpace: "nowrap" }}>Summary</th>
                   <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, whiteSpace: "nowrap" }}>Category</th>
-                  <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, whiteSpace: "nowrap" }}>System</th>
+                  <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, whiteSpace: "nowrap" }}>Related System</th>
                   <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, whiteSpace: "nowrap", textAlign: "center" }}>Requested Priority</th>
+                  <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, whiteSpace: "nowrap", textAlign: "center" }}>IT Priority</th>
                   <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, whiteSpace: "nowrap" }}>Status</th>
-                  <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, whiteSpace: "nowrap" }}>Ticket Owner</th>
+                  <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, whiteSpace: "nowrap", textAlign: "center" }}>Ticket Owner</th>
                   {renderSortHeader("Last Updated", "updatedAt")}
                   <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, textAlign: "left", whiteSpace: "nowrap" }}>Actions</th>
                 </tr>
@@ -759,11 +834,14 @@ export default function MyTickets({
                     <td style={{ padding: "0.75rem 0.8rem", whiteSpace: "nowrap", verticalAlign: "middle", textAlign: "center" }}>
                       {renderPriorityBadge(t.requestedPriority)}
                     </td>
+                    <td style={{ padding: "0.75rem 0.8rem", whiteSpace: "nowrap", verticalAlign: "middle", textAlign: "center" }}>
+                      {renderPriorityBadge((t as any).itPriority || t.requestedPriority)}
+                    </td>
                     <td style={{ padding: "0.75rem 0.8rem", whiteSpace: "nowrap", verticalAlign: "middle" }}>
                       {renderStatusBadge(t.status)}
                     </td>
-                    <td style={{ padding: "0.75rem 0.8rem", color: "#1F2937", fontWeight: 500, whiteSpace: "nowrap", verticalAlign: "middle" }}>
-                      👤 {t.requester?.displayName || activeRequester.displayName}
+                    <td style={{ padding: "0.75rem 0.8rem", color: "#1F2937", fontWeight: 500, whiteSpace: "nowrap", verticalAlign: "middle", textAlign: "center" }}>
+                      -
                     </td>
                     <td
                       title={new Date(t.updatedAt || t.createdAt).toLocaleString("en-US", { dateStyle: "full", timeStyle: "medium" })}

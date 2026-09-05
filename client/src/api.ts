@@ -132,6 +132,7 @@ export interface FetchMyTicketsParams {
   categoryId?: number;
   status?: string;
   priority?: string;
+  itPriority?: string;
   sortBy?: string;
   sortOrder?: string;
   page?: number;
@@ -156,6 +157,7 @@ export async function fetchMyTickets(params: FetchMyTicketsParams): Promise<Pagi
   if (params.categoryId) queryParams.set("categoryId", String(params.categoryId));
   if (params.status) queryParams.set("status", params.status);
   if (params.priority) queryParams.set("priority", params.priority);
+  if (params.itPriority) queryParams.set("itPriority", params.itPriority);
   if (params.sortBy) queryParams.set("sortBy", params.sortBy);
   if (params.sortOrder) queryParams.set("sortOrder", params.sortOrder);
   if (params.page) queryParams.set("page", String(params.page));
