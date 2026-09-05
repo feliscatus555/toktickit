@@ -468,14 +468,14 @@ export default function MyTickets({
       >
         <div
           style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            display: "flex",
+            flexWrap: "wrap",
             gap: "0.8rem",
-            alignItems: "center",
+            alignItems: "flex-end",
           }}
         >
           {/* Search Input */}
-          <div style={{ gridColumn: "1 / -1" }}>
+          <div style={{ flex: "1 1 240px", maxWidth: "340px", minWidth: "200px" }}>
             <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, color: "#5B6573", marginBottom: "0.25rem" }}>
               Search Summary or Ticket #
             </label>
@@ -519,7 +519,7 @@ export default function MyTickets({
           </div>
 
           {/* Category Filter */}
-          <div>
+          <div style={{ flex: "1 1 150px", maxWidth: "220px", minWidth: "140px" }}>
             <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, color: "#5B6573", marginBottom: "0.25rem" }}>
               Category
             </label>
@@ -548,7 +548,7 @@ export default function MyTickets({
           </div>
 
           {/* Status Filter */}
-          <div>
+          <div style={{ flex: "1 1 140px", maxWidth: "180px", minWidth: "130px" }}>
             <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, color: "#5B6573", marginBottom: "0.25rem" }}>
               Status
             </label>
@@ -579,7 +579,7 @@ export default function MyTickets({
           </div>
 
           {/* Requested Priority Filter */}
-          <div>
+          <div style={{ flex: "1 1 140px", maxWidth: "180px", minWidth: "130px" }}>
             <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, color: "#5B6573", marginBottom: "0.25rem" }}>
               Requested Priority
             </label>
@@ -607,7 +607,7 @@ export default function MyTickets({
           </div>
 
           {/* IT Priority Filter */}
-          <div>
+          <div style={{ flex: "1 1 140px", maxWidth: "180px", minWidth: "130px" }}>
             <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, color: "#5B6573", marginBottom: "0.25rem" }}>
               IT Priority
             </label>
@@ -633,8 +633,6 @@ export default function MyTickets({
               <option value="URGENT">Urgent</option>
             </select>
           </div>
-
-
         </div>
 
         {hasActiveFilters && (

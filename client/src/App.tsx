@@ -70,23 +70,76 @@ export default function App() {
       <header className="py-2 px-3 px-md-4 text-white shadow-sm" style={{ backgroundColor: "#006B3C", maxWidth: "100%", overflowX: "hidden" }}>
         <div className="container-fluid px-1 px-md-4">
           <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 py-1">
-            {/* Logo */}
-            <h1 className="h4 mb-0 fw-bold d-flex align-items-center gap-2" style={{ whiteSpace: "nowrap" }}>
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#FFFFFF"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <circle cx="12" cy="12" r="10" />
-                <polyline points="12 6 12 12 16 14" />
-              </svg>
-              <span>TokTickIT</span>
-            </h1>
+            {/* Logo + Desktop Navigation */}
+            <div className="d-flex align-items-center gap-3">
+              <h1 className="h4 mb-0 fw-bold d-flex align-items-center gap-2" style={{ whiteSpace: "nowrap" }}>
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#FFFFFF"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <polyline points="12 6 12 12 16 14" />
+                </svg>
+                <span>TokTickIT</span>
+              </h1>
+
+              {/* Desktop Nav Buttons */}
+              {currentRequester && !showSelectorModal && (
+                <div className="d-none d-md-flex gap-2 ms-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("my-tickets")}
+                    className="btn btn-sm text-white fw-semibold"
+                    style={{
+                      backgroundColor: activeTab === "my-tickets" ? "#0B7A46" : "transparent",
+                      border: activeTab === "my-tickets" ? "1px solid #EAF6EF" : "1px solid transparent",
+                      borderRadius: "6px",
+                      padding: "0.4rem 0.85rem",
+                      whiteSpace: "nowrap",
+                      fontSize: "0.88rem",
+                    }}
+                  >
+                    📋 My Tickets
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("create-ticket")}
+                    className="btn btn-sm text-white fw-semibold"
+                    style={{
+                      backgroundColor: activeTab === "create-ticket" ? "#0B7A46" : "transparent",
+                      border: activeTab === "create-ticket" ? "1px solid #EAF6EF" : "1px solid transparent",
+                      borderRadius: "6px",
+                      padding: "0.4rem 0.85rem",
+                      whiteSpace: "nowrap",
+                      fontSize: "0.88rem",
+                    }}
+                  >
+                    <span style={{ color: "#FFFFFF", fontWeight: "bold", marginRight: "4px" }}>+</span> Create Ticket
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab("system-status")}
+                    className="btn btn-sm text-white fw-semibold"
+                    style={{
+                      backgroundColor: activeTab === "system-status" ? "#0B7A46" : "transparent",
+                      border: activeTab === "system-status" ? "1px solid #EAF6EF" : "1px solid transparent",
+                      borderRadius: "6px",
+                      padding: "0.4rem 0.85rem",
+                      whiteSpace: "nowrap",
+                      fontSize: "0.88rem",
+                    }}
+                  >
+                    ⚙️ System Status
+                  </button>
+                </div>
+              )}
+            </div>
 
             {/* Requester Info */}
             <div className="d-flex align-items-center gap-2">
@@ -133,10 +186,10 @@ export default function App() {
             </div>
           </div>
 
-          {/* Navigation Bar Tabs */}
+          {/* Mobile Navigation Bar Tabs */}
           {currentRequester && !showSelectorModal && (
             <div
-              className="d-flex gap-1 gap-sm-2 mt-2 pt-2 border-top w-100"
+              className="d-flex d-md-none gap-1 mt-2 pt-2 border-top w-100"
               style={{
                 borderColor: "rgba(255, 255, 255, 0.2)",
               }}
