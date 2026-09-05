@@ -112,4 +112,78 @@ export async function checkSystem(): Promise<SystemStatus> {
   return { online: true, categories };
 }
 
+export interface TicketListItem {
+  id: string;
+  ticketNo: string;
+  summary: string;
+  status: string;
+  requestedPriority: string;
+  category: { id: number; name: string };
+  relatedSystem: { id: number; name: string };
+  requester?: { id: number; displayName: string; email: string };
+  attachmentCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FetchMyTicketsParams {
+  requesterId: number;
+  search?: string;
+  categoryId?: number;
+  status?: string;
+  priority?: string;
+  itPriority?: string;
+  sortBy?: string;
+  sortOrder?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface PaginatedTicketsResponse {
+  data: TicketListItem[];
+  pagination: {
+    page: number;
+    limit: number;
+    totalItems: number;
+    totalPages: number;
+  };
+}
+
+export async function fetchMyTickets(params: FetchMyTicketsParams): Promise<PaginatedTicketsResponse> {
+  const queryParams = new URLSearchParams();
+  queryParams.set("requesterId", String(params.requesterId));
+
+  if (params.search) queryParams.set("search", params.search);
+  if (params.categoryId) queryParams.set("categoryId", String(params.categoryId));
+  if (params.status) queryParams.set("status", params.status);
+  if (params.priority) queryParams.set("priority", params.priority);
+  if (params.itPriority) queryParams.set("itPriority", params.itPriority);
+  if (params.sortBy) queryParams.set("sortBy", params.sortBy);
+  if (params.sortOrder) queryParams.set("sortOrder", params.sortOrder);
+  if (params.page) queryParams.set("page", String(params.page));
+  if (params.limit) queryParams.set("limit", String(params.limit));
+
+  const res = await fetch(`${API_URL}/api/tickets?${queryParams.toString()}`, {
+    headers: {
+      "X-Development-Requester-Id": String(params.requesterId),
+    },
+  });
+
+  if (!res.ok) {
+    let errorMsg = "Failed to fetch tickets list";
+    try {
+      const errData = await res.json();
+      if (errData?.error?.message) {
+        errorMsg = errData.error.message;
+      } else if (errData?.message) {
+        errorMsg = errData.message;
+      }
+    } catch { }
+    throw new Error(errorMsg);
+  }
+
+  return res.json();
+}
+
+
 

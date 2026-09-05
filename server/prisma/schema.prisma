@@ -45,6 +45,12 @@ enum RequestedPriority {
 
 enum TicketStatus {
   New
+  InProgress
+  Assigned
+  Pending
+  Resolved
+  Closed
+  Cancelled
 }
 
 model RelatedSystem {

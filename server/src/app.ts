@@ -197,21 +197,36 @@ app.post("/api/tickets", async (req: Request, res: Response) => {
       return;
     }
 
-    const newTicket = await prisma.$transaction(async (tx) => {
-      const ticketNo = await generateTicketNo(tx);
-      return await tx.ticket.create({
-        data: {
-          ticketNo,
-          summary: trimmedSummary,
-          description: trimmedDescription,
-          requestedPriority,
-          status: "New",
-          requesterId,
-          categoryId,
-          relatedSystemId,
-        },
-      });
-    });
+    let attempts = 0;
+    let newTicket;
+    while (attempts < 5) {
+      try {
+        const ticketNo = await generateTicketNo(prisma);
+        newTicket = await prisma.ticket.create({
+          data: {
+            ticketNo,
+            summary: trimmedSummary,
+            description: trimmedDescription,
+            requestedPriority,
+            status: "New",
+            requesterId,
+            categoryId,
+            relatedSystemId,
+          },
+        });
+        break;
+      } catch (err: any) {
+        attempts++;
+        if (err?.code === "P2002" && attempts < 5) {
+          continue;
+        }
+        throw err;
+      }
+    }
+
+    if (!newTicket) {
+      throw new Error("Failed to generate unique ticket number after multiple attempts.");
+    }
 
     res.status(201).json(newTicket);
   } catch (error) {
@@ -220,5 +235,163 @@ app.post("/api/tickets", async (req: Request, res: Response) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// Feature 7 — My Tickets List API Endpoint
+// GET /api/tickets
+// Supports requester identity filtering, search, category/status/priority filters,
+// sorting, and pagination.
+// ---------------------------------------------------------------------------
+app.get("/api/tickets", async (req: Request, res: Response) => {
+  try {
+    const prisma = getPrisma();
+    const reqHeaderId = req.headers["x-development-requester-id"];
+    const queryRequesterId = req.query.requesterId;
+
+    const rawRequesterId = reqHeaderId || queryRequesterId;
+    const requesterId = Number(rawRequesterId);
+
+    if (!rawRequesterId || isNaN(requesterId)) {
+      res.status(400).json({
+        error: {
+          code: "MISSING_REQUESTER_ID",
+          message: "Development Requester ID is required (header or query parameter).",
+        },
+      });
+      return;
+    }
+
+    const search = typeof req.query.search === "string" ? req.query.search.trim() : "";
+    const categoryId = req.query.categoryId ? Number(req.query.categoryId) : undefined;
+    const status = typeof req.query.status === "string" ? req.query.status.trim() : undefined;
+    const priority = typeof req.query.priority === "string" ? req.query.priority.trim() : undefined;
+    const itPriority = typeof req.query.itPriority === "string" ? req.query.itPriority.trim() : undefined;
+
+    // Sorting params
+    const allowedSortFields = ["createdAt", "updatedAt", "ticketNo", "requestedPriority", "summary", "category", "system", "relatedSystem", "status"];
+    let sortBy = typeof req.query.sortBy === "string" ? req.query.sortBy.trim() : "createdAt";
+    if (!allowedSortFields.includes(sortBy)) {
+      sortBy = "createdAt";
+    }
+
+    let sortOrder: "asc" | "desc" = "desc";
+    if (typeof req.query.sortOrder === "string" && req.query.sortOrder.toLowerCase() === "asc") {
+      sortOrder = "asc";
+    }
+
+    // Pagination params
+    let page = req.query.page ? parseInt(req.query.page as string, 10) : 1;
+    if (isNaN(page) || page < 1) page = 1;
+
+    let limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 10;
+    if (isNaN(limit) || limit < 1) limit = 10;
+    if (limit > 50) limit = 50;
+
+    const where: any = {
+      requesterId,
+    };
+
+    if (search) {
+      where.OR = [
+        { summary: { contains: search, mode: "insensitive" } },
+        { ticketNo: { contains: search, mode: "insensitive" } },
+      ];
+    }
+
+    if (categoryId && !isNaN(categoryId)) {
+      where.categoryId = categoryId;
+    }
+
+    if (status) {
+      if (status === "In Progress" || status === "InProgress") {
+        where.status = "InProgress";
+      } else {
+        where.status = status;
+      }
+    }
+
+    const targetPriority = itPriority || priority;
+    if (targetPriority) {
+      where.requestedPriority = targetPriority;
+    }
+
+    const totalItems = await prisma.ticket.count({ where });
+    const totalPages = Math.ceil(totalItems / limit) || 1;
+
+    let targetPage = page;
+    if (totalItems > 0 && targetPage > totalPages) {
+      targetPage = totalPages;
+    }
+    const skip = (targetPage - 1) * limit;
+
+    let sortClause: any;
+    if (sortBy === "category") {
+      sortClause = { category: { name: sortOrder } };
+    } else if (sortBy === "system" || sortBy === "relatedSystem") {
+      sortClause = { relatedSystem: { name: sortOrder } };
+    } else {
+      sortClause = { [sortBy]: sortOrder };
+    }
+
+    const orderBy: any[] = [sortClause];
+    if (sortBy !== "id") {
+      orderBy.push({ id: "desc" });
+    }
+
+    const tickets = await prisma.ticket.findMany({
+      where,
+      select: {
+        id: true,
+        ticketNo: true,
+        summary: true,
+        status: true,
+        requestedPriority: true,
+        category: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        relatedSystem: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        requester: {
+          select: {
+            id: true,
+            displayName: true,
+            email: true,
+          },
+        },
+        createdAt: true,
+        updatedAt: true,
+      },
+      orderBy,
+      skip,
+      take: limit,
+    });
+
+    const data = tickets.map((ticket) => ({
+      ...ticket,
+      attachmentCount: 0,
+    }));
+
+    res.status(200).json({
+      data,
+      pagination: {
+        page: targetPage,
+        limit,
+        totalItems,
+        totalPages,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching tickets", error);
+    res.status(500).json({ error: "Failed to fetch tickets." });
+  }
+});
+
 export default app;
+
 
