@@ -6,10 +6,10 @@
 ## Pull Requests I authored (reviewed by my partner)
 | PR | Branch | Reviewer verdict |
 |----|--------|------------------|
-| Feature 5, dev requester context successfully implemented #15 | feature/5-dev-requester-context | Everything works fine |
-| implemented the create ticket feature and its required db #16 | feature/6-ticket-creation | Everything is resolved and all tests pass. Good job. |
-| Feature/7 my tickets list #17 | feature/7-my-tickets-list| Looks good. |
-|  # | feature/8-ticket-detail |  |
+| https://github.com/feliscatus555/toktickit/pull/15 | feature/5-dev-requester-context | Everything works fine |
+| https://github.com/feliscatus555/toktickit/pull/16 | feature/6-ticket-creation | Everything is resolved and all tests pass. Good job. |
+| https://github.com/feliscatus555/toktickit/pull/17 | feature/7-my-tickets-list| Looks good. |
+| https://github.com/feliscatus555/toktickit/pull/18 | feature/8-ticket-detail |  |
 | Lab 2 release # | lab2-staging | Approved |
 
 Reviewer comment: Why is there no mention of the Attachment Upload feature?
