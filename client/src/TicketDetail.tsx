@@ -299,6 +299,20 @@ export default function TicketDetail({ ticketId, currentRequester, onBack }: Tic
               <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block" }}>Requested Priority</label>
               <div style={{ marginTop: "0.2rem" }}>{renderPriorityBadge(ticket.requestedPriority)}</div>
             </div>
+
+            <div className="col-12 col-sm-6 col-md-3">
+              <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block" }}>IT Priority</label>
+              <div style={{ marginTop: "0.2rem" }}>
+                {renderPriorityBadge(ticket.itPriority || ticket.requestedPriority)}
+              </div>
+            </div>
+
+            <div className="col-12 col-sm-6 col-md-3">
+              <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block" }}>Ticket Owner</label>
+              <div style={{ fontSize: "0.95rem", fontWeight: 600, color: "#1F2937" }}>
+                {ticket.ownerName || "Unassigned"}
+              </div>
+            </div>
           </div>
 
           <hr style={{ borderColor: "#E5E7EB" }} />
@@ -324,7 +338,7 @@ export default function TicketDetail({ ticketId, currentRequester, onBack }: Tic
           </div>
 
           {/* Ticket Description */}
-          <div>
+          <div className="mb-4">
             <label style={{ fontSize: "0.8rem", fontWeight: 700, color: "#5B6573", display: "block", marginBottom: "0.3rem" }}>
               Description
             </label>
@@ -344,8 +358,38 @@ export default function TicketDetail({ ticketId, currentRequester, onBack }: Tic
               {ticket.description}
             </div>
           </div>
+
+          {/* Resolution Summary Box */}
+          <div className="mb-2">
+            <label style={{ fontSize: "0.8rem", fontWeight: 700, color: "#5B6573", display: "block", marginBottom: "0.3rem" }}>
+              Resolution Summary
+            </label>
+            <div
+              style={{
+                backgroundColor: ticket.resolutionSummary ? "#EAF6EF" : "#F9FAFB",
+                border: ticket.resolutionSummary ? "1px solid #0B7A46" : "1px solid #E5E7EB",
+                borderRadius: "6px",
+                padding: "0.85rem 1rem",
+                fontSize: "0.95rem",
+                color: ticket.resolutionSummary ? "#006B3C" : "#6B7280",
+                whiteSpace: "pre-wrap",
+                lineHeight: 1.5,
+                minHeight: "65px",
+              }}
+            >
+              {ticket.resolutionSummary ? (
+                <div style={{ display: "flex", gap: "0.5rem", alignItems: "flex-start" }}>
+                  <span style={{ fontWeight: "bold", fontSize: "1.1rem" }}>✓</span>
+                  <div>{ticket.resolutionSummary}</div>
+                </div>
+              ) : (
+                <em style={{ color: "#9CA3AF" }}>No resolution summary provided yet. (Pending IT Staff resolution)</em>
+              )}
+            </div>
+          </div>
         </div>
       </div>
+
 
       {/* Attachments Section Card */}
       <div className="card shadow-sm mb-4" style={{ borderRadius: "8px", border: "1px solid #E0E0E0" }}>

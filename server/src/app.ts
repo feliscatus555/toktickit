@@ -367,6 +367,9 @@ app.get("/api/tickets", async (req: Request, res: Response) => {
         summary: true,
         status: true,
         requestedPriority: true,
+        itPriority: true,
+        ownerName: true,
+        resolutionSummary: true,
         category: {
           select: {
             id: true,
@@ -452,8 +455,12 @@ app.get("/api/tickets/:id", async (req: Request, res: Response) => {
         description: true,
         status: true,
         requestedPriority: true,
+        itPriority: true,
+        ownerName: true,
+        resolutionSummary: true,
         requesterId: true,
         version: true,
+
         requester: {
           select: {
             id: true,

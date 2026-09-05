@@ -55,10 +55,14 @@ describe("UI Component — TicketDetail.tsx", () => {
     expect(screen.getByText("Laptop battery drains rapidly after update")).toBeInTheDocument();
     expect(screen.getByText("Hardware")).toBeInTheDocument();
     expect(screen.getByText("Email")).toBeInTheDocument();
+    expect(screen.getByText("IT Priority")).toBeInTheDocument();
+    expect(screen.getByText("Ticket Owner")).toBeInTheDocument();
+    expect(screen.getByText("Resolution Summary")).toBeInTheDocument();
     expect(screen.getByText("battery_log.pdf")).toBeInTheDocument();
     expect(screen.getByText("Download")).toBeInTheDocument();
     expect(screen.getByText("Remove")).toBeInTheDocument();
   });
+
 
   it("triggers onBack callback when clicking Back button", async () => {
     vi.spyOn(api, "fetchTicketDetail").mockResolvedValue(mockTicketData);

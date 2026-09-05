@@ -204,6 +204,9 @@ export interface TicketDetail {
   description: string;
   status: string;
   requestedPriority: string;
+  itPriority?: string | null;
+  ownerName?: string | null;
+  resolutionSummary?: string | null;
   requesterId: number;
   version: number;
   requester: { id: number; displayName: string; email: string };
@@ -213,6 +216,7 @@ export interface TicketDetail {
   createdAt: string;
   updatedAt: string;
 }
+
 
 export interface SoftRemoveAttachmentResponse {
   message: string;
