@@ -110,7 +110,7 @@ export default function MyTickets({
     let nextOrder: "asc" | "desc" = "asc";
     if (currentSortField === field) {
       nextOrder = currentSortOrder === "asc" ? "desc" : "asc";
-    } else if (field === "createdAt" || field === "requestedPriority") {
+    } else if (field === "createdAt" || field === "updatedAt" || field === "requestedPriority") {
       nextOrder = "desc";
     }
     setSortOption(`${field}:${nextOrder}`);
@@ -701,7 +701,7 @@ export default function MyTickets({
                   <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, whiteSpace: "nowrap", textAlign: "center" }}>Requested Priority</th>
                   <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, whiteSpace: "nowrap" }}>Status</th>
                   <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, whiteSpace: "nowrap" }}>Ticket Owner</th>
-                  <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, whiteSpace: "nowrap" }}>Last Updated</th>
+                  {renderSortHeader("Last Updated", "updatedAt")}
                   <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, textAlign: "left", whiteSpace: "nowrap" }}>Actions</th>
                 </tr>
               </thead>

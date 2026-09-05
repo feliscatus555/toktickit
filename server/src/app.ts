@@ -266,7 +266,7 @@ app.get("/api/tickets", async (req: Request, res: Response) => {
     const priority = typeof req.query.priority === "string" ? req.query.priority.trim() : undefined;
 
     // Sorting params
-    const allowedSortFields = ["createdAt", "ticketNo", "requestedPriority", "summary", "category", "system", "relatedSystem", "status"];
+    const allowedSortFields = ["createdAt", "updatedAt", "ticketNo", "requestedPriority", "summary", "category", "system", "relatedSystem", "status"];
     let sortBy = typeof req.query.sortBy === "string" ? req.query.sortBy.trim() : "createdAt";
     if (!allowedSortFields.includes(sortBy)) {
       sortBy = "createdAt";
