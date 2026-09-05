@@ -76,6 +76,22 @@ model Ticket {
   relatedSystemId   Int
   relatedSystem     RelatedSystem     @relation(fields: [relatedSystemId], references: [id])
   version           Int               @default(1)
+  attachments       Attachment[]
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
+}
+
+model Attachment {
+  id               String    @id @default(uuid())
+  ticketId         String
+  ticket           Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  originalFilename String
+  mimeType         String
+  sizeBytes        Int
+  storageKey       String
+  isDeleted        Boolean   @default(false)
+  deletedAt        DateTime?
+  deletedById      Int?
+  deletionReason   String?
+  createdAt        DateTime  @default(now())
 }
