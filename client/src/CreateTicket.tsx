@@ -33,6 +33,7 @@ export default function CreateTicket({ activeRequester, onSuccess }: CreateTicke
   const [attachments, setAttachments] = useState<File[]>([]);
   const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [showRequesterTooltip, setShowRequesterTooltip] = useState<boolean>(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
@@ -243,6 +244,7 @@ export default function CreateTicket({ activeRequester, onSuccess }: CreateTicke
     );
   }
 
+
   return (
     <div
       style={{
@@ -259,8 +261,113 @@ export default function CreateTicket({ activeRequester, onSuccess }: CreateTicke
         Create IT Support Ticket
       </h2>
 
-      <div style={{ marginBottom: "1.5rem", fontSize: "0.9rem", color: "#555" }}>
-        Requester: <strong>{activeRequester.displayName}</strong> ({activeRequester.email})
+      {/* Read-Only System Information Strip */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          gap: "1rem",
+          backgroundColor: "#F5F7F6",
+          border: "1px solid #E0E0E0",
+          borderRadius: "8px",
+          padding: "1rem",
+          marginBottom: "1.5rem",
+        }}
+      >
+        <div>
+          <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", color: "#5B6573", marginBottom: "0.2rem" }}>
+            Ticket Number
+          </label>
+          <div
+            title={`TKT-${new Date().getFullYear()}-XXXXX (Auto)`}
+            style={{
+              backgroundColor: "#E9ECEF",
+              padding: "0.45rem 0.7rem",
+              borderRadius: "4px",
+              fontSize: "0.9rem",
+              fontWeight: 600,
+              color: "#006B3C",
+              border: "1px solid #D1D5DB",
+            }}
+          >
+            TKT-{new Date().getFullYear()}-XXXXX (Auto)
+          </div>
+        </div>
+
+        <div>
+          <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", color: "#5B6573", marginBottom: "0.2rem" }}>
+            Ticket Date
+          </label>
+          <div
+            title={new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+            style={{
+              backgroundColor: "#E9ECEF",
+              padding: "0.45rem 0.7rem",
+              borderRadius: "4px",
+              fontSize: "0.9rem",
+              fontWeight: 600,
+              color: "#1F2937",
+              border: "1px solid #D1D5DB",
+            }}
+          >
+            {new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+          </div>
+        </div>
+
+        <div
+          onMouseEnter={() => setShowRequesterTooltip(true)}
+          onMouseLeave={() => setShowRequesterTooltip(false)}
+          title={`👤 ${activeRequester.displayName} (${activeRequester.email})`}
+          style={{ position: "relative", cursor: "pointer" }}
+        >
+          <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, textTransform: "uppercase", color: "#5B6573", marginBottom: "0.2rem", cursor: "pointer" }}>
+            Requester Identity
+          </label>
+          <div
+            title={`👤 ${activeRequester.displayName} (${activeRequester.email})`}
+            style={{
+              backgroundColor: "#E9ECEF",
+              padding: "0.45rem 0.7rem",
+              borderRadius: "4px",
+              fontSize: "0.9rem",
+              fontWeight: 600,
+              color: "#1F2937",
+              border: "1px solid #D1D5DB",
+              wordBreak: "break-word",
+              lineHeight: "1.3",
+              cursor: "pointer",
+            }}
+          >
+            👤 {activeRequester.displayName} ({activeRequester.email})
+          </div>
+
+          {showRequesterTooltip && (
+            <div
+              style={{
+                position: "absolute",
+                bottom: "105%",
+                left: "50%",
+                transform: "translateX(-50%)",
+                backgroundColor: "#1F2937",
+                color: "#FFFFFF",
+                padding: "0.55rem 0.85rem",
+                borderRadius: "6px",
+                fontSize: "0.85rem",
+                fontWeight: 500,
+                whiteSpace: "normal",
+                wordBreak: "break-word",
+                minWidth: "220px",
+                maxWidth: "340px",
+                boxShadow: "0 4px 14px rgba(0,0,0,0.18)",
+                zIndex: 100,
+                pointerEvents: "none",
+                textAlign: "center",
+              }}
+            >
+              👤 {activeRequester.displayName} ({activeRequester.email})
+            </div>
+          )}
+        </div>
       </div>
 
       {generalError && (
@@ -496,7 +603,7 @@ export default function CreateTicket({ activeRequester, onSuccess }: CreateTicke
                     >
                       <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", overflow: "hidden" }}>
                         <span style={{ fontSize: "1.2rem" }}>{isPdf ? "📄" : "🖼️"}</span>
-                        <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                        <div title={file.name} style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           <div style={{ fontWeight: 600, fontSize: "0.9rem", color: "#1F2937" }}>{file.name}</div>
                           <div style={{ fontSize: "0.8rem", color: "#6B7280" }}>
                             {(file.size / (1024 * 1024)).toFixed(2)} MB
@@ -530,26 +637,55 @@ export default function CreateTicket({ activeRequester, onSuccess }: CreateTicke
           )}
         </div>
 
-        {/* Submit Button */}
-        <button
-          type="submit"
-          disabled={submitting}
+        {/* Action Footer Aligned to Right */}
+        <div
           style={{
-            backgroundColor: submitting ? "#A0C4B4" : "#006B3C",
-            color: "#FFFFFF",
-            padding: "0.75rem 1.5rem",
-            border: "none",
-            borderRadius: "6px",
-            fontSize: "1rem",
-            fontWeight: 600,
-            cursor: submitting ? "not-allowed" : "pointer",
-            display: "inline-flex",
+            display: "flex",
+            justifyContent: "flex-end",
             alignItems: "center",
-            gap: "0.5rem",
+            gap: "0.75rem",
+            marginTop: "2rem",
+            paddingTop: "1rem",
+            borderTop: "1px solid #EAF6EF",
           }}
         >
-          {submitting ? "Submitting Ticket..." : "Submit Ticket"}
-        </button>
+          <button
+            type="button"
+            onClick={handleReset}
+            disabled={submitting}
+            style={{
+              backgroundColor: "#EAF6EF",
+              color: "#006B3C",
+              border: "1px solid #0B7A46",
+              padding: "0.75rem 1.5rem",
+              borderRadius: "6px",
+              fontSize: "1rem",
+              fontWeight: 600,
+              cursor: submitting ? "not-allowed" : "pointer",
+            }}
+          >
+            Reset Form
+          </button>
+          <button
+            type="submit"
+            disabled={submitting}
+            style={{
+              backgroundColor: submitting ? "#A0C4B4" : "#006B3C",
+              color: "#FFFFFF",
+              padding: "0.75rem 1.5rem",
+              border: "none",
+              borderRadius: "6px",
+              fontSize: "1rem",
+              fontWeight: 600,
+              cursor: submitting ? "not-allowed" : "pointer",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.5rem",
+            }}
+          >
+            {submitting ? "Submitting Ticket..." : "Submit Ticket"}
+          </button>
+        </div>
       </form>
     </div>
   );

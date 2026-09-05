@@ -107,7 +107,7 @@ export default function App() {
           <div className="d-flex align-items-center gap-3">
             {currentRequester ? (
               <div className="d-flex align-items-center gap-2">
-                <span className="badge bg-light text-dark py-2 px-3 fs-6">
+                <span className="badge bg-light text-dark py-2 px-3 fs-6" title={`👤 ${currentRequester.displayName} (${currentRequester.email})`}>
                   👤 {currentRequester.displayName} ({currentRequester.email})
                 </span>
                 <button

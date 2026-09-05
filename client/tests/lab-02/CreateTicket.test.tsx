@@ -54,6 +54,39 @@ describe("CreateTicket Component", () => {
     expect(screen.getByText(/Description must be between 10 and 2000 characters long/i)).toBeInTheDocument();
   });
 
+  it("validates attachment file format and size limits", async () => {
+    vi.spyOn(api, "fetchCategories").mockResolvedValue([{ id: 1, name: "Hardware" }]);
+    vi.spyOn(api, "fetchRelatedSystems").mockResolvedValue([{ id: 1, name: "Email" }]);
+
+    const { container } = render(<CreateTicket activeRequester={activeRequester} />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Create IT Support Ticket/i)).toBeInTheDocument();
+    });
+
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
+    expect(fileInput).toBeInTheDocument();
+
+    // 1. Invalid file extension (.exe)
+    const invalidFile = new File(["binary content"], "script.exe", { type: "application/x-msdownload" });
+    fireEvent.change(fileInput, { target: { files: [invalidFile] } });
+
+    expect(await screen.findByText(/Invalid file format "script.exe"/i)).toBeInTheDocument();
+
+    // 2. Oversized file (> 5 MB)
+    const oversizedFile = new File([new ArrayBuffer(6 * 1024 * 1024)], "large.pdf", { type: "application/pdf" });
+    fireEvent.change(fileInput, { target: { files: [oversizedFile] } });
+
+    expect(await screen.findByText(/exceeds the 5 MB limit/i)).toBeInTheDocument();
+
+    // 3. Valid attachment
+    const validFile = new File(["valid pdf content"], "attachment.pdf", { type: "application/pdf" });
+    fireEvent.change(fileInput, { target: { files: [validFile] } });
+
+    expect(await screen.findByText(/attachment.pdf/i)).toBeInTheDocument();
+    expect(screen.getByText(/Selected Attachments \(1\/5\)/i)).toBeInTheDocument();
+  });
+
   it("submits form data successfully and renders ticket creation feedback with ticketNo", async () => {
     vi.spyOn(api, "fetchCategories").mockResolvedValue([{ id: 1, name: "Hardware" }]);
     vi.spyOn(api, "fetchRelatedSystems").mockResolvedValue([{ id: 1, name: "Email" }]);
