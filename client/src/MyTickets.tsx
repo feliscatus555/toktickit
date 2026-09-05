@@ -550,14 +550,14 @@ export default function MyTickets({
                     color: "#5B6573",
                   }}
                 >
-                  <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700 }}>Ticket #</th>
-                  <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700 }}>Summary</th>
-                  <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700 }}>Category</th>
-                  <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700 }}>System</th>
-                  <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700 }}>Priority</th>
-                  <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700 }}>Status</th>
-                  <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700 }}>Created Date</th>
-                  <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, textAlign: "right" }}>Actions</th>
+                  <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, whiteSpace: "nowrap" }}>Ticket #</th>
+                  <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, whiteSpace: "nowrap" }}>Summary</th>
+                  <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, whiteSpace: "nowrap" }}>Category</th>
+                  <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, whiteSpace: "nowrap" }}>System</th>
+                  <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, whiteSpace: "nowrap" }}>Priority</th>
+                  <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, whiteSpace: "nowrap" }}>Status</th>
+                  <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, whiteSpace: "nowrap" }}>Created Date</th>
+                  <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, textAlign: "right", whiteSpace: "nowrap" }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -575,7 +575,7 @@ export default function MyTickets({
                       e.currentTarget.style.backgroundColor = "transparent";
                     }}
                   >
-                    <td style={{ padding: "0.75rem 0.8rem", fontWeight: 700, color: "#006B3C" }}>
+                    <td style={{ padding: "0.75rem 0.8rem", fontWeight: 700, color: "#006B3C", whiteSpace: "nowrap", verticalAlign: "middle" }}>
                       {t.ticketNo}
                     </td>
                     <td
@@ -588,30 +588,31 @@ export default function MyTickets({
                         whiteSpace: "nowrap",
                         color: "#1F2937",
                         fontWeight: 500,
+                        verticalAlign: "middle",
                       }}
                     >
                       {t.summary}
                     </td>
-                    <td style={{ padding: "0.75rem 0.8rem", color: "#5B6573" }}>
+                    <td style={{ padding: "0.75rem 0.8rem", color: "#5B6573", whiteSpace: "nowrap", verticalAlign: "middle" }}>
                       {t.category?.name || "—"}
                     </td>
-                    <td style={{ padding: "0.75rem 0.8rem", color: "#5B6573" }}>
+                    <td style={{ padding: "0.75rem 0.8rem", color: "#5B6573", whiteSpace: "nowrap", verticalAlign: "middle" }}>
                       {t.relatedSystem?.name || "—"}
                     </td>
-                    <td style={{ padding: "0.75rem 0.8rem" }}>
+                    <td style={{ padding: "0.75rem 0.8rem", whiteSpace: "nowrap", verticalAlign: "middle" }}>
                       {renderPriorityBadge(t.requestedPriority)}
                     </td>
-                    <td style={{ padding: "0.75rem 0.8rem" }}>
+                    <td style={{ padding: "0.75rem 0.8rem", whiteSpace: "nowrap", verticalAlign: "middle" }}>
                       {renderStatusBadge(t.status)}
                     </td>
-                    <td style={{ padding: "0.75rem 0.8rem", color: "#6B7280", fontSize: "0.85rem" }}>
+                    <td style={{ padding: "0.75rem 0.8rem", color: "#6B7280", fontSize: "0.85rem", whiteSpace: "nowrap", verticalAlign: "middle" }}>
                       {new Date(t.createdAt).toLocaleDateString("en-US", {
                         year: "numeric",
                         month: "short",
                         day: "numeric",
                       })}
                     </td>
-                    <td style={{ padding: "0.75rem 0.8rem", textAlign: "right" }}>
+                    <td style={{ padding: "0.75rem 0.8rem", textAlign: "right", whiteSpace: "nowrap", verticalAlign: "middle" }}>
                       <button
                         type="button"
                         onClick={() => {
