@@ -299,7 +299,7 @@ export default function CreateTicket({ activeRequester, onSuccess }: CreateTicke
             Ticket Date
           </label>
           <div
-            title={new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+            title={new Date().toLocaleString("en-US", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}
             style={{
               backgroundColor: "#E9ECEF",
               padding: "0.45rem 0.7rem",
@@ -310,7 +310,7 @@ export default function CreateTicket({ activeRequester, onSuccess }: CreateTicke
               border: "1px solid #D1D5DB",
             }}
           >
-            {new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}
+            {new Date().toLocaleString("en-US", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}
           </div>
         </div>
 

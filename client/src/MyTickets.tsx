@@ -185,19 +185,96 @@ export default function MyTickets({
   };
 
   const renderStatusBadge = (s: string) => {
+    const statusKey = s ? s.trim() : "";
+    if (statusKey === "Pending") {
+      return (
+        <span
+          style={{
+            backgroundColor: "#FEF3C7",
+            color: "#92400E",
+            padding: "0.25rem 0.6rem",
+            borderRadius: "12px",
+            fontSize: "0.8rem",
+            fontWeight: 600,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "0.3rem",
+            border: "1px solid #F59E0B",
+          }}
+        >
+          ● Pending
+        </span>
+      );
+    }
+    if (statusKey === "Open" || statusKey === "New") {
+      return (
+        <span
+          style={{
+            backgroundColor: "#EAF6EF",
+            color: "#006B3C",
+            padding: "0.25rem 0.6rem",
+            borderRadius: "12px",
+            fontSize: "0.8rem",
+            fontWeight: 600,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "0.3rem",
+            border: "1px solid #B5D5C5",
+          }}
+        >
+          ● {statusKey}
+        </span>
+      );
+    }
+    if (statusKey === "InProgress" || statusKey === "In Progress") {
+      return (
+        <span
+          style={{
+            backgroundColor: "#E0E7FF",
+            color: "#3730A3",
+            padding: "0.25rem 0.6rem",
+            borderRadius: "12px",
+            fontSize: "0.8rem",
+            fontWeight: 600,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "0.3rem",
+            border: "1px solid #A5B4FC",
+          }}
+        >
+          ⚙ In Progress
+        </span>
+      );
+    }
+    if (statusKey === "Resolved") {
+      return (
+        <span
+          style={{
+            backgroundColor: "#D1FAE5",
+            color: "#065F46",
+            padding: "0.25rem 0.6rem",
+            borderRadius: "12px",
+            fontSize: "0.8rem",
+            fontWeight: 600,
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "0.3rem",
+            border: "1px solid #34D399",
+          }}
+        >
+          ✓ Resolved
+        </span>
+      );
+    }
     return (
       <span
         style={{
-          backgroundColor: "#EAF6EF",
-          color: "#006B3C",
+          backgroundColor: "#F3F4F6",
+          color: "#4B5563",
           padding: "0.25rem 0.6rem",
           borderRadius: "12px",
           fontSize: "0.8rem",
           fontWeight: 600,
-          display: "inline-flex",
-          alignItems: "center",
-          gap: "0.3rem",
-          border: "1px solid #B5D5C5",
         }}
       >
         ● {s}
@@ -358,14 +435,17 @@ export default function MyTickets({
               }}
             >
               <option value="">All Statuses</option>
-              <option value="New">New</option>
+              <option value="Pending">Pending</option>
+              <option value="Open">Open</option>
+              <option value="InProgress">In Progress</option>
+              <option value="Resolved">Resolved</option>
             </select>
           </div>
 
           {/* Priority Filter */}
           <div>
             <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, color: "#5B6573", marginBottom: "0.25rem" }}>
-              Priority
+              Requested Priority
             </label>
             <select
               value={priority}
@@ -551,12 +631,12 @@ export default function MyTickets({
                   }}
                 >
                   <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, whiteSpace: "nowrap" }}>Ticket #</th>
+                  <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, whiteSpace: "nowrap" }}>Created Date</th>
                   <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, whiteSpace: "nowrap" }}>Summary</th>
                   <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, whiteSpace: "nowrap" }}>Category</th>
                   <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, whiteSpace: "nowrap" }}>System</th>
-                  <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, whiteSpace: "nowrap" }}>Priority</th>
+                  <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, whiteSpace: "nowrap", textAlign: "center" }}>Requested Priority</th>
                   <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, whiteSpace: "nowrap" }}>Status</th>
-                  <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, whiteSpace: "nowrap" }}>Created Date</th>
                   <th style={{ padding: "0.75rem 0.8rem", fontWeight: 700, textAlign: "right", whiteSpace: "nowrap" }}>Actions</th>
                 </tr>
               </thead>
@@ -579,6 +659,18 @@ export default function MyTickets({
                       {t.ticketNo}
                     </td>
                     <td
+                      title={new Date(t.createdAt).toLocaleString("en-US", { dateStyle: "full", timeStyle: "medium" })}
+                      style={{ padding: "0.75rem 0.8rem", color: "#6B7280", fontSize: "0.85rem", whiteSpace: "nowrap", verticalAlign: "middle" }}
+                    >
+                      {new Date(t.createdAt).toLocaleString("en-US", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </td>
+                    <td
                       title={t.summary}
                       style={{
                         padding: "0.75rem 0.8rem",
@@ -599,18 +691,11 @@ export default function MyTickets({
                     <td style={{ padding: "0.75rem 0.8rem", color: "#5B6573", whiteSpace: "nowrap", verticalAlign: "middle" }}>
                       {t.relatedSystem?.name || "—"}
                     </td>
-                    <td style={{ padding: "0.75rem 0.8rem", whiteSpace: "nowrap", verticalAlign: "middle" }}>
+                    <td style={{ padding: "0.75rem 0.8rem", whiteSpace: "nowrap", verticalAlign: "middle", textAlign: "center" }}>
                       {renderPriorityBadge(t.requestedPriority)}
                     </td>
                     <td style={{ padding: "0.75rem 0.8rem", whiteSpace: "nowrap", verticalAlign: "middle" }}>
                       {renderStatusBadge(t.status)}
-                    </td>
-                    <td style={{ padding: "0.75rem 0.8rem", color: "#6B7280", fontSize: "0.85rem", whiteSpace: "nowrap", verticalAlign: "middle" }}>
-                      {new Date(t.createdAt).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })}
                     </td>
                     <td style={{ padding: "0.75rem 0.8rem", textAlign: "right", whiteSpace: "nowrap", verticalAlign: "middle" }}>
                       <button

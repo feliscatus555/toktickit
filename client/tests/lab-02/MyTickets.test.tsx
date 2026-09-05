@@ -19,7 +19,7 @@ const mockTicketList: api.TicketListItem[] = [
     id: "t1",
     ticketNo: "TKT-2026-00001",
     summary: "Laptop battery issue after OS update",
-    status: "New",
+    status: "Pending",
     requestedPriority: "HIGH",
     category: { id: 2, name: "Hardware" },
     relatedSystem: { id: 1, name: "Email" },
@@ -50,7 +50,7 @@ describe("MyTickets Component", () => {
       expect(screen.getByText("TKT-2026-00001")).toBeInTheDocument();
       expect(screen.getByText("Laptop battery issue after OS update")).toBeInTheDocument();
       expect(screen.getByText("↑ High")).toBeInTheDocument();
-      expect(screen.getByText("● New")).toBeInTheDocument();
+      expect(screen.getByText("● Pending")).toBeInTheDocument();
     });
   });
 
@@ -91,6 +91,20 @@ describe("MyTickets Component", () => {
 
     await waitFor(() => {
       expect(searchInput).toHaveValue("");
+    });
+  });
+
+  it("displays error message banner when fetching tickets fails", async () => {
+    vi.spyOn(api, "fetchMyTickets").mockRejectedValue(
+      new Error("Failed to fetch tickets list from server")
+    );
+
+    render(<MyTickets activeRequester={mockRequester} />);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/Failed to fetch tickets list from server/i)
+      ).toBeInTheDocument();
     });
   });
 

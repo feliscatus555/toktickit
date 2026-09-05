@@ -208,7 +208,7 @@ app.post("/api/tickets", async (req: Request, res: Response) => {
             summary: trimmedSummary,
             description: trimmedDescription,
             requestedPriority,
-            status: "New",
+            status: "Pending",
             requesterId,
             categoryId,
             relatedSystemId,
@@ -301,7 +301,11 @@ app.get("/api/tickets", async (req: Request, res: Response) => {
     }
 
     if (status) {
-      where.status = status;
+      if (status === "In Progress" || status === "InProgress") {
+        where.status = "InProgress";
+      } else {
+        where.status = status;
+      }
     }
 
     if (priority) {

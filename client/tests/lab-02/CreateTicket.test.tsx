@@ -95,7 +95,7 @@ describe("CreateTicket Component", () => {
       ticketNo: "TKT-2026-00001",
       summary: "Valid summary for ticket testing",
       description: "Valid description for ticket testing with enough characters",
-      status: "New",
+      status: "Pending",
       requestedPriority: "HIGH",
       requesterId: 1,
       categoryId: 1,

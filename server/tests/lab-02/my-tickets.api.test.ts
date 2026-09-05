@@ -109,14 +109,14 @@ describe("GET /api/tickets (My Tickets List API)", () => {
 
     const res = await request(app)
       .get("/api/tickets")
-      .query({ requesterId, categoryId, priority: "HIGH", status: "New" });
+      .query({ requesterId, categoryId, priority: "HIGH", status: "Pending" });
 
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body.data)).toBe(true);
     res.body.data.forEach((ticket: any) => {
       expect(ticket.category.id).toBe(categoryId);
       expect(ticket.requestedPriority).toBe("HIGH");
-      expect(ticket.status).toBe("New");
+      expect(ticket.status).toBe("Pending");
     });
   });
 
