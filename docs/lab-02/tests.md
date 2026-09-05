@@ -89,8 +89,8 @@ npx playwright test --config=e2e/playwright.config.ts
 
 ## 5. Responsive and Visual Inspection Checklist
 
-- [/] **Desktop Viewport (`1280px`)**: Multi-column form layout, header navigation alignment, My Tickets table grid display without text truncation.
-- [/] **Tablet Viewport (`768px`)**: Two-column field grouping, Summary and Description inputs span 100% width, flexible table grid container.
-- [/] **Mobile Viewport (`375px`)**: Single-column vertical stacking, My Tickets table transforms into card view, touch targets >= 44x44px, zero horizontal page scroll bar (`overflow-x: hidden`).
-- [/] **Zen Green Visual Palette**: Primary Green `#006B3C` header, Pale Green `#EAF6EF` selection highlight, dark red `#B3261E` validation error text below inputs.
-- [/] **Non-Color Indicators**: Priority and Status badges contain visible icons (`↑ High`, `● New`).
+- [x] **Desktop Viewport (`1280px`)**: Multi-column form layout, header navigation alignment, My Tickets table grid display without text truncation.
+- [x] **Tablet Viewport (`768px`)**: Two-column field grouping, Summary and Description inputs span 100% width, flexible table grid container.
+- [x] **Mobile Viewport (`375px`)**: Single-column vertical stacking, My Tickets table transforms into card view, touch targets >= 44x44px, zero horizontal page scroll bar (`overflow-x: hidden`).
+- [x] **Zen Green Visual Palette**: Primary Green `#006B3C` header, Pale Green `#EAF6EF` selection highlight, dark red `#B3261E` validation error text below inputs.
+- [x] **Non-Color Indicators**: Priority and Status badges contain visible icons (`↑ High`, `● New`).
