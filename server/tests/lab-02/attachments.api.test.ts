@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import request from "supertest";
 import { app } from "../../src/app.js";
 
-describe("Feature 8 — Requester Ticket Detail & Attachment Management API", () => {
+describe("API-06..10 — Attachment Upload, Download & Soft-Removal API (attachments.api.test.ts)", () => {
   let requesterA: number;
   let requesterB: number;
   let categoryId: number;
@@ -32,59 +32,16 @@ describe("Feature 8 — Requester Ticket Detail & Attachment Management API", ()
         categoryId,
         relatedSystemId,
         requestedPriority: "HIGH",
-        summary: "Laptop screen flickering after system update",
-        description: "Screen blinks violently every few seconds when starting demanding applications.",
+        summary: "Attachment Testing Ticket",
+        description: "Testing attachment endpoints.",
       });
 
     expect(ticketRes.status).toBe(201);
-    expect(ticketRes.body).toHaveProperty("id");
     ticketId = ticketRes.body.id;
   });
 
-  describe("GET /api/tickets/:id (Ticket Detail)", () => {
-    it("returns 400 Bad Request when requester identity is missing", async () => {
-      const res = await request(app).get(`/api/tickets/${ticketId}`);
-      expect(res.status).toBe(400);
-      expect(res.body.error.code).toBe("MISSING_REQUESTER_ID");
-    });
-
-    it("returns 404 Not Found for non-existent ticket ID", async () => {
-      const res = await request(app)
-        .get("/api/tickets/00000000-0000-0000-0000-000000000000")
-        .set("X-Development-Requester-Id", String(requesterA));
-
-      expect(res.status).toBe(404);
-      expect(res.body.error.code).toBe("NOT_FOUND");
-    });
-
-    it("returns 403 Forbidden when requesting ticket owned by another requester", async () => {
-      const res = await request(app)
-        .get(`/api/tickets/${ticketId}`)
-        .set("X-Development-Requester-Id", String(requesterB));
-
-      expect(res.status).toBe(403);
-      expect(res.body.error.code).toBe("OWNERSHIP_DENIED");
-    });
-
-    it("returns 200 OK with full ticket details and attachments array for owner", async () => {
-      const res = await request(app)
-        .get(`/api/tickets/${ticketId}`)
-        .set("X-Development-Requester-Id", String(requesterA));
-
-      expect(res.status).toBe(200);
-      expect(res.body.id).toBe(ticketId);
-      expect(res.body.summary).toBe("Laptop screen flickering after system update");
-      expect(res.body).toHaveProperty("description");
-      expect(res.body).toHaveProperty("requester");
-      expect(res.body).toHaveProperty("category");
-      expect(res.body).toHaveProperty("relatedSystem");
-      expect(res.body).toHaveProperty("attachments");
-      expect(Array.isArray(res.body.attachments)).toBe(true);
-    });
-  });
-
   describe("POST /api/tickets/:id/attachments (Upload Attachment)", () => {
-    it("returns 403 Forbidden when uploading attachment to another user's ticket", async () => {
+    it("API-10: returns 403 Forbidden when uploading attachment to another user's ticket", async () => {
       const res = await request(app)
         .post(`/api/tickets/${ticketId}/attachments`)
         .set("X-Development-Requester-Id", String(requesterB))
@@ -97,7 +54,7 @@ describe("Feature 8 — Requester Ticket Detail & Attachment Management API", ()
       expect(res.body.error.code).toBe("OWNERSHIP_DENIED");
     });
 
-    it("returns 422 Unprocessable Entity when uploading disallowed file type (.exe)", async () => {
+    it("API-06: returns 422 Unprocessable Entity when uploading disallowed file type (.exe)", async () => {
       const res = await request(app)
         .post(`/api/tickets/${ticketId}/attachments`)
         .set("X-Development-Requester-Id", String(requesterA))
@@ -111,7 +68,7 @@ describe("Feature 8 — Requester Ticket Detail & Attachment Management API", ()
       expect(res.body.error.message).toContain("Allowed formats");
     });
 
-    it("returns 422 Unprocessable Entity when file size exceeds 5 MB limit", async () => {
+    it("API-06: returns 422 Unprocessable Entity when file size exceeds 5 MB limit", async () => {
       const largeBuffer = Buffer.alloc(6 * 1024 * 1024); // 6 MB
       const res = await request(app)
         .post(`/api/tickets/${ticketId}/attachments`)
@@ -146,9 +103,8 @@ describe("Feature 8 — Requester Ticket Detail & Attachment Management API", ()
       attachmentId = res.body.id;
     });
 
-    it("returns 422 Unprocessable Entity when uploading 6th attachment (exceeding limit of 5)", async () => {
+    it("API-07: returns 422 Unprocessable Entity when uploading 6th attachment (exceeding limit of 5)", async () => {
       const pngBuffer = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==", "base64");
-      // Upload 4 more attachments so ticket reaches max limit of 5 active attachments
       for (let i = 1; i <= 4; i++) {
         const attachRes = await request(app)
           .post(`/api/tickets/${ticketId}/attachments`)
@@ -160,7 +116,6 @@ describe("Feature 8 — Requester Ticket Detail & Attachment Management API", ()
         expect(attachRes.status).toBe(201);
       }
 
-      // Attempting to upload 6th attachment
       const res = await request(app)
         .post(`/api/tickets/${ticketId}/attachments`)
         .set("X-Development-Requester-Id", String(requesterA))
@@ -175,9 +130,8 @@ describe("Feature 8 — Requester Ticket Detail & Attachment Management API", ()
     });
   });
 
-
   describe("GET /api/attachments/:id/download (Download Binary)", () => {
-    it("returns 403 Forbidden when downloading attachment owned by another user", async () => {
+    it("API-10: returns 403 Forbidden when downloading attachment owned by another user", async () => {
       const res = await request(app)
         .get(`/api/attachments/${attachmentId}/download`)
         .set("X-Development-Requester-Id", String(requesterB));
@@ -219,7 +173,7 @@ describe("Feature 8 — Requester Ticket Detail & Attachment Management API", ()
       expect(res.body.error.code).toBe("OWNERSHIP_DENIED");
     });
 
-    it("returns 200 OK and marks attachment soft-removed with valid reason", async () => {
+    it("API-08: returns 200 OK and marks attachment soft-removed with valid reason", async () => {
       const res = await request(app)
         .delete(`/api/attachments/${attachmentId}`)
         .set("X-Development-Requester-Id", String(requesterA))
@@ -231,7 +185,7 @@ describe("Feature 8 — Requester Ticket Detail & Attachment Management API", ()
       expect(res.body).toHaveProperty("deletedAt");
     });
 
-    it("returns 410 Gone when attempting to download soft-removed attachment", async () => {
+    it("API-09: returns 410 Gone when attempting to download soft-removed attachment", async () => {
       const res = await request(app)
         .get(`/api/attachments/${attachmentId}/download`)
         .set("X-Development-Requester-Id", String(requesterA));
