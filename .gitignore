@@ -17,6 +17,10 @@ server/prisma/*.db
 server/uploads/*
 !.gitkeep
 
+# playwright test artifacts
+test-results/
+playwright-report/
+
 #other files
 *Lab_02_labsheet.pdf
 *TokTickIT-System-Level-SDS-v1.0.pdf
