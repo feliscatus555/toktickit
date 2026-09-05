@@ -754,12 +754,11 @@ app.delete("/api/attachments/:id", async (req: Request, res: Response) => {
     }
 
     const trimmedReason = typeof reason === "string" ? reason.trim() : "";
-    if (!trimmedReason) {
+    if (!trimmedReason || trimmedReason.length > 255) {
       res.status(422).json({
         error: {
           code: "VALIDATION_FAILED",
-          message: "Deletion reason is required.",
-          fieldErrors: [{ field: "reason", message: "Reason is required to soft-remove an attachment." }],
+          fieldErrors: [{ field: "reason", message: "Reason must not exceed 255 characters." }],
           correlationId: crypto.randomUUID(),
         },
       });

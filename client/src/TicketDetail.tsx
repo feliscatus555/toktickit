@@ -101,9 +101,9 @@ export default function TicketDetail({ ticketId, currentRequester, onBack }: Tic
       setTicket((prev) =>
         prev
           ? {
-              ...prev,
-              attachments: [...prev.attachments, newAtt],
-            }
+            ...prev,
+            attachments: [...prev.attachments, newAtt],
+          }
           : prev
       );
 
@@ -140,12 +140,12 @@ export default function TicketDetail({ ticketId, currentRequester, onBack }: Tic
           attachments: prev.attachments.map((a) =>
             a.id === targetAttachment.id
               ? {
-                  ...a,
-                  isDeleted: true,
-                  deletedAt: res.deletedAt,
-                  deletionReason: trimmedReason,
-                  deletedById: currentRequester.id,
-                }
+                ...a,
+                isDeleted: true,
+                deletedAt: res.deletedAt,
+                deletionReason: trimmedReason,
+                deletedById: currentRequester.id,
+              }
               : a
           ),
         };
@@ -586,11 +586,17 @@ export default function TicketDetail({ ticketId, currentRequester, onBack }: Tic
                 )}
 
                 <div className="mb-3">
-                  <label style={{ fontSize: "0.82rem", fontWeight: 700, color: "#374151", display: "block" }}>
-                    Reason for Removal <span className="text-danger">*</span>
-                  </label>
+                  <div className="d-flex justify-content-between align-items-center mb-1">
+                    <label style={{ fontSize: "0.82rem", fontWeight: 700, color: "#374151", margin: 0 }}>
+                      Reason for Removal <span className="text-danger">*</span>
+                    </label>
+                    <span style={{ fontSize: "0.75rem", color: removalReason.trim().length > 255 ? "#B3261E" : "#6B7280" }}>
+                      {removalReason.trim().length} / 255 characters
+                    </span>
+                  </div>
                   <textarea
                     rows={3}
+                    maxLength={255}
                     value={removalReason}
                     onChange={(e) => {
                       setRemovalReason(e.target.value);
@@ -615,7 +621,7 @@ export default function TicketDetail({ ticketId, currentRequester, onBack }: Tic
                   type="button"
                   className="btn btn-danger btn-sm fw-bold"
                   onClick={handleConfirmSoftRemove}
-                  disabled={removing || !removalReason.trim()}
+                  disabled={removing || !removalReason.trim() || removalReason.trim().length > 255}
                 >
                   {removing ? "Removing..." : "Confirm Removal"}
                 </button>
