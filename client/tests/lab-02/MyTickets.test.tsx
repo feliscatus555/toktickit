@@ -47,10 +47,10 @@ describe("MyTickets Component", () => {
     expect(screen.getByText(/Somchai Pattana/i)).toBeInTheDocument();
 
     await waitFor(() => {
-      expect(screen.getByText("TKT-2026-00001")).toBeInTheDocument();
-      expect(screen.getByText("Laptop battery issue after OS update")).toBeInTheDocument();
+      expect(screen.getAllByText("TKT-2026-00001")[0]).toBeInTheDocument();
+      expect(screen.getAllByText("Laptop battery issue after OS update")[0]).toBeInTheDocument();
       expect(screen.getAllByText("↑ High")[0]).toBeInTheDocument();
-      expect(screen.getByText("● Pending")).toBeInTheDocument();
+      expect(screen.getAllByText("● Pending")[0]).toBeInTheDocument();
     });
   });
 

@@ -475,7 +475,7 @@ export default function MyTickets({
           }}
         >
           {/* Search Input */}
-          <div style={{ gridColumn: "span 2", minWidth: "220px" }}>
+          <div style={{ gridColumn: "1 / -1" }}>
             <label style={{ display: "block", fontSize: "0.75rem", fontWeight: 700, color: "#5B6573", marginBottom: "0.25rem" }}>
               Search Summary or Ticket #
             </label>
@@ -750,7 +750,7 @@ export default function MyTickets({
         /* Data Presentation */
         <>
           {/* Desktop Table View */}
-          <div style={{ overflowX: "auto" }}>
+          <div className="d-none d-md-block" style={{ overflowX: "auto" }}>
             <table
               style={{
                 width: "100%",
@@ -879,6 +879,81 @@ export default function MyTickets({
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile Card View (< 768px) */}
+          <div className="d-md-none d-flex flex-column gap-3">
+            {tickets.map((t) => (
+              <div
+                key={t.id}
+                style={{
+                  backgroundColor: "#FFFFFF",
+                  borderRadius: "8px",
+                  border: "1px solid #E0E0E0",
+                  padding: "1rem",
+                  boxShadow: "0 2px 6px rgba(0,0,0,0.04)",
+                }}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+                  <span style={{ fontWeight: 700, color: "#006B3C", fontSize: "0.95rem" }}>
+                    {t.ticketNo}
+                  </span>
+                  {renderStatusBadge(t.status)}
+                </div>
+
+                <h4 style={{ fontSize: "0.95rem", fontWeight: 600, color: "#1F2937", margin: "0 0 0.6rem 0", lineHeight: 1.35 }}>
+                  {t.summary}
+                </h4>
+
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", fontSize: "0.82rem", color: "#5B6573", marginBottom: "0.75rem" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span>Category:</span>
+                    <strong style={{ color: "#1F2937" }}>{t.category?.name || "—"}</strong>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span>Related System:</span>
+                    <strong style={{ color: "#1F2937" }}>{t.relatedSystem?.name || "—"}</strong>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span>Requested Priority:</span>
+                    <span>{renderPriorityBadge(t.requestedPriority)}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span>IT Priority:</span>
+                    <span>{renderPriorityBadge((t as any).itPriority || t.requestedPriority)}</span>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between" }}>
+                    <span>Ticket Owner:</span>
+                    <strong style={{ color: "#1F2937" }}>-</strong>
+                  </div>
+                </div>
+
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "0.6rem", borderTop: "1px solid #F3F4F6" }}>
+                  <div style={{ display: "flex", flexDirection: "column", fontSize: "0.75rem", color: "#6B7280" }}>
+                    <span>Created: {new Date(t.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                    <span>Updated: {new Date(t.updatedAt || t.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (onSelectTicket) onSelectTicket(t.id);
+                    }}
+                    style={{
+                      backgroundColor: "#EAF6EF",
+                      color: "#006B3C",
+                      border: "1px solid #0B7A46",
+                      padding: "0.35rem 0.75rem",
+                      borderRadius: "4px",
+                      fontSize: "0.82rem",
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    View Detail
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
 
 

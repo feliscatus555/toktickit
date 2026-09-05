@@ -53,15 +53,28 @@ export default function App() {
   }
 
   return (
-    <div className="min-vh-100" style={{ backgroundColor: "#F5F7F6" }}>
+    <div className="min-vh-100" style={{ backgroundColor: "#F5F7F6", overflowX: "hidden", maxWidth: "100vw" }}>
+      <style>{`
+        html, body, #root {
+          overflow-x: hidden !important;
+          max-width: 100vw !important;
+          margin: 0;
+          padding: 0;
+          box-sizing: border-box;
+        }
+        *, *:before, *:after {
+          box-sizing: border-box;
+        }
+      `}</style>
       {/* Zen Green Top Header */}
-      <header className="py-3 px-4 text-white shadow-sm" style={{ backgroundColor: "#006B3C" }}>
-        <div className="container-fluid px-3 px-md-5 d-flex justify-content-between align-items-center flex-wrap gap-3">
-          <div className="d-flex align-items-center gap-3">
-            <h1 className="h4 mb-0 fw-bold d-flex align-items-center gap-2">
+      <header className="py-2 px-3 px-md-4 text-white shadow-sm" style={{ backgroundColor: "#006B3C", maxWidth: "100%", overflowX: "hidden" }}>
+        <div className="container-fluid px-1 px-md-4">
+          <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 py-1">
+            {/* Logo */}
+            <h1 className="h4 mb-0 fw-bold d-flex align-items-center gap-2" style={{ whiteSpace: "nowrap" }}>
               <svg
-                width="22"
-                height="22"
+                width="24"
+                height="24"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="#FFFFFF"
@@ -75,71 +88,112 @@ export default function App() {
               <span>TokTickIT</span>
             </h1>
 
-            {currentRequester && !showSelectorModal && (
-              <div className="d-flex ms-2 gap-2">
+            {/* Requester Info */}
+            <div className="d-flex align-items-center gap-2">
+              {currentRequester ? (
+                <>
+                  <span
+                    className="badge bg-light text-dark py-2 px-2 px-sm-3"
+                    style={{
+                      fontSize: "0.85rem",
+                      maxWidth: "220px",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                    title={`👤 ${currentRequester.displayName} (${currentRequester.email})`}
+                  >
+                    👤 {currentRequester.displayName}
+                    <span className="d-none d-sm-inline"> ({currentRequester.email})</span>
+                  </span>
+                  <button
+                    type="button"
+                    className="btn btn-sm text-white fw-semibold"
+                    style={{
+                      backgroundColor: "#0B7A46",
+                      border: "1px solid #EAF6EF",
+                      whiteSpace: "nowrap",
+                      fontSize: "0.82rem",
+                      padding: "0.35rem 0.65rem",
+                    }}
+                    onClick={() => setShowSelectorModal(true)}
+                  >
+                    Change Requester
+                  </button>
+                </>
+              ) : (
                 <button
-                  onClick={() => setActiveTab("my-tickets")}
-                  className="btn btn-sm text-white fw-semibold"
-                  style={{
-                    backgroundColor: activeTab === "my-tickets" ? "#0B7A46" : "transparent",
-                    border: activeTab === "my-tickets" ? "1px solid #EAF6EF" : "1px solid transparent",
-                    borderRadius: "6px",
-                    padding: "0.4rem 0.8rem",
-                  }}
-                >
-                  📋 My Tickets
-                </button>
-                <button
-                  onClick={() => setActiveTab("create-ticket")}
-                  className="btn btn-sm text-white fw-semibold"
-                  style={{
-                    backgroundColor: activeTab === "create-ticket" ? "#0B7A46" : "transparent",
-                    border: activeTab === "create-ticket" ? "1px solid #EAF6EF" : "1px solid transparent",
-                    borderRadius: "6px",
-                    padding: "0.4rem 0.8rem",
-                  }}
-                >
-                  <span style={{ color: "#FFFFFF", fontWeight: "bold", marginRight: "4px" }}>+</span> Create Ticket
-                </button>
-                <button
-                  onClick={() => setActiveTab("system-status")}
-                  className="btn btn-sm text-white fw-semibold"
-                  style={{
-                    backgroundColor: activeTab === "system-status" ? "#0B7A46" : "transparent",
-                    border: activeTab === "system-status" ? "1px solid #EAF6EF" : "1px solid transparent",
-                    borderRadius: "6px",
-                    padding: "0.4rem 0.8rem",
-                  }}
-                >
-                  ⚙️ System Status
-                </button>
-              </div>
-            )}
-          </div>
-
-          <div className="d-flex align-items-center gap-3">
-            {currentRequester ? (
-              <div className="d-flex align-items-center gap-2">
-                <span className="badge bg-light text-dark py-2 px-3 fs-6" title={`👤 ${currentRequester.displayName} (${currentRequester.email})`}>
-                  👤 {currentRequester.displayName} ({currentRequester.email})
-                </span>
-                <button
-                  className="btn btn-sm text-white fw-semibold"
-                  style={{ backgroundColor: "#0B7A46", border: "1px solid #EAF6EF" }}
+                  type="button"
+                  className="btn btn-sm btn-light fw-bold"
                   onClick={() => setShowSelectorModal(true)}
                 >
-                  Change Requester
+                  Select Requester
                 </button>
-              </div>
-            ) : (
-              <button
-                className="btn btn-sm btn-light fw-bold"
-                onClick={() => setShowSelectorModal(true)}
-              >
-                Select Requester
-              </button>
-            )}
+              )}
+            </div>
           </div>
+
+          {/* Navigation Bar Tabs */}
+          {currentRequester && !showSelectorModal && (
+            <div
+              className="d-flex gap-1 gap-sm-2 mt-2 pt-2 border-top w-100"
+              style={{
+                borderColor: "rgba(255, 255, 255, 0.2)",
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setActiveTab("my-tickets")}
+                className="btn btn-sm text-white fw-semibold flex-fill text-center"
+                style={{
+                  backgroundColor: activeTab === "my-tickets" ? "#0B7A46" : "transparent",
+                  border: activeTab === "my-tickets" ? "1px solid #EAF6EF" : "1px solid transparent",
+                  borderRadius: "6px",
+                  padding: "0.4rem 0.25rem",
+                  fontSize: "0.82rem",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                📋 My Tickets
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("create-ticket")}
+                className="btn btn-sm text-white fw-semibold flex-fill text-center"
+                style={{
+                  backgroundColor: activeTab === "create-ticket" ? "#0B7A46" : "transparent",
+                  border: activeTab === "create-ticket" ? "1px solid #EAF6EF" : "1px solid transparent",
+                  borderRadius: "6px",
+                  padding: "0.4rem 0.25rem",
+                  fontSize: "0.82rem",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                <span style={{ color: "#FFFFFF", fontWeight: "bold", marginRight: "2px" }}>+</span> Create Ticket
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("system-status")}
+                className="btn btn-sm text-white fw-semibold flex-fill text-center"
+                style={{
+                  backgroundColor: activeTab === "system-status" ? "#0B7A46" : "transparent",
+                  border: activeTab === "system-status" ? "1px solid #EAF6EF" : "1px solid transparent",
+                  borderRadius: "6px",
+                  padding: "0.4rem 0.25rem",
+                  fontSize: "0.82rem",
+                  whiteSpace: "nowrap",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                }}
+              >
+                ⚙️ System Status
+              </button>
+            </div>
+          )}
         </div>
       </header>
 
