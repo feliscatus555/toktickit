@@ -3,9 +3,10 @@ import { checkSystem, Category, RequesterUser } from "./api.js";
 import RequesterSelector from "./RequesterSelector.js";
 import CreateTicket from "./CreateTicket.js";
 import MyTickets from "./MyTickets.js";
+import TicketDetail from "./TicketDetail.js";
 
 type UiState = "idle" | "loading" | "success" | "error";
-type ActiveTab = "my-tickets" | "create-ticket" | "system-status";
+type ActiveTab = "my-tickets" | "create-ticket" | "system-status" | "ticket-detail";
 
 const STORAGE_KEY = "toktickit_selected_requester";
 const DEFAULT_REQUESTER: RequesterUser = {
@@ -19,6 +20,7 @@ export default function App() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<ActiveTab>("system-status");
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
 
   const [currentRequester, setCurrentRequester] = useState<RequesterUser>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -37,6 +39,11 @@ export default function App() {
     setCurrentRequester(requester);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(requester));
     setShowSelectorModal(false);
+  }
+
+  function handleSelectTicket(ticketId: string) {
+    setSelectedTicketId(ticketId);
+    setActiveTab("ticket-detail");
   }
 
   async function handleCheck() {
@@ -97,8 +104,8 @@ export default function App() {
                     onClick={() => setActiveTab("my-tickets")}
                     className="btn btn-sm text-white fw-semibold"
                     style={{
-                      backgroundColor: activeTab === "my-tickets" ? "#0B7A46" : "transparent",
-                      border: activeTab === "my-tickets" ? "1px solid #EAF6EF" : "1px solid transparent",
+                      backgroundColor: activeTab === "my-tickets" || activeTab === "ticket-detail" ? "#0B7A46" : "transparent",
+                      border: activeTab === "my-tickets" || activeTab === "ticket-detail" ? "1px solid #EAF6EF" : "1px solid transparent",
                       borderRadius: "6px",
                       padding: "0.4rem 0.85rem",
                       whiteSpace: "nowrap",
@@ -199,8 +206,8 @@ export default function App() {
                 onClick={() => setActiveTab("my-tickets")}
                 className="btn btn-sm text-white fw-semibold flex-fill text-center"
                 style={{
-                  backgroundColor: activeTab === "my-tickets" ? "#0B7A46" : "transparent",
-                  border: activeTab === "my-tickets" ? "1px solid #EAF6EF" : "1px solid transparent",
+                  backgroundColor: activeTab === "my-tickets" || activeTab === "ticket-detail" ? "#0B7A46" : "transparent",
+                  border: activeTab === "my-tickets" || activeTab === "ticket-detail" ? "1px solid #EAF6EF" : "1px solid transparent",
                   borderRadius: "6px",
                   padding: "0.4rem 0.6rem",
                   fontSize: "0.85rem",
@@ -258,6 +265,13 @@ export default function App() {
           <MyTickets
             activeRequester={currentRequester}
             onCreateTicketClick={() => setActiveTab("create-ticket")}
+            onSelectTicket={handleSelectTicket}
+          />
+        ) : activeTab === "ticket-detail" && selectedTicketId ? (
+          <TicketDetail
+            ticketId={selectedTicketId}
+            currentRequester={currentRequester}
+            onBack={() => setActiveTab("my-tickets")}
           />
         ) : activeTab === "create-ticket" ? (
           <CreateTicket
@@ -266,6 +280,7 @@ export default function App() {
             onCancel={() => setActiveTab("my-tickets")}
           />
         ) : (
+
           <div className="card shadow-sm border-0 p-4" style={{ maxWidth: 720, margin: "0 auto" }}>
             <div className="d-flex justify-content-between align-items-center mb-4">
               <h2 className="h4 mb-0 text-dark">System Status Baseline</h2>

@@ -13,6 +13,10 @@ server/prisma/*.db
 *.log
 .DS_Store
 
+# uploads
+server/uploads/*
+!.gitkeep
+
 #other files
 *Lab_02_labsheet.pdf
 *TokTickIT-System-Level-SDS-v1.0.pdf
