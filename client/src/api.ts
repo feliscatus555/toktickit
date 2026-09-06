@@ -185,5 +185,141 @@ export async function fetchMyTickets(params: FetchMyTicketsParams): Promise<Pagi
   return res.json();
 }
 
+export interface AttachmentItem {
+  id: string;
+  originalFilename: string;
+  mimeType: string;
+  sizeBytes: number;
+  isDeleted: boolean;
+  deletedAt?: string | null;
+  deletedById?: number | null;
+  deletionReason?: string | null;
+  createdAt: string;
+}
+
+export interface TicketDetail {
+  id: string;
+  ticketNo: string;
+  summary: string;
+  description: string;
+  status: string;
+  requestedPriority: string;
+  itPriority?: string | null;
+  ownerName?: string | null;
+  resolutionSummary?: string | null;
+  requesterId: number;
+  version: number;
+  requester: { id: number; displayName: string; email: string };
+  category: { id: number; name: string };
+  relatedSystem: { id: number; name: string };
+  attachments: AttachmentItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+
+export interface SoftRemoveAttachmentResponse {
+  message: string;
+  attachmentId: string;
+  deletedAt: string;
+}
+
+export async function fetchTicketDetail(ticketId: string, requesterId: number): Promise<TicketDetail> {
+  const res = await fetch(`${API_URL}/api/tickets/${ticketId}`, {
+    headers: {
+      "X-Development-Requester-Id": String(requesterId),
+    },
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    const errorMsg = data?.error?.message || "Failed to fetch ticket detail";
+    const err = new Error(errorMsg) as any;
+    err.code = data?.error?.code;
+    throw err;
+  }
+  return data;
+}
+
+export async function uploadAttachment(
+  ticketId: string,
+  file: File,
+  uploaderId: number
+): Promise<AttachmentItem> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("uploaderId", String(uploaderId));
+
+  const res = await fetch(`${API_URL}/api/tickets/${ticketId}/attachments`, {
+    method: "POST",
+    headers: {
+      "X-Development-Requester-Id": String(uploaderId),
+    },
+    body: formData,
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    const errorMsg = data?.error?.message || "Failed to upload attachment";
+    const err = new Error(errorMsg) as any;
+    err.code = data?.error?.code;
+    throw err;
+  }
+
+  return data;
+}
+
+export function getAttachmentDownloadUrl(attachmentId: string, requesterId: number): string {
+  return `${API_URL}/api/attachments/${attachmentId}/download?requesterId=${requesterId}`;
+}
+
+export async function downloadAttachmentBlob(attachmentId: string, requesterId: number): Promise<Blob> {
+  const res = await fetch(getAttachmentDownloadUrl(attachmentId, requesterId), {
+    headers: {
+      "X-Development-Requester-Id": String(requesterId),
+    },
+  });
+
+  if (!res.ok) {
+    let errorMsg = "Failed to download attachment";
+    try {
+      const data = await res.json();
+      if (data?.error?.message) errorMsg = data.error.message;
+    } catch {}
+    const err = new Error(errorMsg) as any;
+    err.status = res.status;
+    throw err;
+  }
+
+  return res.blob();
+}
+
+export async function softRemoveAttachment(
+  attachmentId: string,
+  removerId: number,
+  reason: string
+): Promise<SoftRemoveAttachmentResponse> {
+  const res = await fetch(`${API_URL}/api/attachments/${attachmentId}`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Development-Requester-Id": String(removerId),
+    },
+    body: JSON.stringify({ removerId, reason }),
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    const errorMsg = data?.error?.message || "Failed to soft-remove attachment";
+    const err = new Error(errorMsg) as any;
+    err.code = data?.error?.code;
+    err.fieldErrors = data?.error?.fieldErrors;
+    throw err;
+  }
+
+  return data;
+}
+
+
 
 

@@ -1,4 +1,4 @@
-# Lab 1 — Peer Review Record  (fill this in)
+# Lab 2 — Peer Review Record  (fill this in)
 
 **Author:** <Iris French> — <67070503478> — GitHub: @feliscatus555  
 **Peer reviewer:** <Maimoona Aziz> — <67070503473> — GitHub: @Wiggle-Ryutsuki
@@ -6,18 +6,17 @@
 ## Pull Requests I authored (reviewed by my partner)
 | PR | Branch | Reviewer verdict |
 |----|--------|------------------|
-| foundation of the project, front end and back end starts successfully #6 | feature/1-project-foundation | Approved |
-| Health check working #7 | feature/2-health-check | Looks good, approved  |
-| Prisma category model creation and seeding #8 | feature/3-category-seed | All in order, approved. |
-| Feature/4 category list #9 | feature/4-category-list | Approved, well done |
-| Lab 1 release #10 | lab1-staging | Approved |
+| https://github.com/feliscatus555/toktickit/pull/15 | feature/5-dev-requester-context | Everything works fine |
+| https://github.com/feliscatus555/toktickit/pull/16 | feature/6-ticket-creation | Everything is resolved and all tests pass. Good job. |
+| https://github.com/feliscatus555/toktickit/pull/17 | feature/7-my-tickets-list| Looks good. |
+| https://github.com/feliscatus555/toktickit/pull/18 | feature/8-ticket-detail | Everything works. Approved |
+| Lab 2 release # | lab2-staging | Approved |
 
-Reviewer comment: Why not remove this commented line?
+Reviewer comment: Why is there no mention of the Attachment Upload feature?
 
-How I responded: I intentionally left the comment as it's not something i need right now, but might potentially need in the future.
+How I responded: Good catch, i will go add the ui for it now.
 
-![alt text](image-2.png)
 
 ## Pull Requests I reviewed for my partner
-My comment: < The appropriate code has been made for issue 2, well done. >
-Partner's response: < Thank you. >
+My comment: < All good for real this time. >
+Partner's response: < Thank you for the quick action >

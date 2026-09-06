@@ -1,14 +1,36 @@
 import express, { Request, Response } from "express";
 import cors from "cors";
 import crypto from "crypto";
+import path from "path";
+import fs from "fs";
+import multer from "multer";
 import { getPrisma } from "./prisma.js";
 import { generateTicketNo } from "./services/ticketNoGenerator.js";
-// getPrisma() is your lazy database handle. Call it INSIDE a route when you
-// need the DB (Issue 4). It is intentionally unused until then.
+import { validateAttachmentFile } from "./services/attachmentValidator.js";
 
-// The Express app is exported separately from app.listen() (see index.ts) so
-// Supertest can import `app` without opening a port. Do not merge these files.
+const uploadsDir = path.join(process.cwd(), "uploads");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, uploadsDir);
+  },
+  filename: (_req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    const ext = path.extname(file.originalname);
+    cb(null, `${uniqueSuffix}${ext}`);
+  },
+});
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 20 * 1024 * 1024 },
+});
+
 export const app = express();
+
 
 app.use(cors());          // already wired: lets the Vite dev server call this API
 app.use(express.json());
@@ -345,6 +367,9 @@ app.get("/api/tickets", async (req: Request, res: Response) => {
         summary: true,
         status: true,
         requestedPriority: true,
+        itPriority: true,
+        ownerName: true,
+        resolutionSummary: true,
         category: {
           select: {
             id: true,
@@ -364,6 +389,10 @@ app.get("/api/tickets", async (req: Request, res: Response) => {
             email: true,
           },
         },
+        attachments: {
+          where: { isDeleted: false },
+          select: { id: true },
+        },
         createdAt: true,
         updatedAt: true,
       },
@@ -372,10 +401,13 @@ app.get("/api/tickets", async (req: Request, res: Response) => {
       take: limit,
     });
 
-    const data = tickets.map((ticket) => ({
-      ...ticket,
-      attachmentCount: 0,
-    }));
+    const data = tickets.map((t) => {
+      const { attachments, ...ticket } = t;
+      return {
+        ...ticket,
+        attachmentCount: attachments ? attachments.length : 0,
+      };
+    });
 
     res.status(200).json({
       data,
@@ -392,6 +424,379 @@ app.get("/api/tickets", async (req: Request, res: Response) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// Feature 8 — Requester Ticket Detail API Endpoint
+// GET /api/tickets/:id
+// ---------------------------------------------------------------------------
+app.get("/api/tickets/:id", async (req: Request, res: Response) => {
+  try {
+    const prisma = getPrisma();
+    const reqHeaderId = req.headers["x-development-requester-id"];
+    const queryRequesterId = req.query.requesterId;
+    const rawRequesterId = reqHeaderId || queryRequesterId;
+    const requesterId = Number(rawRequesterId);
+
+    if (!rawRequesterId || isNaN(requesterId)) {
+      res.status(400).json({
+        error: {
+          code: "MISSING_REQUESTER_ID",
+          message: "Development Requester ID is required (header or query parameter).",
+        },
+      });
+      return;
+    }
+
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: req.params.id },
+      select: {
+        id: true,
+        ticketNo: true,
+        summary: true,
+        description: true,
+        status: true,
+        requestedPriority: true,
+        itPriority: true,
+        ownerName: true,
+        resolutionSummary: true,
+        requesterId: true,
+        version: true,
+
+        requester: {
+          select: {
+            id: true,
+            displayName: true,
+            email: true,
+          },
+        },
+        category: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        relatedSystem: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        attachments: {
+          select: {
+            id: true,
+            originalFilename: true,
+            mimeType: true,
+            sizeBytes: true,
+            isDeleted: true,
+            deletedAt: true,
+            deletedById: true,
+            deletionReason: true,
+            createdAt: true,
+          },
+          orderBy: { createdAt: "asc" },
+        },
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    if (!ticket) {
+      res.status(404).json({
+        error: {
+          code: "NOT_FOUND",
+          message: "Ticket not found.",
+        },
+      });
+      return;
+    }
+
+    if (ticket.requesterId !== requesterId) {
+      res.status(403).json({
+        error: {
+          code: "OWNERSHIP_DENIED",
+          message: "You are not authorized to view this ticket.",
+          correlationId: crypto.randomUUID(),
+        },
+      });
+      return;
+    }
+
+    res.status(200).json(ticket);
+  } catch (error) {
+    console.error("Error fetching ticket detail", error);
+    res.status(500).json({ error: "Failed to fetch ticket detail." });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Feature 8 — Upload Attachment Endpoint
+// POST /api/tickets/:id/attachments
+// ---------------------------------------------------------------------------
+app.post("/api/tickets/:id/attachments", upload.single("file"), async (req: Request, res: Response) => {
+  try {
+    const prisma = getPrisma();
+    const reqHeaderId = req.headers["x-development-requester-id"];
+    const bodyUploaderId = req.body?.uploaderId;
+    const queryUploaderId = req.query?.uploaderId;
+    const rawUploaderId = reqHeaderId || bodyUploaderId || queryUploaderId;
+    const uploaderId = Number(rawUploaderId);
+
+    if (!rawUploaderId || isNaN(uploaderId)) {
+      if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      res.status(400).json({
+        error: {
+          code: "MISSING_REQUESTER_ID",
+          message: "Development Requester identity must be provided.",
+        },
+      });
+      return;
+    }
+
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: req.params.id },
+      select: { id: true, requesterId: true },
+    });
+
+    if (!ticket) {
+      if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      res.status(404).json({
+        error: {
+          code: "NOT_FOUND",
+          message: "Ticket not found.",
+        },
+      });
+      return;
+    }
+
+    if (ticket.requesterId !== uploaderId) {
+      if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      res.status(403).json({
+        error: {
+          code: "OWNERSHIP_DENIED",
+          message: "You are not authorized to upload attachments for this ticket.",
+          correlationId: crypto.randomUUID(),
+        },
+      });
+      return;
+    }
+
+    if (!req.file) {
+      res.status(422).json({
+        error: {
+          code: "INVALID_ATTACHMENT",
+          message: "No attachment file provided.",
+          correlationId: crypto.randomUUID(),
+        },
+      });
+      return;
+    }
+
+    const activeAttachmentCount = await prisma.attachment.count({
+      where: { ticketId: ticket.id, isDeleted: false },
+    });
+
+    const validation = validateAttachmentFile(
+      req.file.originalname,
+      req.file.size,
+      activeAttachmentCount,
+      req.file.mimetype
+    );
+
+    if (!validation.valid) {
+      if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      const isMax = activeAttachmentCount >= 5;
+      res.status(422).json({
+        error: {
+          code: isMax ? "MAX_ATTACHMENTS_EXCEEDED" : "INVALID_ATTACHMENT",
+          message: validation.error,
+          correlationId: crypto.randomUUID(),
+        },
+      });
+      return;
+    }
+
+    const attachment = await prisma.attachment.create({
+      data: {
+        ticketId: ticket.id,
+        originalFilename: req.file.originalname,
+        mimeType: req.file.mimetype,
+        sizeBytes: req.file.size,
+        storageKey: req.file.filename,
+        isDeleted: false,
+      },
+    });
+
+    res.status(201).json({
+      id: attachment.id,
+      ticketId: attachment.ticketId,
+      originalFilename: attachment.originalFilename,
+      mimeType: attachment.mimeType,
+      sizeBytes: attachment.sizeBytes,
+      isDeleted: attachment.isDeleted,
+      createdAt: attachment.createdAt,
+    });
+  } catch (error) {
+    if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    console.error("Error uploading attachment", error);
+    res.status(500).json({ error: "Failed to upload attachment." });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Feature 8 — Download Attachment Binary Endpoint
+// GET /api/attachments/:id/download
+// ---------------------------------------------------------------------------
+app.get("/api/attachments/:id/download", async (req: Request, res: Response) => {
+  try {
+    const prisma = getPrisma();
+    const reqHeaderId = req.headers["x-development-requester-id"];
+    const queryRequesterId = req.query.requesterId;
+    const rawRequesterId = reqHeaderId || queryRequesterId;
+    const requesterId = Number(rawRequesterId);
+
+    const attachment = await prisma.attachment.findUnique({
+      where: { id: req.params.id },
+      include: {
+        ticket: { select: { requesterId: true } },
+      },
+    });
+
+    if (!attachment) {
+      res.status(404).json({
+        error: {
+          code: "NOT_FOUND",
+          message: "Attachment not found.",
+        },
+      });
+      return;
+    }
+
+    if (rawRequesterId && !isNaN(requesterId) && attachment.ticket.requesterId !== requesterId) {
+      res.status(403).json({
+        error: {
+          code: "OWNERSHIP_DENIED",
+          message: "You are not authorized to download this attachment.",
+          correlationId: crypto.randomUUID(),
+        },
+      });
+      return;
+    }
+
+    if (attachment.isDeleted) {
+      res.status(410).json({
+        error: {
+          code: "ATTACHMENT_DELETED",
+          message: "This attachment has been soft-removed and cannot be downloaded.",
+          correlationId: crypto.randomUUID(),
+        },
+      });
+      return;
+    }
+
+    const filePath = path.join(uploadsDir, attachment.storageKey);
+    if (!fs.existsSync(filePath)) {
+      res.status(404).json({
+        error: {
+          code: "FILE_NOT_FOUND",
+          message: "Attachment file binary does not exist on storage.",
+        },
+      });
+      return;
+    }
+
+    res.setHeader("Content-Type", attachment.mimeType);
+    res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(attachment.originalFilename)}"`);
+    res.sendFile(filePath);
+  } catch (error) {
+    console.error("Error downloading attachment", error);
+    res.status(500).json({ error: "Failed to download attachment." });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Feature 8 — Soft-Remove Attachment Endpoint
+// DELETE /api/attachments/:id
+// ---------------------------------------------------------------------------
+app.delete("/api/attachments/:id", async (req: Request, res: Response) => {
+  try {
+    const prisma = getPrisma();
+    const reqHeaderId = req.headers["x-development-requester-id"];
+    const { removerId: bodyRemoverId, reason } = req.body || {};
+    const queryRemoverId = req.query.removerId;
+    const rawRemoverId = reqHeaderId || bodyRemoverId || queryRemoverId;
+    const removerId = Number(rawRemoverId);
+
+    const attachment = await prisma.attachment.findUnique({
+      where: { id: req.params.id },
+      include: {
+        ticket: { select: { requesterId: true } },
+      },
+    });
+
+    if (!attachment) {
+      res.status(404).json({
+        error: {
+          code: "NOT_FOUND",
+          message: "Attachment not found.",
+        },
+      });
+      return;
+    }
+
+    if (rawRemoverId && !isNaN(removerId) && attachment.ticket.requesterId !== removerId) {
+      res.status(403).json({
+        error: {
+          code: "OWNERSHIP_DENIED",
+          message: "You are not authorized to soft-remove this attachment.",
+          correlationId: crypto.randomUUID(),
+        },
+      });
+      return;
+    }
+
+    const trimmedReason = typeof reason === "string" ? reason.trim() : "";
+    if (!trimmedReason || trimmedReason.length > 255) {
+      res.status(422).json({
+        error: {
+          code: "VALIDATION_FAILED",
+          fieldErrors: [{ field: "reason", message: "Reason must not exceed 255 characters." }],
+          correlationId: crypto.randomUUID(),
+        },
+      });
+      return;
+    }
+
+    const updated = await prisma.attachment.update({
+      where: { id: attachment.id },
+      data: {
+        isDeleted: true,
+        deletedAt: new Date(),
+        deletedById: !isNaN(removerId) ? removerId : attachment.ticket.requesterId,
+        deletionReason: trimmedReason,
+      },
+    });
+
+    // Remove binary file from disk (SDS decision D-11)
+    const filePath = path.join(uploadsDir, attachment.storageKey);
+    if (fs.existsSync(filePath)) {
+      try {
+        fs.unlinkSync(filePath);
+      } catch (e) {
+        console.error("Failed to delete attachment binary file:", e);
+      }
+    }
+
+    res.status(200).json({
+      message: "Attachment soft-removed successfully.",
+      attachmentId: updated.id,
+      deletedAt: updated.deletedAt,
+    });
+  } catch (error) {
+    console.error("Error soft-removing attachment", error);
+    res.status(500).json({ error: "Failed to soft-remove attachment." });
+  }
+});
+
 export default app;
+
 
 

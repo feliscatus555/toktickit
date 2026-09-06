@@ -43,10 +43,9 @@ describe("MyTickets Component", () => {
 
     render(<MyTickets activeRequester={mockRequester} />);
 
-    expect(screen.getByText(/My Submitted Tickets/i)).toBeInTheDocument();
-    expect(screen.getByText(/Somchai Pattana/i)).toBeInTheDocument();
-
     await waitFor(() => {
+      expect(screen.getByText(/My Submitted Tickets/i)).toBeInTheDocument();
+      expect(screen.getByText(/Somchai Pattana/i)).toBeInTheDocument();
       expect(screen.getAllByText("TKT-2026-00001")[0]).toBeInTheDocument();
       expect(screen.getAllByText("Laptop battery issue after OS update")[0]).toBeInTheDocument();
       expect(screen.getAllByText("↑ High")[0]).toBeInTheDocument();
@@ -76,6 +75,10 @@ describe("MyTickets Component", () => {
     });
 
     render(<MyTickets activeRequester={mockRequester} />);
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/Search by summary or ticket #/i)).toBeInTheDocument();
+    });
 
     const searchInput = screen.getByPlaceholderText(/Search by summary or ticket #/i);
     fireEvent.change(searchInput, { target: { value: "nonexistent" } });
@@ -121,6 +124,10 @@ describe("MyTickets Component", () => {
         onCreateTicketClick={handleCreateClick}
       />
     );
+
+    await waitFor(() => {
+      expect(screen.getAllByText("TKT-2026-00001")[0]).toBeInTheDocument();
+    });
 
     const createBtn = screen.getByRole("button", { name: /\+ Create Ticket/i });
     fireEvent.click(createBtn);

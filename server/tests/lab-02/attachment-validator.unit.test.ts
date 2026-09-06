@@ -1,24 +1,6 @@
 import { describe, it, expect } from "vitest";
+import { validateAttachmentFile } from "../../src/services/attachmentValidator.js";
 
-const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
-const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".pdf"];
-
-export function validateAttachmentFile(filename: string, sizeBytes: number, currentAttachmentCount: number = 0) {
-  if (currentAttachmentCount >= 5) {
-    return { valid: false, error: "Maximum 5 attachments allowed per ticket." };
-  }
-
-  const ext = "." + filename.split(".").pop()?.toLowerCase();
-  if (!ALLOWED_EXTENSIONS.includes(ext)) {
-    return { valid: false, error: `Invalid file format "${filename}". Allowed formats: JPG, PNG, WEBP, PDF.` };
-  }
-
-  if (sizeBytes > MAX_FILE_SIZE_BYTES) {
-    return { valid: false, error: `File "${filename}" exceeds the 5 MB limit.` };
-  }
-
-  return { valid: true };
-}
 
 describe("UNIT-03: Attachment File & Size Validator", () => {
   it("accepts valid file types (JPG, PNG, WEBP, PDF) under 5 MB", () => {

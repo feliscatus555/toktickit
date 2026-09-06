@@ -6,8 +6,10 @@ import {
   fetchCategories,
   fetchRelatedSystems,
   createTicket,
+  uploadAttachment,
   Ticket,
 } from "./api.js";
+
 
 interface CreateTicketProps {
   activeRequester: RequesterUser;
@@ -165,7 +167,18 @@ export default function CreateTicket({ activeRequester, onSuccess, onCancel }: C
         description: description.trim(),
       });
 
+      if (attachments.length > 0) {
+        for (const file of attachments) {
+          try {
+            await uploadAttachment(ticket.id, file, activeRequester.id);
+          } catch (uploadErr) {
+            console.error("Failed to upload attachment during ticket creation:", uploadErr);
+          }
+        }
+      }
+
       setCreatedTicket(ticket);
+
     } catch (err: any) {
       if (err.fieldErrors && Array.isArray(err.fieldErrors)) {
         const errorsMap: Record<string, string> = {};
@@ -504,10 +517,11 @@ export default function CreateTicket({ activeRequester, onSuccess, onCancel }: C
       <form onSubmit={handleSubmit} noValidate>
         {/* Category */}
         <div style={{ marginBottom: "1.25rem" }}>
-          <label style={{ display: "block", fontWeight: 600, marginBottom: "0.4rem", color: "#222" }}>
+          <label htmlFor="categoryId" style={{ display: "block", fontWeight: 600, marginBottom: "0.4rem", color: "#222" }}>
             Category <span style={{ color: "#B3261E" }}>*</span>
           </label>
           <select
+            id="categoryId"
             value={categoryId}
             onChange={(e) => setCategoryId(e.target.value)}
             style={{
@@ -534,10 +548,11 @@ export default function CreateTicket({ activeRequester, onSuccess, onCancel }: C
 
         {/* Related System */}
         <div style={{ marginBottom: "1.25rem" }}>
-          <label style={{ display: "block", fontWeight: 600, marginBottom: "0.4rem", color: "#222" }}>
+          <label htmlFor="relatedSystemId" style={{ display: "block", fontWeight: 600, marginBottom: "0.4rem", color: "#222" }}>
             Related System <span style={{ color: "#B3261E" }}>*</span>
           </label>
           <select
+            id="relatedSystemId"
             value={relatedSystemId}
             onChange={(e) => setRelatedSystemId(e.target.value)}
             style={{
@@ -564,10 +579,11 @@ export default function CreateTicket({ activeRequester, onSuccess, onCancel }: C
 
         {/* Requested Priority */}
         <div style={{ marginBottom: "1.25rem" }}>
-          <label style={{ display: "block", fontWeight: 600, marginBottom: "0.4rem", color: "#222" }}>
+          <label htmlFor="requestedPriority" style={{ display: "block", fontWeight: 600, marginBottom: "0.4rem", color: "#222" }}>
             Requested Priority <span style={{ color: "#B3261E" }}>*</span>
           </label>
           <select
+            id="requestedPriority"
             value={requestedPriority}
             onChange={(e) => setRequestedPriority(e.target.value)}
             style={{
@@ -593,10 +609,11 @@ export default function CreateTicket({ activeRequester, onSuccess, onCancel }: C
 
         {/* Summary */}
         <div style={{ marginBottom: "1.25rem" }}>
-          <label style={{ display: "block", fontWeight: 600, marginBottom: "0.4rem", color: "#222" }}>
+          <label htmlFor="summary" style={{ display: "block", fontWeight: 600, marginBottom: "0.4rem", color: "#222" }}>
             Ticket Summary <span style={{ color: "#B3261E" }}>*</span>
           </label>
           <input
+            id="summary"
             type="text"
             value={summary}
             onChange={(e) => setSummary(e.target.value)}
@@ -619,10 +636,11 @@ export default function CreateTicket({ activeRequester, onSuccess, onCancel }: C
 
         {/* Description */}
         <div style={{ marginBottom: "1.5rem" }}>
-          <label style={{ display: "block", fontWeight: 600, marginBottom: "0.4rem", color: "#222" }}>
+          <label htmlFor="description" style={{ display: "block", fontWeight: 600, marginBottom: "0.4rem", color: "#222" }}>
             Description <span style={{ color: "#B3261E" }}>*</span>
           </label>
           <textarea
+            id="description"
             rows={5}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
