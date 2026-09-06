@@ -10,12 +10,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Category {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique
-  createdAt DateTime @default(now())
-}
-
 // ---------------------------------------------------------------------------
 // Issue 3 — Create and seed IT request categories
 // Define a Category model with:
@@ -25,3 +19,83 @@ model Category {
 // Then run:  npx prisma migrate dev --name init
 // TODO(Issue 3): add the Category model below.
 // ---------------------------------------------------------------------------
+model Category {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  tickets   Ticket[]
+}
+
+//starting feature 5 of lab2
+model RequesterUser {
+  id          Int      @id @default(autoincrement())
+  email       String   @unique
+  displayName String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  tickets     Ticket[]
+}
+
+enum RequestedPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TicketStatus {
+  New
+  InProgress
+  Assigned
+  Pending
+  Resolved
+  Closed
+  Cancelled
+}
+
+model RelatedSystem {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  tickets     Ticket[]
+}
+
+model Ticket {
+  id                String            @id @default(uuid())
+  ticketNo          String            @unique
+  summary           String
+  description       String
+  status            TicketStatus      @default(New)
+  requestedPriority RequestedPriority
+  itPriority        RequestedPriority?
+  ownerName         String?
+  resolutionSummary String?
+  requesterId       Int
+  requester         RequesterUser     @relation(fields: [requesterId], references: [id])
+  categoryId        Int
+  category          Category          @relation(fields: [categoryId], references: [id])
+  relatedSystemId   Int
+  relatedSystem     RelatedSystem     @relation(fields: [relatedSystemId], references: [id])
+  version           Int               @default(1)
+  attachments       Attachment[]
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+}
+
+
+model Attachment {
+  id               String    @id @default(uuid())
+  ticketId         String
+  ticket           Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  originalFilename String
+  mimeType         String
+  sizeBytes        Int
+  storageKey       String
+  isDeleted        Boolean   @default(false)
+  deletedAt        DateTime?
+  deletedById      Int?
+  deletionReason   String?
+  createdAt        DateTime  @default(now())
+}
