@@ -31,14 +31,14 @@ describe("Client API Service Layer — Feature 8", () => {
         updatedAt: "2026-09-05T00:00:00.000Z",
       };
 
-      global.fetch = vi.fn().mockResolvedValue({
+      globalThis.fetch = vi.fn().mockResolvedValue({
         ok: true,
         json: async () => mockTicket,
       });
 
       const res = await fetchTicketDetail("tkt-123", 1);
       expect(res).toEqual(mockTicket);
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(globalThis.fetch).toHaveBeenCalledWith(
         expect.stringContaining("/api/tickets/tkt-123"),
         expect.objectContaining({
           headers: {
@@ -49,7 +49,7 @@ describe("Client API Service Layer — Feature 8", () => {
     });
 
     it("throws formatted error on 403 OWNERSHIP_DENIED non-200 response", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
+      globalThis.fetch = vi.fn().mockResolvedValue({
         ok: false,
         json: async () => ({
           error: { code: "OWNERSHIP_DENIED", message: "You are not authorized to view this ticket." },
@@ -65,7 +65,7 @@ describe("Client API Service Layer — Feature 8", () => {
     });
 
     it("throws formatted error on 404 NOT_FOUND response", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
+      globalThis.fetch = vi.fn().mockResolvedValue({
         ok: false,
         json: async () => ({
           error: { code: "NOT_FOUND", message: "Ticket not found." },
@@ -93,7 +93,7 @@ describe("Client API Service Layer — Feature 8", () => {
         createdAt: "2026-09-05T00:00:00.000Z",
       };
 
-      global.fetch = vi.fn().mockResolvedValue({
+      globalThis.fetch = vi.fn().mockResolvedValue({
         ok: true,
         json: async () => mockAttachment,
       });
@@ -102,7 +102,7 @@ describe("Client API Service Layer — Feature 8", () => {
       const res = await uploadAttachment("tkt-123", file, 1);
 
       expect(res).toEqual(mockAttachment);
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(globalThis.fetch).toHaveBeenCalledWith(
         expect.stringContaining("/api/tickets/tkt-123/attachments"),
         expect.objectContaining({
           method: "POST",
@@ -114,7 +114,7 @@ describe("Client API Service Layer — Feature 8", () => {
     });
 
     it("throws INVALID_ATTACHMENT error when uploading disallowed file type or oversized file", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
+      globalThis.fetch = vi.fn().mockResolvedValue({
         ok: false,
         json: async () => ({
           error: {
@@ -134,7 +134,7 @@ describe("Client API Service Layer — Feature 8", () => {
     });
 
     it("throws MAX_ATTACHMENTS_EXCEEDED error when ticket active attachments limit (5) is reached", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
+      globalThis.fetch = vi.fn().mockResolvedValue({
         ok: false,
         json: async () => ({
           error: {
@@ -154,7 +154,7 @@ describe("Client API Service Layer — Feature 8", () => {
     });
 
     it("throws OWNERSHIP_DENIED error when uploading attachment as unauthorized requester", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
+      globalThis.fetch = vi.fn().mockResolvedValue({
         ok: false,
         json: async () => ({
           error: {
@@ -182,7 +182,7 @@ describe("Client API Service Layer — Feature 8", () => {
 
     it("fetches blob binary on download success", async () => {
       const blob = new Blob(["test binary"], { type: "image/png" });
-      global.fetch = vi.fn().mockResolvedValue({
+      globalThis.fetch = vi.fn().mockResolvedValue({
         ok: true,
         blob: async () => blob,
       });
@@ -192,7 +192,7 @@ describe("Client API Service Layer — Feature 8", () => {
     });
 
     it("throws 410 error when downloading soft-removed attachment", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
+      globalThis.fetch = vi.fn().mockResolvedValue({
         ok: false,
         status: 410,
         json: async () => ({
@@ -220,14 +220,14 @@ describe("Client API Service Layer — Feature 8", () => {
         deletedAt: "2026-09-05T00:00:00.000Z",
       };
 
-      global.fetch = vi.fn().mockResolvedValue({
+      globalThis.fetch = vi.fn().mockResolvedValue({
         ok: true,
         json: async () => mockResponse,
       });
 
       const res = await softRemoveAttachment("att-1", 1, "Wrong file uploaded");
       expect(res).toEqual(mockResponse);
-      expect(global.fetch).toHaveBeenCalledWith(
+      expect(globalThis.fetch).toHaveBeenCalledWith(
         expect.stringContaining("/api/attachments/att-1"),
         expect.objectContaining({
           method: "DELETE",
@@ -241,7 +241,7 @@ describe("Client API Service Layer — Feature 8", () => {
     });
 
     it("throws VALIDATION_FAILED error with fieldErrors array when deletion reason is omitted", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
+      globalThis.fetch = vi.fn().mockResolvedValue({
         ok: false,
         json: async () => ({
           error: {
@@ -264,7 +264,7 @@ describe("Client API Service Layer — Feature 8", () => {
     });
 
     it("throws OWNERSHIP_DENIED error when attempting to soft-remove attachment owned by another user", async () => {
-      global.fetch = vi.fn().mockResolvedValue({
+      globalThis.fetch = vi.fn().mockResolvedValue({
         ok: false,
         json: async () => ({
           error: {
