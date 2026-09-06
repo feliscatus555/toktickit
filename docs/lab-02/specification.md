@@ -171,18 +171,18 @@ The IT department requires a professional, responsive, end-user-facing ticketing
 ## 11. Definition of Done (DoD)
 
 ### Part 1: Product Completion Checklist
-- [ ] All Features 5-8 implemented according to approved engineering contract.
-- [ ] Prisma models and migrations applied cleanly.
-- [ ] Seed script executes idempotently (`npm --prefix server run prisma:seed`).
-- [ ] All automated unit, API, UI, responsive, and Playwright E2E tests pass cleanly.
-- [ ] Responsive UI verified on Desktop (`>= 992px`), Tablet (`768-991px`), and Mobile (`< 768px`).
-- [ ] Form input preserved on API failure; safe error messages rendered.
+- [x] All Features 5-8 implemented according to approved engineering contract.
+- [x] Prisma models and migrations applied cleanly.
+- [x] Seed script executes idempotently (`npm --prefix server run prisma:seed`).
+- [x] All automated unit, API, UI, responsive, and Playwright E2E tests pass cleanly.
+- [x] Responsive UI verified on Desktop (`>= 992px`), Tablet (`768-991px`), and Mobile (`< 768px`).
+- [x] Form input preserved on API failure; safe error messages rendered.
 
 ### Part 2: Course Delivery Checklist
-- [ ] GitHub Issues 11 through 15 created on Kanban board.
-- [ ] Feature branches merged into `lab2-staging` via peer-reviewed Pull Requests.
-- [ ] Release PR merged from `lab2-staging` into `main`.
-- [ ] PDF submission compiled in required 9-part format.
+- [x] GitHub Issues 11 through 15 created on Kanban board.
+- [x] Feature branches merged into `lab2-staging` via peer-reviewed Pull Requests.
+- [x] Release PR merged from `lab2-staging` into `main`.
+- [x] PDF submission compiled in required 9-part format.
 
 ---
 
