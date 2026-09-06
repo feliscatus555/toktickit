@@ -10,7 +10,7 @@
 | https://github.com/feliscatus555/toktickit/pull/16 | feature/6-ticket-creation | Everything is resolved and all tests pass. Good job. |
 | https://github.com/feliscatus555/toktickit/pull/17 | feature/7-my-tickets-list| Looks good. |
 | https://github.com/feliscatus555/toktickit/pull/18 | feature/8-ticket-detail | Everything works. Approved |
-| Lab 2 release # | lab2-staging | Approved |
+| https://github.com/feliscatus555/toktickit/pull/19 | lab2-staging | Approved |
 
 Reviewer comment: Why is there no mention of the Attachment Upload feature?
 
