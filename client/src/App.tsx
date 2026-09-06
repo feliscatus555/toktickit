@@ -6,7 +6,7 @@ import MyTickets from "./MyTickets.js";
 import TicketDetail from "./TicketDetail.js";
 
 type UiState = "idle" | "loading" | "success" | "error";
-type ActiveTab = "my-tickets" | "create-ticket" | "system-status" | "ticket-detail";
+type ActiveTab = "my-tickets" | "create-ticket" | "ticket-detail";
 
 const STORAGE_KEY = "toktickit_selected_requester";
 const DEFAULT_REQUESTER: RequesterUser = {
@@ -19,7 +19,7 @@ export default function App() {
   const [state, setState] = useState<UiState>("idle");
   const [categories, setCategories] = useState<Category[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<ActiveTab>("system-status");
+  const [activeTab, setActiveTab] = useState<ActiveTab>("my-tickets");
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
 
   const [currentRequester, setCurrentRequester] = useState<RequesterUser>(() => {
@@ -129,21 +129,6 @@ export default function App() {
                   >
                     <span style={{ color: "#FFFFFF", fontWeight: "bold", marginRight: "4px" }}>+</span> Create Ticket
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab("system-status")}
-                    className="btn btn-sm text-white fw-semibold"
-                    style={{
-                      backgroundColor: activeTab === "system-status" ? "#0B7A46" : "transparent",
-                      border: activeTab === "system-status" ? "1px solid #EAF6EF" : "1px solid transparent",
-                      borderRadius: "6px",
-                      padding: "0.4rem 0.85rem",
-                      whiteSpace: "nowrap",
-                      fontSize: "0.88rem",
-                    }}
-                  >
-                    ⚙️ System Status
-                  </button>
                 </div>
               )}
             </div>
@@ -231,21 +216,6 @@ export default function App() {
               >
                 <span style={{ color: "#FFFFFF", fontWeight: "bold", marginRight: "4px" }}>+</span> Create Ticket
               </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("system-status")}
-                className="btn btn-sm text-white fw-semibold flex-fill text-center"
-                style={{
-                  backgroundColor: activeTab === "system-status" ? "#0B7A46" : "transparent",
-                  border: activeTab === "system-status" ? "1px solid #EAF6EF" : "1px solid transparent",
-                  borderRadius: "6px",
-                  padding: "0.4rem 0.6rem",
-                  fontSize: "0.85rem",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                ⚙️ System Status
-              </button>
             </div>
           )}
         </div>
@@ -273,54 +243,12 @@ export default function App() {
             currentRequester={currentRequester}
             onBack={() => setActiveTab("my-tickets")}
           />
-        ) : activeTab === "create-ticket" ? (
+        ) : (
           <CreateTicket
             activeRequester={currentRequester}
             onSuccess={() => setActiveTab("my-tickets")}
             onCancel={() => setActiveTab("my-tickets")}
           />
-        ) : (
-
-          <div className="card shadow-sm border-0 p-4" style={{ maxWidth: 720, margin: "0 auto" }}>
-            <div className="d-flex justify-content-between align-items-center mb-4">
-              <h2 className="h4 mb-0 text-dark">System Status Baseline</h2>
-              <button
-                className="btn text-white px-4 fw-semibold"
-                style={{ backgroundColor: "#006B3C" }}
-                onClick={handleCheck}
-                disabled={state === "loading"}
-              >
-                {state === "loading" ? "Loading…" : "Check System"}
-              </button>
-            </div>
-
-            {state === "error" && (
-              <div className="alert alert-danger" role="alert">
-                <h5 className="alert-heading mb-1">Status: Offline</h5>
-                <p className="mb-0">{error ?? "Unable to connect to TokTickIT API server"}</p>
-              </div>
-            )}
-
-            {state === "success" && (
-              <div className="mt-2">
-                <div className="alert alert-success" role="alert">
-                  <h5 className="alert-heading mb-0">Status: Online</h5>
-                </div>
-
-                <h6 className="fw-bold mt-4">Categories ({categories.length}):</h6>
-                <ul className="list-group mt-2">
-                  {categories.map((category) => (
-                    <li
-                      key={category.id}
-                      className="list-group-item d-flex justify-content-between align-items-center py-3"
-                    >
-                      <span className="fw-medium">{category.name}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
         )}
       </main>
     </div>

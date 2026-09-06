@@ -15,7 +15,7 @@ export default function App() {
     const [state, setState] = useState("idle");
     const [categories, setCategories] = useState([]);
     const [error, setError] = useState(null);
-    const [activeTab, setActiveTab] = useState("system-status");
+    const [activeTab, setActiveTab] = useState("my-tickets");
     const [selectedTicketId, setSelectedTicketId] = useState(null);
     const [currentRequester, setCurrentRequester] = useState(() => {
         const saved = localStorage.getItem(STORAGE_KEY);
@@ -77,14 +77,7 @@ export default function App() {
                                                         padding: "0.4rem 0.85rem",
                                                         whiteSpace: "nowrap",
                                                         fontSize: "0.88rem",
-                                                    }, children: [_jsx("span", { style: { color: "#FFFFFF", fontWeight: "bold", marginRight: "4px" }, children: "+" }), " Create Ticket"] }), _jsx("button", { type: "button", onClick: () => setActiveTab("system-status"), className: "btn btn-sm text-white fw-semibold", style: {
-                                                        backgroundColor: activeTab === "system-status" ? "#0B7A46" : "transparent",
-                                                        border: activeTab === "system-status" ? "1px solid #EAF6EF" : "1px solid transparent",
-                                                        borderRadius: "6px",
-                                                        padding: "0.4rem 0.85rem",
-                                                        whiteSpace: "nowrap",
-                                                        fontSize: "0.88rem",
-                                                    }, children: "\u2699\uFE0F System Status" })] }))] }), _jsx("div", { className: "d-flex align-items-center gap-2", children: currentRequester ? (_jsxs(_Fragment, { children: [_jsxs("span", { className: "badge bg-light text-dark py-2 px-2 px-sm-3", style: {
+                                                    }, children: [_jsx("span", { style: { color: "#FFFFFF", fontWeight: "bold", marginRight: "4px" }, children: "+" }), " Create Ticket"] })] }))] }), _jsx("div", { className: "d-flex align-items-center gap-2", children: currentRequester ? (_jsxs(_Fragment, { children: [_jsxs("span", { className: "badge bg-light text-dark py-2 px-2 px-sm-3", style: {
                                                     fontSize: "0.85rem",
                                                     maxWidth: "220px",
                                                     overflow: "hidden",
@@ -112,12 +105,5 @@ export default function App() {
                                         padding: "0.4rem 0.6rem",
                                         fontSize: "0.85rem",
                                         whiteSpace: "nowrap",
-                                    }, children: [_jsx("span", { style: { color: "#FFFFFF", fontWeight: "bold", marginRight: "4px" }, children: "+" }), " Create Ticket"] }), _jsx("button", { type: "button", onClick: () => setActiveTab("system-status"), className: "btn btn-sm text-white fw-semibold flex-fill text-center", style: {
-                                        backgroundColor: activeTab === "system-status" ? "#0B7A46" : "transparent",
-                                        border: activeTab === "system-status" ? "1px solid #EAF6EF" : "1px solid transparent",
-                                        borderRadius: "6px",
-                                        padding: "0.4rem 0.6rem",
-                                        fontSize: "0.85rem",
-                                        whiteSpace: "nowrap",
-                                    }, children: "\u2699\uFE0F System Status" })] }))] }) }), _jsx("main", { className: "container-fluid px-3 px-md-5 py-4", children: !currentRequester || showSelectorModal ? (_jsx("div", { style: { maxWidth: 720, margin: "0 auto" }, children: _jsx(RequesterSelector, { onSelectRequester: handleSelectRequester, onClose: currentRequester ? () => setShowSelectorModal(false) : undefined, currentRequesterId: currentRequester?.id }) })) : activeTab === "my-tickets" ? (_jsx(MyTickets, { activeRequester: currentRequester, onCreateTicketClick: () => setActiveTab("create-ticket"), onSelectTicket: handleSelectTicket })) : activeTab === "ticket-detail" && selectedTicketId ? (_jsx(TicketDetail, { ticketId: selectedTicketId, currentRequester: currentRequester, onBack: () => setActiveTab("my-tickets") })) : activeTab === "create-ticket" ? (_jsx(CreateTicket, { activeRequester: currentRequester, onSuccess: () => setActiveTab("my-tickets"), onCancel: () => setActiveTab("my-tickets") })) : (_jsxs("div", { className: "card shadow-sm border-0 p-4", style: { maxWidth: 720, margin: "0 auto" }, children: [_jsxs("div", { className: "d-flex justify-content-between align-items-center mb-4", children: [_jsx("h2", { className: "h4 mb-0 text-dark", children: "System Status Baseline" }), _jsx("button", { className: "btn text-white px-4 fw-semibold", style: { backgroundColor: "#006B3C" }, onClick: handleCheck, disabled: state === "loading", children: state === "loading" ? "Loading…" : "Check System" })] }), state === "error" && (_jsxs("div", { className: "alert alert-danger", role: "alert", children: [_jsx("h5", { className: "alert-heading mb-1", children: "Status: Offline" }), _jsx("p", { className: "mb-0", children: error ?? "Unable to connect to TokTickIT API server" })] })), state === "success" && (_jsxs("div", { className: "mt-2", children: [_jsx("div", { className: "alert alert-success", role: "alert", children: _jsx("h5", { className: "alert-heading mb-0", children: "Status: Online" }) }), _jsxs("h6", { className: "fw-bold mt-4", children: ["Categories (", categories.length, "):"] }), _jsx("ul", { className: "list-group mt-2", children: categories.map((category) => (_jsx("li", { className: "list-group-item d-flex justify-content-between align-items-center py-3", children: _jsx("span", { className: "fw-medium", children: category.name }) }, category.id))) })] }))] })) })] }));
+                                    }, children: [_jsx("span", { style: { color: "#FFFFFF", fontWeight: "bold", marginRight: "4px" }, children: "+" }), " Create Ticket"] })] }))] }) }), _jsx("main", { className: "container-fluid px-3 px-md-5 py-4", children: !currentRequester || showSelectorModal ? (_jsx("div", { style: { maxWidth: 720, margin: "0 auto" }, children: _jsx(RequesterSelector, { onSelectRequester: handleSelectRequester, onClose: currentRequester ? () => setShowSelectorModal(false) : undefined, currentRequesterId: currentRequester?.id }) })) : activeTab === "my-tickets" ? (_jsx(MyTickets, { activeRequester: currentRequester, onCreateTicketClick: () => setActiveTab("create-ticket"), onSelectTicket: handleSelectTicket })) : activeTab === "ticket-detail" && selectedTicketId ? (_jsx(TicketDetail, { ticketId: selectedTicketId, currentRequester: currentRequester, onBack: () => setActiveTab("my-tickets") })) : (_jsx(CreateTicket, { activeRequester: currentRequester, onSuccess: () => setActiveTab("my-tickets"), onCancel: () => setActiveTab("my-tickets") })) })] }));
 }
