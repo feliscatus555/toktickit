@@ -450,6 +450,86 @@ export async function softRemoveAttachment(
   return data;
 }
 
+export interface StaffTicketItem {
+  id: string;
+  ticketNo: string;
+  summary: string;
+  createdAt: string;
+  updatedAt: string;
+  category: {
+    id: number;
+    name: string;
+  };
+  requestedPriority: string;
+  itPriority: string;
+  status: string;
+  owner: {
+    id: number;
+    displayName: string;
+  } | null;
+  requester: {
+    id: number;
+    displayName: string;
+  };
+  isProblemAppearsResolved?: boolean;
+}
 
+export interface StaffTicketsResponse {
+  items: StaffTicketItem[];
+  pagination: {
+    page: number;
+    limit: number;
+    totalItems: number;
+    totalPages: number;
+  };
+}
 
+export interface FetchStaffTicketsParams {
+  search?: string;
+  category?: number | string;
+  status?: string;
+  priority?: string;
+  owner?: string;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+  page?: number;
+  limit?: number;
+}
 
+export async function fetchStaffTickets(
+  params: FetchStaffTicketsParams = {}
+): Promise<StaffTicketsResponse> {
+  const queryParams = new URLSearchParams();
+  if (params.search) queryParams.set("search", params.search);
+  if (params.category !== undefined && params.category !== "") {
+    queryParams.set("category", String(params.category));
+  }
+  if (params.status) queryParams.set("status", params.status);
+  if (params.priority) queryParams.set("priority", params.priority);
+  if (params.owner) queryParams.set("owner", params.owner);
+  if (params.sortBy) queryParams.set("sortBy", params.sortBy);
+  if (params.sortOrder) queryParams.set("sortOrder", params.sortOrder);
+  if (params.page !== undefined) queryParams.set("page", String(params.page));
+  if (params.limit !== undefined) queryParams.set("limit", String(params.limit));
+
+  const queryString = queryParams.toString();
+  const url = `${API_URL}/api/staff/tickets${queryString ? `?${queryString}` : ""}`;
+
+  const res = await fetch(url, {
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeaders(),
+    },
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    const errorMsg = data?.error?.message || "Failed to fetch IT staff tickets.";
+    const err = new Error(errorMsg) as any;
+    err.code = data?.error?.code;
+    err.status = res.status;
+    throw err;
+  }
+
+  return data;
+}

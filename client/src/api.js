@@ -279,3 +279,42 @@ export async function softRemoveAttachment(attachmentId, removerId, reason) {
     }
     return data;
 }
+export async function fetchStaffTickets(params = {}) {
+    const queryParams = new URLSearchParams();
+    if (params.search)
+        queryParams.set("search", params.search);
+    if (params.category !== undefined && params.category !== "") {
+        queryParams.set("category", String(params.category));
+    }
+    if (params.status)
+        queryParams.set("status", params.status);
+    if (params.priority)
+        queryParams.set("priority", params.priority);
+    if (params.owner)
+        queryParams.set("owner", params.owner);
+    if (params.sortBy)
+        queryParams.set("sortBy", params.sortBy);
+    if (params.sortOrder)
+        queryParams.set("sortOrder", params.sortOrder);
+    if (params.page !== undefined)
+        queryParams.set("page", String(params.page));
+    if (params.limit !== undefined)
+        queryParams.set("limit", String(params.limit));
+    const queryString = queryParams.toString();
+    const url = `${API_URL}/api/staff/tickets${queryString ? `?${queryString}` : ""}`;
+    const res = await fetch(url, {
+        headers: {
+            "Content-Type": "application/json",
+            ...getAuthHeaders(),
+        },
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        const errorMsg = data?.error?.message || "Failed to fetch IT staff tickets.";
+        const err = new Error(errorMsg);
+        err.code = data?.error?.code;
+        err.status = res.status;
+        throw err;
+    }
+    return data;
+}
