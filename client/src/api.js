@@ -1,4 +1,35 @@
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
+export const AUTH_TOKEN_KEY = "toktickit_auth_token";
+export const AUTH_USER_KEY = "toktickit_auth_user";
+export function getAuthToken() {
+    return localStorage.getItem(AUTH_TOKEN_KEY);
+}
+export function setAuthToken(token) {
+    localStorage.setItem(AUTH_TOKEN_KEY, token);
+}
+export function clearAuthSession() {
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+    localStorage.removeItem(AUTH_USER_KEY);
+}
+export function getStoredAuthUser() {
+    const saved = localStorage.getItem(AUTH_USER_KEY);
+    if (!saved)
+        return null;
+    try {
+        return JSON.parse(saved);
+    }
+    catch {
+        localStorage.removeItem(AUTH_USER_KEY);
+        return null;
+    }
+}
+export function setStoredAuthUser(user) {
+    localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+}
+export function getAuthHeaders() {
+    const token = getAuthToken();
+    return token ? { Authorization: `Bearer ${token}` } : {};
+}
 export async function fetchActiveRequesters() {
     const res = await fetch(`${API_URL}/api/requesters/active`);
     if (!res.ok) {
@@ -20,12 +51,81 @@ export async function fetchRelatedSystems() {
     }
     return res.json();
 }
+export async function login(email, password) {
+    const res = await fetch(`${API_URL}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        const errorMsg = data?.error?.message || "Invalid email or password. Please try again.";
+        const err = new Error(errorMsg);
+        err.code = data?.error?.code;
+        err.fieldErrors = data?.error?.fieldErrors;
+        throw err;
+    }
+    setAuthToken(data.token);
+    setStoredAuthUser(data.user);
+    return data;
+}
+export async function logout() {
+    try {
+        await fetch(`${API_URL}/api/auth/logout`, {
+            method: "POST",
+            headers: {
+                ...getAuthHeaders(),
+            },
+        });
+    }
+    catch {
+        // Ignore network failure on logout
+    }
+    finally {
+        clearAuthSession();
+    }
+}
+export async function fetchCurrentUser() {
+    const res = await fetch(`${API_URL}/api/auth/me`, {
+        headers: {
+            ...getAuthHeaders(),
+        },
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        clearAuthSession();
+        throw new Error(data?.error?.message || "Failed to fetch user profile");
+    }
+    setStoredAuthUser(data.user);
+    return data.user;
+}
+export async function changePassword(payload) {
+    const res = await fetch(`${API_URL}/api/auth/change-password`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            ...getAuthHeaders(),
+        },
+        body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        const errorMsg = data?.error?.message || "Failed to change password";
+        const err = new Error(errorMsg);
+        err.code = data?.error?.code;
+        err.fieldErrors = data?.error?.fieldErrors;
+        throw err;
+    }
+    setStoredAuthUser(data.user);
+    return data;
+}
 export async function createTicket(payload) {
     const res = await fetch(`${API_URL}/api/tickets`, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
             "X-Development-Requester-Id": String(payload.requesterId),
+            ...getAuthHeaders(),
         },
         body: JSON.stringify(payload),
     });
@@ -79,6 +179,7 @@ export async function fetchMyTickets(params) {
     const res = await fetch(`${API_URL}/api/tickets?${queryParams.toString()}`, {
         headers: {
             "X-Development-Requester-Id": String(params.requesterId),
+            ...getAuthHeaders(),
         },
     });
     if (!res.ok) {
@@ -101,6 +202,7 @@ export async function fetchTicketDetail(ticketId, requesterId) {
     const res = await fetch(`${API_URL}/api/tickets/${ticketId}`, {
         headers: {
             "X-Development-Requester-Id": String(requesterId),
+            ...getAuthHeaders(),
         },
     });
     const data = await res.json();
@@ -120,6 +222,7 @@ export async function uploadAttachment(ticketId, file, uploaderId) {
         method: "POST",
         headers: {
             "X-Development-Requester-Id": String(uploaderId),
+            ...getAuthHeaders(),
         },
         body: formData,
     });
@@ -139,6 +242,7 @@ export async function downloadAttachmentBlob(attachmentId, requesterId) {
     const res = await fetch(getAttachmentDownloadUrl(attachmentId, requesterId), {
         headers: {
             "X-Development-Requester-Id": String(requesterId),
+            ...getAuthHeaders(),
         },
     });
     if (!res.ok) {
@@ -161,6 +265,7 @@ export async function softRemoveAttachment(attachmentId, removerId, reason) {
         headers: {
             "Content-Type": "application/json",
             "X-Development-Requester-Id": String(removerId),
+            ...getAuthHeaders(),
         },
         body: JSON.stringify({ removerId, reason }),
     });
