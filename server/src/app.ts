@@ -7,6 +7,18 @@ import multer from "multer";
 import { getPrisma } from "./prisma.js";
 import { generateTicketNo } from "./services/ticketNoGenerator.js";
 import { validateAttachmentFile } from "./services/attachmentValidator.js";
+import {
+  authenticateToken,
+  optionalAuthenticate,
+  requireRole,
+  AuthenticatedRequest,
+} from "./middleware/authMiddleware.js";
+import {
+  hashPassword,
+  comparePassword,
+  generateToken,
+  validatePasswordComplexity,
+} from "./services/authService.js";
 
 const uploadsDir = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(uploadsDir)) {
@@ -31,9 +43,9 @@ const upload = multer({
 
 export const app = express();
 
-
 app.use(cors());          // already wired: lets the Vite dev server call this API
 app.use(express.json());
+app.use(optionalAuthenticate);
 
 // ---------------------------------------------------------------------------
 // Issue 2 — API health check
@@ -44,6 +56,211 @@ app.get("/api/health", (_req: Request, res: Response) => {
   // TODO(Issue 2): replace this stub with the required 200 response.
   res.status(200).json({ status: "ok", service: "TokTickIT API" });
 });
+
+// ---------------------------------------------------------------------------
+// Feature 9 — Authentication & Password Management Routes
+// ---------------------------------------------------------------------------
+app.post("/api/auth/login", async (req: Request, res: Response) => {
+  try {
+    const { email, password } = req.body || {};
+    const fieldErrors: Array<{ field: string; message: string }> = [];
+
+    if (!email || typeof email !== "string" || !email.trim()) {
+      fieldErrors.push({ field: "email", message: "Email is required." });
+    }
+    if (!password || typeof password !== "string") {
+      fieldErrors.push({ field: "password", message: "Password is required." });
+    }
+
+    if (fieldErrors.length > 0) {
+      res.status(422).json({
+        error: {
+          code: "VALIDATION_FAILED",
+          message: "Login failed due to invalid input.",
+          fieldErrors,
+        },
+      });
+      return;
+    }
+
+    const prisma = getPrisma();
+    const user = await prisma.user.findUnique({
+      where: { email: email.toLowerCase().trim() },
+    });
+
+    if (!user || !user.isActive) {
+      res.status(401).json({
+        error: {
+          code: "INVALID_CREDENTIALS",
+          message: "Invalid email address or password.",
+        },
+      });
+      return;
+    }
+
+    const isMatch = await comparePassword(password, user.passwordHash);
+    if (!isMatch) {
+      res.status(401).json({
+        error: {
+          code: "INVALID_CREDENTIALS",
+          message: "Invalid email address or password.",
+        },
+      });
+      return;
+    }
+
+    const token = generateToken({
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      displayName: user.displayName,
+    });
+
+    res.status(200).json({
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        displayName: user.displayName,
+        role: user.role,
+        mustChangePassword: user.mustChangePassword,
+      },
+    });
+  } catch (error) {
+    console.error("Login error", error);
+    res.status(500).json({
+      error: {
+        code: "INTERNAL_ERROR",
+        message: "Failed to authenticate user.",
+      },
+    });
+  }
+});
+
+app.post("/api/auth/logout", authenticateToken, (_req: Request, res: Response) => {
+  res.status(200).json({ message: "Successfully logged out." });
+});
+
+app.get("/api/auth/me", authenticateToken, (req: AuthenticatedRequest, res: Response) => {
+  res.status(200).json({ user: req.user });
+});
+
+app.post("/api/auth/change-password", authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { currentPassword, newPassword, confirmPassword } = req.body || {};
+    const fieldErrors: Array<{ field: string; message: string }> = [];
+
+    if (!currentPassword || typeof currentPassword !== "string") {
+      fieldErrors.push({ field: "currentPassword", message: "Current password is required." });
+    }
+    if (!newPassword || typeof newPassword !== "string") {
+      fieldErrors.push({ field: "newPassword", message: "New password is required." });
+    }
+    if (!confirmPassword || typeof confirmPassword !== "string") {
+      fieldErrors.push({ field: "confirmPassword", message: "Password confirmation is required." });
+    }
+
+    if (fieldErrors.length > 0) {
+      res.status(422).json({
+        error: {
+          code: "VALIDATION_FAILED",
+          message: "Password change failed due to missing fields.",
+          fieldErrors,
+        },
+      });
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      res.status(422).json({
+        error: {
+          code: "PASSWORD_MISMATCH",
+          message: "New password and confirmation password do not match.",
+          fieldErrors: [{ field: "confirmPassword", message: "Passwords do not match." }],
+        },
+      });
+      return;
+    }
+
+    const complexity = validatePasswordComplexity(newPassword);
+    if (!complexity.isValid) {
+      res.status(422).json({
+        error: {
+          code: "PASSWORD_TOO_WEAK",
+          message: "New password does not meet complexity requirements.",
+          fieldErrors: complexity.errors.map((msg) => ({ field: "newPassword", message: msg })),
+        },
+      });
+      return;
+    }
+
+    const prisma = getPrisma();
+    const dbUser = await prisma.user.findUnique({ where: { id: req.user!.id } });
+    if (!dbUser) {
+      res.status(404).json({ error: { code: "NOT_FOUND", message: "User not found." } });
+      return;
+    }
+
+    const isMatch = await comparePassword(currentPassword, dbUser.passwordHash);
+    if (!isMatch) {
+      res.status(401).json({
+        error: {
+          code: "INVALID_CURRENT_PASSWORD",
+          message: "Current password is incorrect.",
+        },
+      });
+      return;
+    }
+
+    const newHash = await hashPassword(newPassword);
+    const updatedUser = await prisma.user.update({
+      where: { id: req.user!.id },
+      data: {
+        passwordHash: newHash,
+        mustChangePassword: false,
+      },
+      select: {
+        id: true,
+        email: true,
+        displayName: true,
+        role: true,
+        isActive: true,
+        mustChangePassword: true,
+      },
+    });
+
+    res.status(200).json({
+      message: "Password updated successfully.",
+      user: updatedUser,
+    });
+  } catch (error) {
+    console.error("Change password error", error);
+    res.status(500).json({
+      error: {
+        code: "INTERNAL_ERROR",
+        message: "Failed to change password.",
+      },
+    });
+  }
+});
+
+app.get(
+  "/api/staff/tickets",
+  authenticateToken,
+  requireRole("IT_STAFF", "ADMINISTRATOR"),
+  async (_req: AuthenticatedRequest, res: Response) => {
+    res.status(200).json({
+      items: [],
+      pagination: {
+        page: 1,
+        limit: 10,
+        totalItems: 0,
+        totalPages: 0,
+      },
+    });
+  }
+);
+
 
 // ---------------------------------------------------------------------------
 // Issue 4 — Category list
@@ -84,8 +301,8 @@ app.get("/api/categories", async (_req: Request, res: Response) => {
 app.get("/api/requesters/active", async (_req: Request, res: Response) => {
   try {
     const prisma = getPrisma();
-    const requesters = await prisma.requesterUser.findMany({
-      where: { isActive: true },
+    const requesters = await prisma.user.findMany({
+      where: { isActive: true, role: "REQUESTER" },
       select: { id: true, email: true, displayName: true },
       orderBy: { email: "asc" },
     });
@@ -120,17 +337,33 @@ app.get("/api/related-systems", async (_req: Request, res: Response) => {
 app.post("/api/tickets", async (req: Request, res: Response) => {
   try {
     const prisma = getPrisma();
-    const reqHeaderId = req.headers["x-development-requester-id"];
+    const authUser = (req as AuthenticatedRequest).user;
+    if (authUser && authUser.mustChangePassword) {
+      res.status(403).json({
+        error: {
+          code: "MUST_CHANGE_PASSWORD",
+          message: "Password change is required before accessing application resources.",
+        },
+      });
+      return;
+    }
+    let requesterId: number;
+
+    if (authUser) {
+      requesterId = authUser.id;
+    } else {
+      const reqHeaderId = req.headers["x-development-requester-id"];
+      const { requesterId: bodyRequesterId } = req.body || {};
+      requesterId = Number(reqHeaderId || bodyRequesterId);
+    }
+
     const {
-      requesterId: bodyRequesterId,
       categoryId,
       relatedSystemId,
       requestedPriority,
       summary,
       description,
     } = req.body || {};
-
-    const requesterId = Number(reqHeaderId || bodyRequesterId);
 
     const fieldErrors: Array<{ field: string; message: string }> = [];
 
@@ -192,7 +425,7 @@ app.post("/api/tickets", async (req: Request, res: Response) => {
     }
 
     const [requester, category, relatedSystem] = await Promise.all([
-      prisma.requesterUser.findUnique({ where: { id: requesterId } }),
+      prisma.user.findUnique({ where: { id: requesterId } }),
       prisma.category.findUnique({ where: { id: categoryId } }),
       prisma.relatedSystem.findUnique({ where: { id: relatedSystemId } }),
     ]);
@@ -266,20 +499,35 @@ app.post("/api/tickets", async (req: Request, res: Response) => {
 app.get("/api/tickets", async (req: Request, res: Response) => {
   try {
     const prisma = getPrisma();
-    const reqHeaderId = req.headers["x-development-requester-id"];
-    const queryRequesterId = req.query.requesterId;
-
-    const rawRequesterId = reqHeaderId || queryRequesterId;
-    const requesterId = Number(rawRequesterId);
-
-    if (!rawRequesterId || isNaN(requesterId)) {
-      res.status(400).json({
+    const authUser = (req as AuthenticatedRequest).user;
+    if (authUser && authUser.mustChangePassword) {
+      res.status(403).json({
         error: {
-          code: "MISSING_REQUESTER_ID",
-          message: "Development Requester ID is required (header or query parameter).",
+          code: "MUST_CHANGE_PASSWORD",
+          message: "Password change is required before accessing application resources.",
         },
       });
       return;
+    }
+    let requesterId: number;
+
+    if (authUser) {
+      requesterId = authUser.id;
+    } else {
+      const reqHeaderId = req.headers["x-development-requester-id"];
+      const queryRequesterId = req.query.requesterId;
+      const rawRequesterId = reqHeaderId || queryRequesterId;
+      requesterId = Number(rawRequesterId);
+
+      if (!rawRequesterId || isNaN(requesterId)) {
+        res.status(400).json({
+          error: {
+            code: "MISSING_REQUESTER_ID",
+            message: "Development Requester ID is required (header or query parameter).",
+          },
+        });
+        return;
+      }
     }
 
     const search = typeof req.query.search === "string" ? req.query.search.trim() : "";
@@ -431,19 +679,33 @@ app.get("/api/tickets", async (req: Request, res: Response) => {
 app.get("/api/tickets/:id", async (req: Request, res: Response) => {
   try {
     const prisma = getPrisma();
-    const reqHeaderId = req.headers["x-development-requester-id"];
-    const queryRequesterId = req.query.requesterId;
-    const rawRequesterId = reqHeaderId || queryRequesterId;
-    const requesterId = Number(rawRequesterId);
-
-    if (!rawRequesterId || isNaN(requesterId)) {
-      res.status(400).json({
+    const authUser = (req as AuthenticatedRequest).user;
+    if (authUser && authUser.mustChangePassword) {
+      res.status(403).json({
         error: {
-          code: "MISSING_REQUESTER_ID",
-          message: "Development Requester ID is required (header or query parameter).",
+          code: "MUST_CHANGE_PASSWORD",
+          message: "Password change is required before accessing application resources.",
         },
       });
       return;
+    }
+    let legacyRequesterId: number | null = null;
+
+    if (!authUser) {
+      const reqHeaderId = req.headers["x-development-requester-id"];
+      const queryRequesterId = req.query.requesterId;
+      const rawRequesterId = reqHeaderId || queryRequesterId;
+      legacyRequesterId = Number(rawRequesterId);
+
+      if (!rawRequesterId || isNaN(legacyRequesterId)) {
+        res.status(400).json({
+          error: {
+            code: "MISSING_REQUESTER_ID",
+            message: "Development Requester ID is required (header or query parameter).",
+          },
+        });
+        return;
+      }
     }
 
     const ticket = await prisma.ticket.findUnique({
@@ -509,7 +771,18 @@ app.get("/api/tickets/:id", async (req: Request, res: Response) => {
       return;
     }
 
-    if (ticket.requesterId !== requesterId) {
+    if (authUser) {
+      if (authUser.role === "REQUESTER" && ticket.requesterId !== authUser.id) {
+        res.status(403).json({
+          error: {
+            code: "OWNERSHIP_DENIED",
+            message: "You are not authorized to view this ticket.",
+            correlationId: crypto.randomUUID(),
+          },
+        });
+        return;
+      }
+    } else if (legacyRequesterId !== null && ticket.requesterId !== legacyRequesterId) {
       res.status(403).json({
         error: {
           code: "OWNERSHIP_DENIED",
