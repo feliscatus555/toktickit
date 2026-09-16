@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   AuthUser,
   getStoredAuthUser,
@@ -27,6 +27,22 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>("my-tickets");
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState<boolean>(false);
+  const [showProfileMenu, setShowProfileMenu] = useState<boolean>(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setShowProfileMenu(false);
+      }
+    }
+    if (showProfileMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showProfileMenu]);
 
   useEffect(() => {
     const token = getAuthToken();
@@ -164,8 +180,13 @@ export default function App() {
 
       {/* Zen Green Top Header */}
       <header
-        className="py-2 px-3 px-md-4 text-white shadow-sm"
-        style={{ backgroundColor: "#006B3C", maxWidth: "100%", overflowX: "hidden" }}
+        className="py-2 px-3 px-md-4 text-white shadow-sm position-relative"
+        style={{
+          backgroundColor: "#006B3C",
+          maxWidth: "100%",
+          overflow: "visible",
+          zIndex: 100,
+        }}
       >
         <div className="container-fluid px-1 px-md-4">
           <div className="d-flex justify-content-between align-items-center flex-wrap gap-2 py-1">
@@ -238,55 +259,120 @@ export default function App() {
               </div>
             </div>
 
-            {/* Authenticated User Identity Area */}
-            <div className="d-flex align-items-center gap-2 flex-wrap">
-              <span
-                id="user-identity-badge"
-                className="badge bg-light text-dark py-2 px-2 px-sm-3 d-inline-flex align-items-center gap-2"
+            {/* Authenticated User Identity Area - Profile Dropdown */}
+            <div className="position-relative" ref={profileMenuRef}>
+              <button
+                id="profile-dropdown-trigger"
+                type="button"
+                onClick={() => setShowProfileMenu((prev) => !prev)}
+                className="btn btn-sm text-white d-flex align-items-center gap-2"
                 style={{
-                  fontSize: "0.85rem",
-                  maxWidth: "260px",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
+                  backgroundColor: showProfileMenu ? "#0B7A46" : "rgba(255, 255, 255, 0.15)",
+                  border: "1px solid rgba(255, 255, 255, 0.3)",
+                  borderRadius: "8px",
+                  padding: "0.35rem 0.65rem",
+                  transition: "all 0.15s ease-in-out",
                 }}
-                title={`${currentUser.displayName} (${currentUser.email})`}
+                aria-expanded={showProfileMenu}
+                aria-haspopup="true"
               >
-                <span className="fw-semibold text-truncate">
-                  {currentUser.displayName}
+                <div
+                  className="rounded-circle d-flex align-items-center justify-content-center fw-bold"
+                  style={{
+                    width: "26px",
+                    height: "26px",
+                    backgroundColor: "#EAF6EF",
+                    color: "#006B3C",
+                    fontSize: "0.82rem",
+                  }}
+                >
+                  {currentUser.displayName.charAt(0).toUpperCase()}
+                </div>
+                <span
+                  id="user-identity-badge"
+                  className="fw-semibold text-truncate d-inline-flex align-items-center gap-2"
+                  style={{ maxWidth: "220px", fontSize: "0.85rem" }}
+                  title={`${currentUser.displayName} (${currentUser.email})`}
+                >
+                  <span>{currentUser.displayName}</span>
+                  {renderRoleBadge(currentUser.role)}
                 </span>
-                {renderRoleBadge(currentUser.role)}
-              </span>
-
-              <button
-                type="button"
-                className="btn btn-sm text-white fw-semibold"
-                style={{
-                  backgroundColor: "#0B7A46",
-                  border: "1px solid #EAF6EF",
-                  whiteSpace: "nowrap",
-                  fontSize: "0.82rem",
-                  padding: "0.35rem 0.65rem",
-                }}
-                onClick={() => setShowChangePasswordModal(true)}
-              >
-                Change Password
+                <svg
+                  width="12"
+                  height="12"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  style={{
+                    transform: showProfileMenu ? "rotate(180deg)" : "rotate(0deg)",
+                    transition: "transform 0.15s ease",
+                  }}
+                >
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
               </button>
 
-              <button
-                id="logout-button"
-                type="button"
-                className="btn btn-sm btn-light fw-bold"
-                style={{
-                  color: "#B3261E",
-                  border: "1px solid #F8B4B4",
-                  fontSize: "0.82rem",
-                  padding: "0.35rem 0.65rem",
-                }}
-                onClick={handleLogout}
-              >
-                Sign Out
-              </button>
+              {/* Dropdown Menu */}
+              {showProfileMenu && (
+                <div
+                  id="profile-dropdown-menu"
+                  className="dropdown-menu dropdown-menu-end show shadow"
+                  style={{
+                    position: "absolute",
+                    top: "100%",
+                    right: 0,
+                    marginTop: "6px",
+                    minWidth: "240px",
+                    borderRadius: "8px",
+                    border: "1px solid #E5E7EB",
+                    backgroundColor: "#FFFFFF",
+                    padding: "0.5rem",
+                    zIndex: 1050,
+                  }}
+                >
+                  <div className="px-3 py-2 border-bottom mb-1 text-start">
+                    <div className="fw-bold text-dark text-truncate" style={{ fontSize: "0.9rem" }}>
+                      {currentUser.displayName}
+                    </div>
+                    <div className="text-muted small text-truncate" style={{ fontSize: "0.78rem" }}>
+                      {currentUser.email}
+                    </div>
+                  </div>
+
+                  <button
+                    id="menu-change-password-button"
+                    type="button"
+                    className="dropdown-item d-flex align-items-center gap-2 py-2 rounded text-dark w-100 text-start border-0 bg-transparent"
+                    style={{ fontSize: "0.88rem", cursor: "pointer" }}
+                    onClick={() => {
+                      setShowProfileMenu(false);
+                      setShowChangePasswordModal(true);
+                    }}
+                  >
+                    <span>🔑</span>
+                    <span>Change Password</span>
+                  </button>
+
+                  <div className="dropdown-divider my-1 border-top" />
+
+                  <button
+                    id="logout-button"
+                    type="button"
+                    className="dropdown-item d-flex align-items-center gap-2 py-2 rounded w-100 text-start border-0 bg-transparent"
+                    style={{ color: "#B3261E", fontSize: "0.88rem", cursor: "pointer" }}
+                    onClick={() => {
+                      setShowProfileMenu(false);
+                      handleLogout();
+                    }}
+                  >
+                    <span>🚪</span>
+                    <span className="fw-semibold">Sign Out</span>
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 

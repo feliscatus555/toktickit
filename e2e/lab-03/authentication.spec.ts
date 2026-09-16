@@ -53,6 +53,7 @@ test.describe("Playwright End-to-End — Lab 03 Authentication Foundation (Featu
     await expect(page.locator("#requester-select")).not.toBeVisible();
 
     // 8. Sign out and verify session termination
+    await page.locator("#profile-dropdown-trigger").click();
     const logoutBtn = page.locator("#logout-button");
     await expect(logoutBtn).toBeVisible();
     await logoutBtn.click();
@@ -119,6 +120,7 @@ test.describe("Playwright End-to-End — Lab 03 Authentication Foundation (Featu
     await expect(page.getByRole("button", { name: /My Tickets/i }).first()).toBeVisible();
 
     // 8. Sign out and verify login with new credentials works
+    await page.locator("#profile-dropdown-trigger").click();
     await page.locator("#logout-button").click();
     await expect(page.getByText("Sign in to your account")).toBeVisible();
 
