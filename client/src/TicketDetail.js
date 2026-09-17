@@ -211,18 +211,19 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
             setUpdatingPriority(false);
         }
     };
-    // Status Transition Handler
-    const handleExecuteStatusTransition = async () => {
-        if (!ticket || !selectedNextStatus)
+    // Status Change Handler (auto-updates on select)
+    const handleStatusChange = async (newStatus) => {
+        if (!ticket || !newStatus || newStatus === ticket.status)
             return;
-        if (selectedNextStatus === "Resolved" && !resolutionSummaryInput.trim()) {
-            setStatusError("Resolution summary is mandatory when resolving a ticket.");
+        if (newStatus === "Resolved") {
+            setSelectedNextStatus("Resolved");
+            setStatusError(null);
             return;
         }
         try {
             setUpdatingStatus(true);
             setStatusError(null);
-            const res = await updateTicketStatus(ticket.id, selectedNextStatus, selectedNextStatus === "Resolved" ? resolutionSummaryInput.trim() : undefined);
+            const res = await updateTicketStatus(ticket.id, newStatus);
             setTicket((prev) => prev
                 ? {
                     ...prev,
@@ -234,6 +235,36 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
         }
         catch (err) {
             setStatusError(err.message || "Failed to update status.");
+            setSelectedNextStatus("");
+        }
+        finally {
+            setUpdatingStatus(false);
+        }
+    };
+    // Confirm Resolve Handler (when status is Resolved and summary is entered)
+    const handleConfirmResolve = async () => {
+        if (!ticket)
+            return;
+        if (!resolutionSummaryInput.trim()) {
+            setStatusError("Resolution summary is mandatory when resolving a ticket.");
+            return;
+        }
+        try {
+            setUpdatingStatus(true);
+            setStatusError(null);
+            const res = await updateTicketStatus(ticket.id, "Resolved", resolutionSummaryInput.trim());
+            setTicket((prev) => prev
+                ? {
+                    ...prev,
+                    status: res.status,
+                    resolutionSummary: res.resolutionSummary !== undefined ? res.resolutionSummary : prev.resolutionSummary,
+                }
+                : prev);
+            setSelectedNextStatus("");
+            setResolutionSummaryInput("");
+        }
+        catch (err) {
+            setStatusError(err.message || "Failed to resolve ticket.");
         }
         finally {
             setUpdatingStatus(false);
@@ -505,9 +536,11 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
                                                     fontSize: "0.92rem",
                                                     fontWeight: 600,
                                                     color: ticket.owner || ticket.ownerName ? "#1F2937" : "#6B7280",
-                                                }, children: ticket.owner?.displayName || ticket.ownerName || "Unassigned" })] })), isStaffOrAdmin ? (_jsxs("div", { className: "col-12 col-sm-6 col-md-3", children: [_jsx("label", { htmlFor: "it-priority-select", style: { fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block", marginBottom: "0.3rem" }, children: "IT Priority:" }), _jsxs("select", { id: "it-priority-select", className: "form-select form-select-sm", value: ticket.itPriority || ticket.requestedPriority, onChange: (e) => handlePriorityChange(e.target.value), disabled: updatingPriority, style: { fontSize: "0.85rem" }, children: [_jsx("option", { value: "LOW", children: "Low" }), _jsx("option", { value: "MEDIUM", children: "Medium" }), _jsx("option", { value: "HIGH", children: "High" }), _jsx("option", { value: "URGENT", children: "Urgent" })] }), priorityError && (_jsx("div", { className: "text-danger mt-1", style: { fontSize: "0.78rem" }, children: priorityError }))] })) : (_jsxs("div", { className: "col-12 col-sm-6 col-md-3", children: [_jsx("label", { style: { fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block" }, children: "IT Priority" }), _jsx("div", { style: { marginTop: "0.2rem" }, children: renderPriorityBadge(ticket.itPriority || ticket.requestedPriority) })] })), isStaffOrAdmin && (_jsxs("div", { className: "col-12 col-sm-12 col-md-5", children: [_jsx("label", { htmlFor: "next-status-select", style: { fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block", marginBottom: "0.3rem" }, children: "Current Status:" }), _jsxs("div", { className: "d-flex gap-2", children: [_jsx("select", { id: "next-status-select", className: "form-select form-select-sm", value: selectedNextStatus || "", onChange: (e) => setSelectedNextStatus(e.target.value), disabled: updatingStatus || permittedNext.length === 0, style: { fontSize: "0.85rem" }, children: permittedNext.length === 0 ? (_jsxs("option", { value: "", children: [formatStatusDisplay(ticket.status), " (Terminal State)"] })) : (_jsxs(_Fragment, { children: [_jsx("option", { value: "", disabled: true, children: formatStatusDisplay(ticket.status) }), permittedNext.map((st) => (_jsx("option", { value: st, children: formatStatusDisplay(st) }, st)))] })) }), _jsx("button", { type: "button", id: "apply-status-transition-btn", className: "btn btn-sm btn-outline-primary fw-bold flex-shrink-0", disabled: updatingStatus ||
-                                                            !selectedNextStatus ||
-                                                            (selectedNextStatus === "Resolved" && !resolutionSummaryInput.trim()), onClick: handleExecuteStatusTransition, children: updatingStatus ? "Updating..." : "Update Status" })] }), statusError && (_jsx("div", { className: "alert alert-danger py-1 px-2 mt-2 mb-0", style: { fontSize: "0.82rem" }, children: statusError }))] })), isStaffOrAdmin && selectedNextStatus === "Resolved" && (_jsxs("div", { className: "col-12 mt-2 p-3 border rounded", style: { backgroundColor: "#F0FDF4", borderColor: "#86EFAC" }, children: [_jsxs("label", { className: "fw-bold mb-1 text-success d-block", style: { fontSize: "0.85rem" }, children: ["Resolution Summary ", _jsx("span", { className: "text-danger", children: "*" }), " (Required for Resolved state)"] }), _jsx("textarea", { id: "resolution-summary-input", className: "form-control form-control-sm mb-2", rows: 2, placeholder: "Describe resolution steps taken...", value: resolutionSummaryInput, onChange: (e) => setResolutionSummaryInput(e.target.value) })] }))] }), _jsx("hr", { style: { borderColor: "#E5E7EB" } }), _jsxs("div", { className: "mb-4", children: [_jsx("label", { style: { fontSize: "0.8rem", fontWeight: 700, color: "#5B6573", display: "block", marginBottom: "0.3rem" }, children: "Summary" }), _jsx("div", { style: {
+                                                }, children: ticket.owner?.displayName || ticket.ownerName || "Unassigned" })] })), isStaffOrAdmin ? (_jsxs("div", { className: "col-12 col-sm-6 col-md-4", children: [_jsx("label", { htmlFor: "it-priority-select", style: { fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block", marginBottom: "0.3rem" }, children: "IT Priority:" }), _jsxs("select", { id: "it-priority-select", className: "form-select form-select-sm", value: ticket.itPriority || ticket.requestedPriority, onChange: (e) => handlePriorityChange(e.target.value), disabled: updatingPriority, style: { fontSize: "0.85rem" }, children: [_jsx("option", { value: "LOW", children: "Low" }), _jsx("option", { value: "MEDIUM", children: "Medium" }), _jsx("option", { value: "HIGH", children: "High" }), _jsx("option", { value: "URGENT", children: "Urgent" })] }), priorityError && (_jsx("div", { className: "text-danger mt-1", style: { fontSize: "0.78rem" }, children: priorityError }))] })) : (_jsxs("div", { className: "col-12 col-sm-6 col-md-3", children: [_jsx("label", { style: { fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block" }, children: "IT Priority" }), _jsx("div", { style: { marginTop: "0.2rem" }, children: renderPriorityBadge(ticket.itPriority || ticket.requestedPriority) })] })), isStaffOrAdmin && (_jsxs("div", { className: "col-12 col-sm-6 col-md-4", children: [_jsx("label", { htmlFor: "next-status-select", style: { fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block", marginBottom: "0.3rem" }, children: "Current Status:" }), _jsx("select", { id: "next-status-select", className: "form-select form-select-sm", value: selectedNextStatus || "", onChange: (e) => handleStatusChange(e.target.value), disabled: updatingStatus || permittedNext.length === 0, style: { fontSize: "0.85rem" }, children: permittedNext.length === 0 ? (_jsxs("option", { value: "", children: [formatStatusDisplay(ticket.status), " (Terminal State)"] })) : (_jsxs(_Fragment, { children: [_jsx("option", { value: "", disabled: true, children: formatStatusDisplay(ticket.status) }), permittedNext.map((st) => (_jsx("option", { value: st, children: formatStatusDisplay(st) }, st)))] })) }), statusError && (_jsx("div", { className: "alert alert-danger py-1 px-2 mt-2 mb-0", style: { fontSize: "0.82rem" }, children: statusError }))] })), isStaffOrAdmin && selectedNextStatus === "Resolved" && (_jsxs("div", { className: "col-12 mt-2 p-3 border rounded", style: { backgroundColor: "#F0FDF4", borderColor: "#86EFAC" }, children: [_jsxs("label", { className: "fw-bold mb-1 text-success d-block", style: { fontSize: "0.85rem" }, children: ["Resolution Summary ", _jsx("span", { className: "text-danger", children: "*" }), " (Required for Resolved state)"] }), _jsx("textarea", { id: "resolution-summary-input", className: "form-control form-control-sm mb-2", rows: 2, placeholder: "Describe resolution steps taken...", value: resolutionSummaryInput, onChange: (e) => setResolutionSummaryInput(e.target.value) }), _jsxs("div", { className: "d-flex gap-2 justify-content-end", children: [_jsx("button", { type: "button", className: "btn btn-sm btn-outline-secondary", onClick: () => {
+                                                            setSelectedNextStatus("");
+                                                            setResolutionSummaryInput("");
+                                                            setStatusError(null);
+                                                        }, disabled: updatingStatus, children: "Cancel" }), _jsx("button", { type: "button", id: "confirm-resolve-btn", className: "btn btn-sm text-white fw-bold", style: { backgroundColor: "#006B3C" }, disabled: updatingStatus || !resolutionSummaryInput.trim(), onClick: handleConfirmResolve, children: updatingStatus ? "Resolving..." : "Confirm Resolve" })] })] }))] }), _jsx("hr", { style: { borderColor: "#E5E7EB" } }), _jsxs("div", { className: "mb-4", children: [_jsx("label", { style: { fontSize: "0.8rem", fontWeight: 700, color: "#5B6573", display: "block", marginBottom: "0.3rem" }, children: "Summary" }), _jsx("div", { style: {
                                             backgroundColor: "#F9FAFB",
                                             border: "1px solid #E5E7EB",
                                             borderRadius: "6px",

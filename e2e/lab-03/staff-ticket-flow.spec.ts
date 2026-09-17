@@ -84,24 +84,21 @@ test.describe("Playwright End-to-End — Lab 03 Staff Operations & Collaboration
     await page.locator("#it-priority-select").selectOption("URGENT");
     await page.waitForTimeout(300);
 
-    // 3. Status Transition: New -> Open -> In Progress
+    // 3. Status Transition: New -> Open -> In Progress (auto-updates upon selection)
     const nextStatusSelect = page.locator("#next-status-select");
-    const applyStatusBtn = page.locator("#apply-status-transition-btn");
 
     // Check if Open is in next status
     const options = await nextStatusSelect.locator("option").allTextContents();
     if (options.some((opt) => opt.includes("Open"))) {
       await nextStatusSelect.selectOption("Open");
-      await applyStatusBtn.click();
-      await page.waitForTimeout(300);
+      await page.waitForTimeout(500);
     }
 
     // Now transition Open -> InProgress
     const optionsAfterOpen = await nextStatusSelect.locator("option").allTextContents();
     if (optionsAfterOpen.some((opt) => opt.includes("In Progress"))) {
       await nextStatusSelect.selectOption("InProgress");
-      await applyStatusBtn.click();
-      await page.waitForTimeout(300);
+      await page.waitForTimeout(500);
     }
 
     // 4. Post Private Internal Note (Staff Only)

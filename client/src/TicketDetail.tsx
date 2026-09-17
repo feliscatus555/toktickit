@@ -241,22 +241,20 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
     }
   };
 
-  // Status Transition Handler
-  const handleExecuteStatusTransition = async () => {
-    if (!ticket || !selectedNextStatus) return;
-    if (selectedNextStatus === "Resolved" && !resolutionSummaryInput.trim()) {
-      setStatusError("Resolution summary is mandatory when resolving a ticket.");
+  // Status Change Handler (auto-updates on select)
+  const handleStatusChange = async (newStatus: string) => {
+    if (!ticket || !newStatus || newStatus === ticket.status) return;
+
+    if (newStatus === "Resolved") {
+      setSelectedNextStatus("Resolved");
+      setStatusError(null);
       return;
     }
 
     try {
       setUpdatingStatus(true);
       setStatusError(null);
-      const res = await updateTicketStatus(
-        ticket.id,
-        selectedNextStatus,
-        selectedNextStatus === "Resolved" ? resolutionSummaryInput.trim() : undefined
-      );
+      const res = await updateTicketStatus(ticket.id, newStatus);
 
       setTicket((prev) =>
         prev
@@ -270,6 +268,38 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
       setSelectedNextStatus("");
     } catch (err: any) {
       setStatusError(err.message || "Failed to update status.");
+      setSelectedNextStatus("");
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  // Confirm Resolve Handler (when status is Resolved and summary is entered)
+  const handleConfirmResolve = async () => {
+    if (!ticket) return;
+    if (!resolutionSummaryInput.trim()) {
+      setStatusError("Resolution summary is mandatory when resolving a ticket.");
+      return;
+    }
+
+    try {
+      setUpdatingStatus(true);
+      setStatusError(null);
+      const res = await updateTicketStatus(ticket.id, "Resolved", resolutionSummaryInput.trim());
+
+      setTicket((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: res.status,
+              resolutionSummary: res.resolutionSummary !== undefined ? res.resolutionSummary : prev.resolutionSummary,
+            }
+          : prev
+      );
+      setSelectedNextStatus("");
+      setResolutionSummaryInput("");
+    } catch (err: any) {
+      setStatusError(err.message || "Failed to resolve ticket.");
     } finally {
       setUpdatingStatus(false);
     }
@@ -794,7 +824,7 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
 
             {/* IT Priority Box */}
             {isStaffOrAdmin ? (
-              <div className="col-12 col-sm-6 col-md-3">
+              <div className="col-12 col-sm-6 col-md-4">
                 <label
                   htmlFor="it-priority-select"
                   style={{ fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block", marginBottom: "0.3rem" }}
@@ -831,52 +861,36 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
 
             {/* Current Status Box (Staff/Admin Only) */}
             {isStaffOrAdmin && (
-              <div className="col-12 col-sm-12 col-md-5">
+              <div className="col-12 col-sm-6 col-md-4">
                 <label
                   htmlFor="next-status-select"
                   style={{ fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block", marginBottom: "0.3rem" }}
                 >
                   Current Status:
                 </label>
-                <div className="d-flex gap-2">
-                  <select
-                    id="next-status-select"
-                    className="form-select form-select-sm"
-                    value={selectedNextStatus || ""}
-                    onChange={(e) => setSelectedNextStatus(e.target.value)}
-                    disabled={updatingStatus || permittedNext.length === 0}
-                    style={{ fontSize: "0.85rem" }}
-                  >
-                    {permittedNext.length === 0 ? (
-                      <option value="">{formatStatusDisplay(ticket.status)} (Terminal State)</option>
-                    ) : (
-                      <>
-                        <option value="" disabled>
-                          {formatStatusDisplay(ticket.status)}
+                <select
+                  id="next-status-select"
+                  className="form-select form-select-sm"
+                  value={selectedNextStatus || ""}
+                  onChange={(e) => handleStatusChange(e.target.value)}
+                  disabled={updatingStatus || permittedNext.length === 0}
+                  style={{ fontSize: "0.85rem" }}
+                >
+                  {permittedNext.length === 0 ? (
+                    <option value="">{formatStatusDisplay(ticket.status)} (Terminal State)</option>
+                  ) : (
+                    <>
+                      <option value="" disabled>
+                        {formatStatusDisplay(ticket.status)}
+                      </option>
+                      {permittedNext.map((st) => (
+                        <option key={st} value={st}>
+                          {formatStatusDisplay(st)}
                         </option>
-                        {permittedNext.map((st) => (
-                          <option key={st} value={st}>
-                            {formatStatusDisplay(st)}
-                          </option>
-                        ))}
-                      </>
-                    )}
-                  </select>
-
-                  <button
-                    type="button"
-                    id="apply-status-transition-btn"
-                    className="btn btn-sm btn-outline-primary fw-bold flex-shrink-0"
-                    disabled={
-                      updatingStatus ||
-                      !selectedNextStatus ||
-                      (selectedNextStatus === "Resolved" && !resolutionSummaryInput.trim())
-                    }
-                    onClick={handleExecuteStatusTransition}
-                  >
-                    {updatingStatus ? "Updating..." : "Update Status"}
-                  </button>
-                </div>
+                      ))}
+                    </>
+                  )}
+                </select>
                 {statusError && (
                   <div className="alert alert-danger py-1 px-2 mt-2 mb-0" style={{ fontSize: "0.82rem" }}>
                     {statusError}
@@ -899,6 +913,30 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
                   value={resolutionSummaryInput}
                   onChange={(e) => setResolutionSummaryInput(e.target.value)}
                 />
+                <div className="d-flex gap-2 justify-content-end">
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-outline-secondary"
+                    onClick={() => {
+                      setSelectedNextStatus("");
+                      setResolutionSummaryInput("");
+                      setStatusError(null);
+                    }}
+                    disabled={updatingStatus}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    id="confirm-resolve-btn"
+                    className="btn btn-sm text-white fw-bold"
+                    style={{ backgroundColor: "#006B3C" }}
+                    disabled={updatingStatus || !resolutionSummaryInput.trim()}
+                    onClick={handleConfirmResolve}
+                  >
+                    {updatingStatus ? "Resolving..." : "Confirm Resolve"}
+                  </button>
+                </div>
               </div>
             )}
           </div>

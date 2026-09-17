@@ -189,6 +189,32 @@ describe("Lab 3 Ticket Detail Screen Component Tests (Feature-11)", () => {
         expect(api.updateTicketPriority).toHaveBeenCalledWith("ticket-uuid-123", "URGENT");
       });
     });
+
+    it("allows IT Staff to update Current Status automatically upon selection", async () => {
+      vi.mocked(api.updateTicketStatus).mockResolvedValue({
+        id: "ticket-uuid-123",
+        status: "WaitingForRequester",
+      });
+
+      render(
+        <TicketDetail
+          ticketId="ticket-uuid-123"
+          currentRequester={mockStaffUser}
+          onBack={vi.fn()}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/current status:/i)).toBeInTheDocument();
+      });
+
+      const select = screen.getByLabelText(/current status:/i);
+      fireEvent.change(select, { target: { value: "WaitingForRequester" } });
+
+      await waitFor(() => {
+        expect(api.updateTicketStatus).toHaveBeenCalledWith("ticket-uuid-123", "WaitingForRequester");
+      });
+    });
   });
 
   // -------------------------------------------------------------------------
