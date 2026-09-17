@@ -1,7 +1,10 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useState, useEffect } from "react";
 import { fetchTicketDetail, uploadAttachment, getAttachmentDownloadUrl, softRemoveAttachment, } from "./api.js";
-export default function TicketDetail({ ticketId, currentRequester, onBack }) {
+export default function TicketDetail({ ticketId, currentRequester, onBack, backLabel }) {
+    const isStaffOrAdmin = currentRequester?.role === "IT_STAFF" ||
+        currentRequester?.role === "ADMINISTRATOR";
+    const displayBackLabel = backLabel || (isStaffOrAdmin ? "← Back to Ticket Queue" : "← Back to My Tickets");
     const [ticket, setTicket] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -160,7 +163,7 @@ export default function TicketDetail({ ticketId, currentRequester, onBack }) {
         return (_jsx("div", { style: { maxWidth: 900, margin: "2rem auto", textAlign: "center", color: "#555" }, children: _jsx("div", { style: { fontSize: "1.2rem", fontWeight: 600 }, children: "Loading ticket details..." }) }));
     }
     if (error || !ticket) {
-        return (_jsx("div", { style: { maxWidth: 900, margin: "2rem auto" }, children: _jsxs("div", { className: "alert alert-danger shadow-sm", role: "alert", children: [_jsx("h5", { className: "alert-heading fw-bold mb-1", children: "Error Loading Ticket" }), _jsx("p", { className: "mb-3", children: error || "Ticket not found or ownership denied." }), _jsx("button", { type: "button", className: "btn btn-outline-danger btn-sm fw-semibold", onClick: onBack, children: "\u2190 Back to My Tickets" })] }) }));
+        return (_jsx("div", { style: { maxWidth: 900, margin: "2rem auto" }, children: _jsxs("div", { className: "alert alert-danger shadow-sm", role: "alert", children: [_jsx("h5", { className: "alert-heading fw-bold mb-1", children: "Error Loading Ticket" }), _jsx("p", { className: "mb-3", children: error || "Ticket not found or ownership denied." }), _jsx("button", { type: "button", className: "btn btn-outline-danger btn-sm fw-semibold", onClick: onBack, children: displayBackLabel })] }) }));
     }
     return (_jsxs("div", { style: { maxWidth: 960, margin: "0 auto", paddingBottom: "3rem" }, children: [_jsxs("div", { className: "d-flex justify-content-between align-items-center mb-3", children: [_jsx("button", { type: "button", onClick: onBack, style: {
                             backgroundColor: "#EAF6EF",
@@ -171,7 +174,7 @@ export default function TicketDetail({ ticketId, currentRequester, onBack }) {
                             fontSize: "0.9rem",
                             fontWeight: 600,
                             cursor: "pointer",
-                        }, children: "\u2190 Back to My Tickets" }), _jsx("div", { children: renderStatusBadge(ticket.status) })] }), _jsxs("div", { className: "card shadow-sm mb-4", style: { borderRadius: "8px", border: "1px solid #E0E0E0", overflow: "hidden" }, children: [_jsxs("div", { style: {
+                        }, children: displayBackLabel }), _jsx("div", { children: renderStatusBadge(ticket.status) })] }), _jsxs("div", { className: "card shadow-sm mb-4", style: { borderRadius: "8px", border: "1px solid #E0E0E0", overflow: "hidden" }, children: [_jsxs("div", { style: {
                             backgroundColor: "#006B3C",
                             color: "#FFFFFF",
                             padding: "1rem 1.5rem",

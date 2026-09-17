@@ -248,16 +248,157 @@ app.get(
   "/api/staff/tickets",
   authenticateToken,
   requireRole("IT_STAFF", "ADMINISTRATOR"),
-  async (_req: AuthenticatedRequest, res: Response) => {
-    res.status(200).json({
-      items: [],
-      pagination: {
-        page: 1,
-        limit: 10,
-        totalItems: 0,
-        totalPages: 0,
-      },
-    });
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (req.user?.mustChangePassword) {
+        res.status(403).json({
+          error: {
+            code: "MUST_CHANGE_PASSWORD",
+            message: "Password change is required before accessing application resources.",
+          },
+        });
+        return;
+      }
+
+      const prisma = getPrisma();
+
+      // Query parameters
+      const search = typeof req.query.search === "string" ? req.query.search.trim() : undefined;
+      const categoryParam = req.query.category || req.query.categoryId;
+      const status = typeof req.query.status === "string" ? req.query.status.trim() : undefined;
+      const priority = typeof req.query.priority === "string" ? req.query.priority.trim() : undefined;
+      const requestedPriority = typeof req.query.requestedPriority === "string" ? req.query.requestedPriority.trim() : undefined;
+      const itPriority = typeof req.query.itPriority === "string" ? req.query.itPriority.trim() : undefined;
+      const owner = typeof req.query.owner === "string" ? req.query.owner.trim() : undefined;
+
+      const where: any = {};
+
+      if (search) {
+        where.OR = [
+          { summary: { contains: search, mode: "insensitive" } },
+          { ticketNo: { contains: search, mode: "insensitive" } },
+        ];
+      }
+
+      if (categoryParam) {
+        const catId = parseInt(categoryParam as string, 10);
+        if (!isNaN(catId)) {
+          where.categoryId = catId;
+        }
+      }
+
+      if (status) {
+        if (status === "In Progress" || status === "InProgress") {
+          where.status = "InProgress";
+        } else {
+          where.status = status;
+        }
+      }
+
+      const targetPriority = priority || requestedPriority;
+      if (targetPriority) {
+        where.requestedPriority = targetPriority;
+      }
+
+      if (itPriority) {
+        where.itPriority = itPriority;
+      }
+
+      if (owner) {
+        if (owner.toLowerCase() === "unassigned") {
+          where.ownerId = null;
+        } else if (owner.toLowerCase() === "me") {
+          where.ownerId = req.user!.id;
+        } else if (owner.toLowerCase() === "assigned") {
+          where.ownerId = { not: null };
+        } else {
+          const ownerIdNum = parseInt(owner, 10);
+          if (!isNaN(ownerIdNum)) {
+            where.ownerId = ownerIdNum;
+          }
+        }
+      }
+
+      // Sorting
+      const allowedSortFields = ["createdAt", "updatedAt", "ticketNo", "requestedPriority", "itPriority", "summary", "status"];
+      let sortBy = typeof req.query.sortBy === "string" ? req.query.sortBy.trim() : "createdAt";
+      const sortOrder: "asc" | "desc" =
+        typeof req.query.sortOrder === "string" && req.query.sortOrder.toLowerCase() === "asc" ? "asc" : "desc";
+
+      let orderBy: any = { createdAt: "desc" };
+      if (sortBy === "category") {
+        orderBy = { category: { name: sortOrder } };
+      } else if (sortBy === "owner") {
+        orderBy = { owner: { displayName: sortOrder } };
+      } else if (sortBy === "requester") {
+        orderBy = { requester: { displayName: sortOrder } };
+      } else if (allowedSortFields.includes(sortBy)) {
+        orderBy = { [sortBy]: sortOrder };
+      }
+
+      // Pagination
+      const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
+      let limit = parseInt(req.query.limit as string, 10) || 10;
+      if (limit < 1) limit = 10;
+      if (limit > 50) limit = 50;
+
+      const skip = (page - 1) * limit;
+
+      const [rawTickets, totalItems] = await Promise.all([
+        prisma.ticket.findMany({
+          where,
+          orderBy,
+          skip,
+          take: limit,
+          select: {
+            id: true,
+            ticketNo: true,
+            summary: true,
+            createdAt: true,
+            updatedAt: true,
+            category: {
+              select: { id: true, name: true },
+            },
+            requestedPriority: true,
+            itPriority: true,
+            status: true,
+            owner: {
+              select: { id: true, displayName: true },
+            },
+            requester: {
+              select: { id: true, displayName: true },
+            },
+            isProblemAppearsResolved: true,
+          },
+        }),
+        prisma.ticket.count({ where }),
+      ]);
+
+      const totalPages = Math.ceil(totalItems / limit);
+
+      const items = rawTickets.map((t) => ({
+        ...t,
+        itPriority: t.itPriority || t.requestedPriority,
+      }));
+
+      res.status(200).json({
+        items,
+        pagination: {
+          page,
+          limit,
+          totalItems,
+          totalPages,
+        },
+      });
+    } catch (error) {
+      console.error("Staff ticket queue error:", error);
+      res.status(500).json({
+        error: {
+          code: "INTERNAL_ERROR",
+          message: "Failed to retrieve staff ticket queue.",
+        },
+      });
+    }
   }
 );
 
@@ -463,6 +604,7 @@ app.post("/api/tickets", async (req: Request, res: Response) => {
             summary: trimmedSummary,
             description: trimmedDescription,
             requestedPriority,
+            itPriority: requestedPriority,
             status: "New",
             requesterId,
             categoryId,

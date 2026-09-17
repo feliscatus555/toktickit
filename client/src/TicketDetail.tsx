@@ -13,9 +13,16 @@ interface TicketDetailProps {
   ticketId: string;
   currentRequester: RequesterUser;
   onBack: () => void;
+  backLabel?: string;
 }
 
-export default function TicketDetail({ ticketId, currentRequester, onBack }: TicketDetailProps) {
+export default function TicketDetail({ ticketId, currentRequester, onBack, backLabel }: TicketDetailProps) {
+  const isStaffOrAdmin =
+    (currentRequester as any)?.role === "IT_STAFF" ||
+    (currentRequester as any)?.role === "ADMINISTRATOR";
+  const displayBackLabel =
+    backLabel || (isStaffOrAdmin ? "← Back to Ticket Queue" : "← Back to My Tickets");
+
   const [ticket, setTicket] = useState<TicketDetailType | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -214,7 +221,7 @@ export default function TicketDetail({ ticketId, currentRequester, onBack }: Tic
           <h5 className="alert-heading fw-bold mb-1">Error Loading Ticket</h5>
           <p className="mb-3">{error || "Ticket not found or ownership denied."}</p>
           <button type="button" className="btn btn-outline-danger btn-sm fw-semibold" onClick={onBack}>
-            ← Back to My Tickets
+            {displayBackLabel}
           </button>
         </div>
       </div>
@@ -239,7 +246,7 @@ export default function TicketDetail({ ticketId, currentRequester, onBack }: Tic
             cursor: "pointer",
           }}
         >
-          ← Back to My Tickets
+          {displayBackLabel}
         </button>
         <div>{renderStatusBadge(ticket.status)}</div>
       </div>
