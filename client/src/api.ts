@@ -323,6 +323,37 @@ export interface AttachmentItem {
   createdAt: string;
 }
 
+export interface CommentItem {
+  id: string;
+  ticketId: string;
+  authorId: number;
+  author: {
+    displayName: string;
+    role: string;
+  };
+  content: string;
+  createdAt: string;
+}
+
+export interface InternalNoteItem {
+  id: string;
+  ticketId: string;
+  authorId: number;
+  author: {
+    displayName: string;
+    role: string;
+  };
+  content: string;
+  createdAt: string;
+}
+
+export interface StaffUser {
+  id: number;
+  displayName: string;
+  email: string;
+  role: string;
+}
+
 export interface TicketDetail {
   id: string;
   ticketNo: string;
@@ -332,13 +363,18 @@ export interface TicketDetail {
   requestedPriority: string;
   itPriority?: string | null;
   ownerName?: string | null;
+  ownerId?: number | null;
+  owner?: { id: number; displayName: string; email?: string; role?: string } | null;
   resolutionSummary?: string | null;
+  isProblemAppearsResolved?: boolean;
   requesterId: number;
   version: number;
-  requester: { id: number; displayName: string; email: string };
+  requester: { id: number; displayName: string; email: string; role?: string };
   category: { id: number; name: string };
   relatedSystem: { id: number; name: string };
   attachments: AttachmentItem[];
+  comments?: CommentItem[];
+  internalNotes?: InternalNoteItem[];
   createdAt: string;
   updatedAt: string;
 }
@@ -531,5 +567,178 @@ export async function fetchStaffTickets(
     throw err;
   }
 
+  return data;
+}
+
+export async function fetchStaffTicketDetail(ticketId: string): Promise<TicketDetail> {
+  const res = await fetch(`${API_URL}/api/staff/tickets/${ticketId}`, {
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeaders(),
+    },
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    const err = new Error(data?.error?.message || "Failed to fetch staff ticket detail") as any;
+    err.status = res.status;
+    throw err;
+  }
+  return data;
+}
+
+export async function assignTicket(ticketId: string, ownerId: number | null): Promise<any> {
+  const res = await fetch(`${API_URL}/api/staff/tickets/${ticketId}/assignment`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify({ ownerId }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    const err = new Error(data?.error?.message || "Failed to assign ticket") as any;
+    err.status = res.status;
+    throw err;
+  }
+  return data;
+}
+
+export async function updateTicketPriority(ticketId: string, itPriority: string): Promise<any> {
+  const res = await fetch(`${API_URL}/api/staff/tickets/${ticketId}/priority`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify({ itPriority }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    const err = new Error(data?.error?.message || "Failed to update priority") as any;
+    err.status = res.status;
+    throw err;
+  }
+  return data;
+}
+
+export async function updateTicketStatus(
+  ticketId: string,
+  status: string,
+  resolutionSummary?: string
+): Promise<any> {
+  const res = await fetch(`${API_URL}/api/staff/tickets/${ticketId}/status`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify({ status, resolutionSummary }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    const err = new Error(data?.error?.message || "Failed to update status") as any;
+    err.status = res.status;
+    throw err;
+  }
+  return data;
+}
+
+export async function fetchTicketComments(ticketId: string): Promise<CommentItem[]> {
+  const res = await fetch(`${API_URL}/api/tickets/${ticketId}/comments`, {
+    headers: {
+      ...getAuthHeaders(),
+    },
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    const err = new Error(data?.error?.message || "Failed to fetch comments") as any;
+    err.status = res.status;
+    throw err;
+  }
+  return data;
+}
+
+export async function createTicketComment(ticketId: string, content: string): Promise<CommentItem> {
+  const res = await fetch(`${API_URL}/api/tickets/${ticketId}/comments`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify({ content }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    const err = new Error(data?.error?.message || "Failed to post comment") as any;
+    err.status = res.status;
+    throw err;
+  }
+  return data;
+}
+
+export async function fetchTicketNotes(ticketId: string): Promise<InternalNoteItem[]> {
+  const res = await fetch(`${API_URL}/api/staff/tickets/${ticketId}/notes`, {
+    headers: {
+      ...getAuthHeaders(),
+    },
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    const err = new Error(data?.error?.message || "Failed to fetch internal notes") as any;
+    err.status = res.status;
+    throw err;
+  }
+  return data;
+}
+
+export async function createTicketNote(ticketId: string, content: string): Promise<InternalNoteItem> {
+  const res = await fetch(`${API_URL}/api/staff/tickets/${ticketId}/notes`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify({ content }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    const err = new Error(data?.error?.message || "Failed to post internal note") as any;
+    err.status = res.status;
+    throw err;
+  }
+  return data;
+}
+
+export async function indicateProblemResolved(ticketId: string): Promise<any> {
+  const res = await fetch(`${API_URL}/api/tickets/${ticketId}/resolve-indication`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...getAuthHeaders(),
+    },
+    body: JSON.stringify({ isProblemAppearsResolved: true }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    const err = new Error(data?.error?.message || "Failed to indicate problem resolved") as any;
+    err.status = res.status;
+    throw err;
+  }
+  return data;
+}
+
+export async function fetchStaffUsers(): Promise<StaffUser[]> {
+  const res = await fetch(`${API_URL}/api/staff/users`, {
+    headers: {
+      ...getAuthHeaders(),
+    },
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    const err = new Error(data?.error?.message || "Failed to fetch staff users") as any;
+    err.status = res.status;
+    throw err;
+  }
   return data;
 }
