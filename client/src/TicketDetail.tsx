@@ -582,166 +582,6 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
         </div>
       </div>
 
-      {/* IT Staff & Administrator Operational Toolbar */}
-      {isStaffOrAdmin && (
-        <div
-          className="card shadow-sm mb-4"
-          style={{
-            backgroundColor: "#F8FAFC",
-            border: "1px solid #CBD5E1",
-            borderRadius: "8px",
-          }}
-        >
-          <div
-            className="card-header py-2 px-3 fw-bold d-flex justify-content-between align-items-center"
-            style={{ backgroundColor: "#0F172A", color: "#FFFFFF", fontSize: "0.9rem" }}
-          >
-            <span>⚙️ IT Operational Actions</span>
-            <span style={{ fontSize: "0.78rem", fontWeight: "normal", opacity: 0.85 }}>
-              Active Staff: {currentRequester.displayName}
-            </span>
-          </div>
-          <div className="card-body p-3">
-            <div className="row g-3 align-items-center">
-              {/* Ownership Claim / Reassignment */}
-              <div className="col-12 col-md-4">
-                <label htmlFor="ticket-owner-select" className="fw-bold mb-1" style={{ fontSize: "0.82rem", color: "#334155" }}>
-                  Ticket Owner:
-                </label>
-                <div className="d-flex gap-2 align-items-center">
-                  <select
-                    id="ticket-owner-select"
-                    className="form-select form-select-sm"
-                    value={ticket.ownerId ? String(ticket.ownerId) : "unassigned"}
-                    onChange={(e) => handleReassignTicket(e.target.value)}
-                    disabled={assigning}
-                    style={{ fontSize: "0.85rem" }}
-                  >
-                    <option value="unassigned">— Unassigned —</option>
-                    {staffUsers.map((u) => (
-                      <option key={u.id} value={String(u.id)}>
-                        {u.displayName} ({u.role === "ADMINISTRATOR" ? "Admin" : "IT Staff"})
-                      </option>
-                    ))}
-                    {ticket.ownerId && !staffUsers.some((u) => u.id === ticket.ownerId) && (
-                      <option value={String(ticket.ownerId)}>
-                        {ticket.ownerName || ticket.owner?.displayName || `User #${ticket.ownerId}`}
-                      </option>
-                    )}
-                  </select>
-
-                  {!ticket.ownerId && (
-                    <button
-                      type="button"
-                      id="claim-ticket-btn"
-                      className="btn btn-sm text-white fw-bold px-3 flex-shrink-0"
-                      style={{ backgroundColor: "#006B3C" }}
-                      onClick={handleClaimTicket}
-                      disabled={assigning}
-                    >
-                      {assigning ? "Claiming..." : "Claim Ticket"}
-                    </button>
-                  )}
-                </div>
-                {assignError && (
-                  <div className="text-danger mt-1" style={{ fontSize: "0.78rem" }}>
-                    {assignError}
-                  </div>
-                )}
-              </div>
-
-              {/* IT Priority Selector */}
-              <div className="col-12 col-md-3">
-                <label htmlFor="it-priority-select" className="fw-bold mb-1" style={{ fontSize: "0.82rem", color: "#334155" }}>
-                  IT Priority:
-                </label>
-                <select
-                  id="it-priority-select"
-                  className="form-select form-select-sm"
-                  value={ticket.itPriority || ticket.requestedPriority}
-                  onChange={(e) => handlePriorityChange(e.target.value)}
-                  disabled={updatingPriority}
-                  style={{ fontSize: "0.85rem" }}
-                >
-                  <option value="LOW">Low</option>
-                  <option value="MEDIUM">Medium</option>
-                  <option value="HIGH">High</option>
-                  <option value="URGENT">Urgent</option>
-                </select>
-                {priorityError && (
-                  <div className="text-danger mt-1" style={{ fontSize: "0.78rem" }}>
-                    {priorityError}
-                  </div>
-                )}
-              </div>
-
-              {/* Status Transition Control */}
-              <div className="col-12 col-md-5">
-                <label htmlFor="next-status-select" className="fw-bold mb-1" style={{ fontSize: "0.82rem", color: "#334155" }}>
-                  Lifecycle Status:
-                </label>
-                <div className="d-flex gap-2">
-                  <select
-                    id="next-status-select"
-                    className="form-select form-select-sm"
-                    value={selectedNextStatus}
-                    onChange={(e) => setSelectedNextStatus(e.target.value)}
-                    disabled={updatingStatus || permittedNext.length === 0}
-                    style={{ fontSize: "0.85rem" }}
-                  >
-                    <option value="">
-                      {permittedNext.length === 0 ? "(Terminal State)" : "Change status to..."}
-                    </option>
-                    {permittedNext.map((st) => (
-                      <option key={st} value={st}>
-                        → {formatStatusDisplay(st)}
-                      </option>
-                    ))}
-                  </select>
-
-                  <button
-                    type="button"
-                    id="apply-status-transition-btn"
-                    className="btn btn-sm btn-outline-primary fw-bold flex-shrink-0"
-                    disabled={
-                      updatingStatus ||
-                      !selectedNextStatus ||
-                      (selectedNextStatus === "Resolved" && !resolutionSummaryInput.trim())
-                    }
-                    onClick={handleExecuteStatusTransition}
-                  >
-                    {updatingStatus ? "Updating..." : "Update Status"}
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Resolution Summary input (visible when transitioning to Resolved) */}
-            {selectedNextStatus === "Resolved" && (
-              <div className="mt-3 p-3 border rounded" style={{ backgroundColor: "#F0FDF4", borderColor: "#86EFAC" }}>
-                <label className="fw-bold mb-1 text-success d-block" style={{ fontSize: "0.85rem" }}>
-                  Resolution Summary <span className="text-danger">*</span> (Required for Resolved state)
-                </label>
-                <textarea
-                  id="resolution-summary-input"
-                  className="form-control form-control-sm mb-2"
-                  rows={2}
-                  placeholder="Describe resolution steps taken..."
-                  value={resolutionSummaryInput}
-                  onChange={(e) => setResolutionSummaryInput(e.target.value)}
-                />
-              </div>
-            )}
-
-            {statusError && (
-              <div className="alert alert-danger py-1 px-2 mt-2 mb-0" style={{ fontSize: "0.82rem" }}>
-                {statusError}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* Requester Problem Resolved Banner / Action */}
       {isTicketOwnerRequester && (
         <div className="mb-4">
@@ -817,7 +657,7 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
         </div>
 
         <div className="card-body p-4" style={{ backgroundColor: "#FFFFFF" }}>
-          {/* Main Info Grid with Read-Only Shading */}
+          {/* Main Info Grid */}
           <div className="row g-3 mb-4">
             <div className="col-12 col-sm-6 col-md-3">
               <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block" }}>Requester</label>
@@ -869,33 +709,192 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
             </div>
 
             <div className="col-12 col-sm-6 col-md-3">
-              <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block" }}>Ticket Owner</label>
-              <div
-                id="ticket-owner-display"
-                style={{
-                  backgroundColor: "#E9ECEF",
-                  padding: "0.4rem 0.6rem",
-                  borderRadius: "6px",
-                  fontSize: "0.92rem",
-                  fontWeight: 600,
-                  color: ticket.owner || ticket.ownerName ? "#1F2937" : "#6B7280",
-                }}
-              >
-                {ticket.owner?.displayName || ticket.ownerName || "Unassigned"}
-              </div>
-            </div>
-
-            <div className="col-12 col-sm-6 col-md-3">
               <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block" }}>Requested Priority</label>
               <div style={{ marginTop: "0.2rem" }}>{renderPriorityBadge(ticket.requestedPriority)}</div>
             </div>
 
-            <div className="col-12 col-sm-6 col-md-3">
-              <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block" }}>IT Priority</label>
-              <div style={{ marginTop: "0.2rem" }}>
-                {renderPriorityBadge(ticket.itPriority || ticket.requestedPriority)}
+            {/* Ticket Owner Box */}
+            {isStaffOrAdmin ? (
+              <div className="col-12 col-sm-6 col-md-4">
+                <label
+                  htmlFor="ticket-owner-select"
+                  style={{ fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block", marginBottom: "0.3rem" }}
+                >
+                  Ticket Owner:
+                </label>
+                <div className="d-flex gap-2 align-items-center">
+                  <select
+                    id="ticket-owner-select"
+                    className="form-select form-select-sm"
+                    value={ticket.ownerId ? String(ticket.ownerId) : "unassigned"}
+                    onChange={(e) => handleReassignTicket(e.target.value)}
+                    disabled={assigning}
+                    style={{ fontSize: "0.85rem" }}
+                  >
+                    <option value="unassigned">— Unassigned —</option>
+                    {staffUsers.map((u) => (
+                      <option key={u.id} value={String(u.id)}>
+                        {u.displayName} ({u.role === "ADMINISTRATOR" ? "Admin" : "IT Staff"})
+                      </option>
+                    ))}
+                    {ticket.ownerId && !staffUsers.some((u) => u.id === ticket.ownerId) && (
+                      <option value={String(ticket.ownerId)}>
+                        {ticket.ownerName || ticket.owner?.displayName || `User #${ticket.ownerId}`}
+                      </option>
+                    )}
+                  </select>
+
+                  {!ticket.ownerId && (
+                    <button
+                      type="button"
+                      id="claim-ticket-btn"
+                      className="btn btn-sm text-white fw-bold px-3 flex-shrink-0"
+                      style={{ backgroundColor: "#006B3C" }}
+                      onClick={handleClaimTicket}
+                      disabled={assigning}
+                    >
+                      {assigning ? "Claiming..." : "Claim Ticket"}
+                    </button>
+                  )}
+                </div>
+                <div
+                  id="ticket-owner-display"
+                  style={{
+                    fontSize: "0.78rem",
+                    color: ticket.owner || ticket.ownerName ? "#1F2937" : "#6B7280",
+                    marginTop: "0.25rem",
+                  }}
+                >
+                  Assigned: <strong>{ticket.owner?.displayName || ticket.ownerName || "Unassigned"}</strong>
+                </div>
+                {assignError && (
+                  <div className="text-danger mt-1" style={{ fontSize: "0.78rem" }}>
+                    {assignError}
+                  </div>
+                )}
               </div>
-            </div>
+            ) : (
+              <div className="col-12 col-sm-6 col-md-3">
+                <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block" }}>Ticket Owner</label>
+                <div
+                  id="ticket-owner-display"
+                  style={{
+                    backgroundColor: "#E9ECEF",
+                    padding: "0.4rem 0.6rem",
+                    borderRadius: "6px",
+                    fontSize: "0.92rem",
+                    fontWeight: 600,
+                    color: ticket.owner || ticket.ownerName ? "#1F2937" : "#6B7280",
+                  }}
+                >
+                  {ticket.owner?.displayName || ticket.ownerName || "Unassigned"}
+                </div>
+              </div>
+            )}
+
+            {/* IT Priority Box */}
+            {isStaffOrAdmin ? (
+              <div className="col-12 col-sm-6 col-md-3">
+                <label
+                  htmlFor="it-priority-select"
+                  style={{ fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block", marginBottom: "0.3rem" }}
+                >
+                  IT Priority:
+                </label>
+                <select
+                  id="it-priority-select"
+                  className="form-select form-select-sm"
+                  value={ticket.itPriority || ticket.requestedPriority}
+                  onChange={(e) => handlePriorityChange(e.target.value)}
+                  disabled={updatingPriority}
+                  style={{ fontSize: "0.85rem" }}
+                >
+                  <option value="LOW">Low</option>
+                  <option value="MEDIUM">Medium</option>
+                  <option value="HIGH">High</option>
+                  <option value="URGENT">Urgent</option>
+                </select>
+                {priorityError && (
+                  <div className="text-danger mt-1" style={{ fontSize: "0.78rem" }}>
+                    {priorityError}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="col-12 col-sm-6 col-md-3">
+                <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block" }}>IT Priority</label>
+                <div style={{ marginTop: "0.2rem" }}>
+                  {renderPriorityBadge(ticket.itPriority || ticket.requestedPriority)}
+                </div>
+              </div>
+            )}
+
+            {/* Lifecycle Status Box (Staff/Admin Only) */}
+            {isStaffOrAdmin && (
+              <div className="col-12 col-sm-12 col-md-5">
+                <label
+                  htmlFor="next-status-select"
+                  style={{ fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block", marginBottom: "0.3rem" }}
+                >
+                  Lifecycle Status:
+                </label>
+                <div className="d-flex gap-2">
+                  <select
+                    id="next-status-select"
+                    className="form-select form-select-sm"
+                    value={selectedNextStatus}
+                    onChange={(e) => setSelectedNextStatus(e.target.value)}
+                    disabled={updatingStatus || permittedNext.length === 0}
+                    style={{ fontSize: "0.85rem" }}
+                  >
+                    <option value="">
+                      {permittedNext.length === 0 ? "(Terminal State)" : "Change status to..."}
+                    </option>
+                    {permittedNext.map((st) => (
+                      <option key={st} value={st}>
+                        → {formatStatusDisplay(st)}
+                      </option>
+                    ))}
+                  </select>
+
+                  <button
+                    type="button"
+                    id="apply-status-transition-btn"
+                    className="btn btn-sm btn-outline-primary fw-bold flex-shrink-0"
+                    disabled={
+                      updatingStatus ||
+                      !selectedNextStatus ||
+                      (selectedNextStatus === "Resolved" && !resolutionSummaryInput.trim())
+                    }
+                    onClick={handleExecuteStatusTransition}
+                  >
+                    {updatingStatus ? "Updating..." : "Update Status"}
+                  </button>
+                </div>
+                {statusError && (
+                  <div className="alert alert-danger py-1 px-2 mt-2 mb-0" style={{ fontSize: "0.82rem" }}>
+                    {statusError}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Resolution Summary input (visible when transitioning to Resolved) */}
+            {isStaffOrAdmin && selectedNextStatus === "Resolved" && (
+              <div className="col-12 mt-2 p-3 border rounded" style={{ backgroundColor: "#F0FDF4", borderColor: "#86EFAC" }}>
+                <label className="fw-bold mb-1 text-success d-block" style={{ fontSize: "0.85rem" }}>
+                  Resolution Summary <span className="text-danger">*</span> (Required for Resolved state)
+                </label>
+                <textarea
+                  id="resolution-summary-input"
+                  className="form-control form-control-sm mb-2"
+                  rows={2}
+                  placeholder="Describe resolution steps taken..."
+                  value={resolutionSummaryInput}
+                  onChange={(e) => setResolutionSummaryInput(e.target.value)}
+                />
+              </div>
+            )}
           </div>
 
           <hr style={{ borderColor: "#E5E7EB" }} />
