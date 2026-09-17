@@ -19,6 +19,8 @@ import {
   generateToken,
   validatePasswordComplexity,
 } from "./services/authService.js";
+import { isValidStatusTransition, normalizeStatus } from "./services/statusTransition.js";
+import { validateCommentContent } from "./services/validationService.js";
 
 const uploadsDir = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(uploadsDir)) {
@@ -402,6 +404,745 @@ app.get(
   }
 );
 
+// ---------------------------------------------------------------------------
+// Feature-11 — IT Staff Ticket Operations & Collaboration
+// ---------------------------------------------------------------------------
+
+// List assignable IT Staff & Administrators
+app.get(
+  "/api/staff/users",
+  authenticateToken,
+  requireRole("IT_STAFF", "ADMINISTRATOR"),
+  async (_req: AuthenticatedRequest, res: Response) => {
+    try {
+      const prisma = getPrisma();
+      const users = await prisma.user.findMany({
+        where: {
+          isActive: true,
+          role: { in: ["IT_STAFF", "ADMINISTRATOR"] },
+        },
+        select: {
+          id: true,
+          displayName: true,
+          email: true,
+          role: true,
+        },
+        orderBy: { displayName: "asc" },
+      });
+      res.status(200).json(users);
+    } catch (error) {
+      console.error("Error fetching staff users:", error);
+      res.status(500).json({ error: "Failed to fetch staff users." });
+    }
+  }
+);
+
+// 6.1 GET /api/staff/tickets/:id - Full ticket detail for IT Staff & Admin
+app.get(
+  "/api/staff/tickets/:id",
+  authenticateToken,
+  requireRole("IT_STAFF", "ADMINISTRATOR"),
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (req.user?.mustChangePassword) {
+        res.status(403).json({
+          error: {
+            code: "MUST_CHANGE_PASSWORD",
+            message: "Password change is required before accessing application resources.",
+          },
+        });
+        return;
+      }
+
+      const prisma = getPrisma();
+      const ticket = await prisma.ticket.findUnique({
+        where: { id: req.params.id },
+        select: {
+          id: true,
+          ticketNo: true,
+          summary: true,
+          description: true,
+          status: true,
+          requestedPriority: true,
+          itPriority: true,
+          ownerId: true,
+          ownerName: true,
+          owner: {
+            select: { id: true, displayName: true, email: true, role: true },
+          },
+          resolutionSummary: true,
+          isProblemAppearsResolved: true,
+          requesterId: true,
+          requester: {
+            select: { id: true, displayName: true, email: true, role: true },
+          },
+          categoryId: true,
+          category: {
+            select: { id: true, name: true },
+          },
+          relatedSystemId: true,
+          relatedSystem: {
+            select: { id: true, name: true },
+          },
+          version: true,
+          attachments: {
+            select: {
+              id: true,
+              originalFilename: true,
+              mimeType: true,
+              sizeBytes: true,
+              isDeleted: true,
+              deletedAt: true,
+              deletedById: true,
+              deletionReason: true,
+              createdAt: true,
+            },
+            orderBy: { createdAt: "asc" },
+          },
+          comments: {
+            select: {
+              id: true,
+              ticketId: true,
+              authorId: true,
+              author: {
+                select: { id: true, displayName: true, role: true },
+              },
+              content: true,
+              createdAt: true,
+            },
+            orderBy: { createdAt: "asc" },
+          },
+          internalNotes: {
+            select: {
+              id: true,
+              ticketId: true,
+              authorId: true,
+              author: {
+                select: { id: true, displayName: true, role: true },
+              },
+              content: true,
+              createdAt: true,
+            },
+            orderBy: { createdAt: "asc" },
+          },
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      if (!ticket) {
+        res.status(404).json({
+          error: {
+            code: "NOT_FOUND",
+            message: "Ticket not found.",
+          },
+        });
+        return;
+      }
+
+      res.status(200).json({
+        ...ticket,
+        itPriority: ticket.itPriority || ticket.requestedPriority,
+      });
+    } catch (error) {
+      console.error("Error fetching staff ticket detail:", error);
+      res.status(500).json({ error: "Failed to fetch staff ticket detail." });
+    }
+  }
+);
+
+// 6.2 PATCH /api/staff/tickets/:id/assignment - Claim / Reassign Ticket Owner
+app.patch(
+  "/api/staff/tickets/:id/assignment",
+  authenticateToken,
+  requireRole("IT_STAFF", "ADMINISTRATOR"),
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (req.user?.mustChangePassword) {
+        res.status(403).json({
+          error: {
+            code: "MUST_CHANGE_PASSWORD",
+            message: "Password change is required before accessing application resources.",
+          },
+        });
+        return;
+      }
+
+      const prisma = getPrisma();
+      const ticket = await prisma.ticket.findUnique({
+        where: { id: req.params.id },
+        select: { id: true },
+      });
+
+      if (!ticket) {
+        res.status(404).json({
+          error: {
+            code: "NOT_FOUND",
+            message: "Ticket not found.",
+          },
+        });
+        return;
+      }
+
+      const { ownerId } = req.body;
+
+      if (ownerId === null || ownerId === undefined) {
+        // Unassign ticket
+        const updated = await prisma.ticket.update({
+          where: { id: req.params.id },
+          data: {
+            ownerId: null,
+            ownerName: null,
+          },
+          select: {
+            id: true,
+            ownerId: true,
+            owner: {
+              select: { id: true, displayName: true },
+            },
+          },
+        });
+        res.status(200).json(updated);
+        return;
+      }
+
+      const targetId = Number(ownerId);
+      if (isNaN(targetId)) {
+        res.status(422).json({
+          error: {
+            code: "INVALID_ASSIGNEE",
+            message: "Assigned user ID must be a valid number.",
+          },
+        });
+        return;
+      }
+
+      const assignee = await prisma.user.findUnique({
+        where: { id: targetId },
+        select: { id: true, displayName: true, isActive: true, role: true },
+      });
+
+      if (!assignee || !assignee.isActive || (assignee.role !== "IT_STAFF" && assignee.role !== "ADMINISTRATOR")) {
+        res.status(422).json({
+          error: {
+            code: "INVALID_ASSIGNEE",
+            message: "Assigned user does not exist, is inactive, or is not an IT Staff or Administrator.",
+          },
+        });
+        return;
+      }
+
+      const updated = await prisma.ticket.update({
+        where: { id: req.params.id },
+        data: {
+          ownerId: assignee.id,
+          ownerName: assignee.displayName,
+        },
+        select: {
+          id: true,
+          ownerId: true,
+          owner: {
+            select: { id: true, displayName: true },
+          },
+        },
+      });
+
+      res.status(200).json(updated);
+    } catch (error) {
+      console.error("Error assigning ticket owner:", error);
+      res.status(500).json({ error: "Failed to assign ticket owner." });
+    }
+  }
+);
+
+// 6.3 PATCH /api/staff/tickets/:id/priority - Update IT Priority
+app.patch(
+  "/api/staff/tickets/:id/priority",
+  authenticateToken,
+  requireRole("IT_STAFF", "ADMINISTRATOR"),
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (req.user?.mustChangePassword) {
+        res.status(403).json({
+          error: {
+            code: "MUST_CHANGE_PASSWORD",
+            message: "Password change is required before accessing application resources.",
+          },
+        });
+        return;
+      }
+
+      const prisma = getPrisma();
+      const ticket = await prisma.ticket.findUnique({
+        where: { id: req.params.id },
+        select: { id: true, requestedPriority: true },
+      });
+
+      if (!ticket) {
+        res.status(404).json({
+          error: {
+            code: "NOT_FOUND",
+            message: "Ticket not found.",
+          },
+        });
+        return;
+      }
+
+      const { itPriority } = req.body;
+      const normalizedPriority = String(itPriority || "").toUpperCase();
+
+      if (!["LOW", "MEDIUM", "HIGH", "URGENT"].includes(normalizedPriority)) {
+        res.status(422).json({
+          error: {
+            code: "INVALID_PRIORITY",
+            message: "Invalid IT priority value. Allowed: LOW, MEDIUM, HIGH, URGENT.",
+          },
+        });
+        return;
+      }
+
+      const updated = await prisma.ticket.update({
+        where: { id: req.params.id },
+        data: {
+          itPriority: normalizedPriority as any,
+        },
+        select: {
+          id: true,
+          ticketNo: true,
+          requestedPriority: true,
+          itPriority: true,
+          status: true,
+        },
+      });
+
+      res.status(200).json(updated);
+    } catch (error) {
+      console.error("Error updating IT priority:", error);
+      res.status(500).json({ error: "Failed to update IT priority." });
+    }
+  }
+);
+
+// 6.4 PATCH /api/staff/tickets/:id/status - Update Ticket Status
+app.patch(
+  "/api/staff/tickets/:id/status",
+  authenticateToken,
+  requireRole("IT_STAFF", "ADMINISTRATOR"),
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (req.user?.mustChangePassword) {
+        res.status(403).json({
+          error: {
+            code: "MUST_CHANGE_PASSWORD",
+            message: "Password change is required before accessing application resources.",
+          },
+        });
+        return;
+      }
+
+      const prisma = getPrisma();
+      const ticket = await prisma.ticket.findUnique({
+        where: { id: req.params.id },
+        select: { id: true, status: true, resolutionSummary: true },
+      });
+
+      if (!ticket) {
+        res.status(404).json({
+          error: {
+            code: "NOT_FOUND",
+            message: "Ticket not found.",
+          },
+        });
+        return;
+      }
+
+      const { status, resolutionSummary } = req.body;
+      const targetStatus = normalizeStatus(status);
+
+      if (!isValidStatusTransition(ticket.status, targetStatus)) {
+        res.status(422).json({
+          error: {
+            code: "INVALID_STATUS_TRANSITION",
+            message: `Invalid status transition from "${ticket.status}" to "${status}".`,
+          },
+        });
+        return;
+      }
+
+      if (targetStatus === "Resolved") {
+        if (typeof resolutionSummary !== "string" || resolutionSummary.trim().length === 0) {
+          res.status(422).json({
+            error: {
+              code: "MISSING_RESOLUTION_SUMMARY",
+              message: "Resolution summary is required when resolving a ticket.",
+            },
+          });
+          return;
+        }
+      }
+
+      const updateData: any = { status: targetStatus as any };
+      if (typeof resolutionSummary === "string") {
+        updateData.resolutionSummary = resolutionSummary.trim();
+      }
+
+      const updated = await prisma.ticket.update({
+        where: { id: req.params.id },
+        data: updateData,
+        select: {
+          id: true,
+          status: true,
+          resolutionSummary: true,
+        },
+      });
+
+      res.status(200).json(updated);
+    } catch (error) {
+      console.error("Error updating ticket status:", error);
+      res.status(500).json({ error: "Failed to update ticket status." });
+    }
+  }
+);
+
+// 6.5 POST /api/tickets/:id/comments - Add Public Comment
+app.post(
+  "/api/tickets/:id/comments",
+  authenticateToken,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (req.user?.mustChangePassword) {
+        res.status(403).json({
+          error: {
+            code: "MUST_CHANGE_PASSWORD",
+            message: "Password change is required before accessing application resources.",
+          },
+        });
+        return;
+      }
+
+      const prisma = getPrisma();
+      const ticket = await prisma.ticket.findUnique({
+        where: { id: req.params.id },
+        select: { id: true, requesterId: true },
+      });
+
+      if (!ticket) {
+        res.status(404).json({
+          error: {
+            code: "NOT_FOUND",
+            message: "Ticket not found.",
+          },
+        });
+        return;
+      }
+
+      if (req.user!.role === "REQUESTER" && ticket.requesterId !== req.user!.id) {
+        res.status(403).json({
+          error: {
+            code: "OWNERSHIP_DENIED",
+            message: "You are not authorized to comment on this ticket.",
+          },
+        });
+        return;
+      }
+
+      const validation = validateCommentContent(req.body?.content);
+      if (!validation.isValid) {
+        res.status(422).json({
+          error: {
+            code: "INVALID_COMMENT_CONTENT",
+            message: validation.error || "Invalid comment content.",
+          },
+        });
+        return;
+      }
+
+      const comment = await prisma.comment.create({
+        data: {
+          ticketId: ticket.id,
+          authorId: req.user!.id,
+          content: validation.trimmed!,
+        },
+        select: {
+          id: true,
+          ticketId: true,
+          authorId: true,
+          author: {
+            select: {
+              displayName: true,
+              role: true,
+            },
+          },
+          content: true,
+          createdAt: true,
+        },
+      });
+
+      res.status(201).json(comment);
+    } catch (error) {
+      console.error("Error posting public comment:", error);
+      res.status(500).json({ error: "Failed to post public comment." });
+    }
+  }
+);
+
+// 6.6 GET /api/tickets/:id/comments - Retrieve Public Comments
+app.get(
+  "/api/tickets/:id/comments",
+  authenticateToken,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (req.user?.mustChangePassword) {
+        res.status(403).json({
+          error: {
+            code: "MUST_CHANGE_PASSWORD",
+            message: "Password change is required before accessing application resources.",
+          },
+        });
+        return;
+      }
+
+      const prisma = getPrisma();
+      const ticket = await prisma.ticket.findUnique({
+        where: { id: req.params.id },
+        select: { id: true, requesterId: true },
+      });
+
+      if (!ticket) {
+        res.status(404).json({
+          error: {
+            code: "NOT_FOUND",
+            message: "Ticket not found.",
+          },
+        });
+        return;
+      }
+
+      if (req.user!.role === "REQUESTER" && ticket.requesterId !== req.user!.id) {
+        res.status(403).json({
+          error: {
+            code: "OWNERSHIP_DENIED",
+            message: "You are not authorized to view comments on this ticket.",
+          },
+        });
+        return;
+      }
+
+      const comments = await prisma.comment.findMany({
+        where: { ticketId: ticket.id },
+        orderBy: { createdAt: "asc" },
+        select: {
+          id: true,
+          ticketId: true,
+          authorId: true,
+          author: {
+            select: {
+              displayName: true,
+              role: true,
+            },
+          },
+          content: true,
+          createdAt: true,
+        },
+      });
+
+      res.status(200).json(comments);
+    } catch (error) {
+      console.error("Error fetching public comments:", error);
+      res.status(500).json({ error: "Failed to fetch public comments." });
+    }
+  }
+);
+
+// 6.7 POST /api/staff/tickets/:id/notes - Add Internal Note
+app.post(
+  "/api/staff/tickets/:id/notes",
+  authenticateToken,
+  requireRole("IT_STAFF", "ADMINISTRATOR"),
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (req.user?.mustChangePassword) {
+        res.status(403).json({
+          error: {
+            code: "MUST_CHANGE_PASSWORD",
+            message: "Password change is required before accessing application resources.",
+          },
+        });
+        return;
+      }
+
+      const prisma = getPrisma();
+      const ticket = await prisma.ticket.findUnique({
+        where: { id: req.params.id },
+        select: { id: true },
+      });
+
+      if (!ticket) {
+        res.status(404).json({
+          error: {
+            code: "NOT_FOUND",
+            message: "Ticket not found.",
+          },
+        });
+        return;
+      }
+
+      const validation = validateCommentContent(req.body?.content);
+      if (!validation.isValid) {
+        res.status(422).json({
+          error: {
+            code: "INVALID_NOTE_CONTENT",
+            message: validation.error || "Invalid internal note content.",
+          },
+        });
+        return;
+      }
+
+      const note = await prisma.internalNote.create({
+        data: {
+          ticketId: ticket.id,
+          authorId: req.user!.id,
+          content: validation.trimmed!,
+        },
+        select: {
+          id: true,
+          ticketId: true,
+          authorId: true,
+          author: {
+            select: {
+              displayName: true,
+              role: true,
+            },
+          },
+          content: true,
+          createdAt: true,
+        },
+      });
+
+      res.status(201).json(note);
+    } catch (error) {
+      console.error("Error posting internal note:", error);
+      res.status(500).json({ error: "Failed to post internal note." });
+    }
+  }
+);
+
+// 6.8 GET /api/staff/tickets/:id/notes - Retrieve Internal Notes
+app.get(
+  "/api/staff/tickets/:id/notes",
+  authenticateToken,
+  requireRole("IT_STAFF", "ADMINISTRATOR"),
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (req.user?.mustChangePassword) {
+        res.status(403).json({
+          error: {
+            code: "MUST_CHANGE_PASSWORD",
+            message: "Password change is required before accessing application resources.",
+          },
+        });
+        return;
+      }
+
+      const prisma = getPrisma();
+      const ticket = await prisma.ticket.findUnique({
+        where: { id: req.params.id },
+        select: { id: true },
+      });
+
+      if (!ticket) {
+        res.status(404).json({
+          error: {
+            code: "NOT_FOUND",
+            message: "Ticket not found.",
+          },
+        });
+        return;
+      }
+
+      const notes = await prisma.internalNote.findMany({
+        where: { ticketId: ticket.id },
+        orderBy: { createdAt: "asc" },
+        select: {
+          id: true,
+          ticketId: true,
+          authorId: true,
+          author: {
+            select: {
+              displayName: true,
+              role: true,
+            },
+          },
+          content: true,
+          createdAt: true,
+        },
+      });
+
+      res.status(200).json(notes);
+    } catch (error) {
+      console.error("Error fetching internal notes:", error);
+      res.status(500).json({ error: "Failed to fetch internal notes." });
+    }
+  }
+);
+
+// 4.7 PATCH /api/tickets/:id/resolve-indication & alias resolution-indicator
+const handleResolutionIndicator = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    if (req.user?.mustChangePassword) {
+      res.status(403).json({
+        error: {
+          code: "MUST_CHANGE_PASSWORD",
+          message: "Password change is required before accessing application resources.",
+        },
+      });
+      return;
+    }
+
+    const prisma = getPrisma();
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: req.params.id },
+      select: { id: true, requesterId: true, status: true },
+    });
+
+    if (!ticket) {
+      res.status(404).json({
+        error: {
+          code: "NOT_FOUND",
+          message: "Ticket not found.",
+        },
+      });
+      return;
+    }
+
+    if (req.user?.role !== "REQUESTER" || ticket.requesterId !== req.user.id) {
+      res.status(403).json({
+        error: {
+          code: "OWNERSHIP_DENIED",
+          message: "Only the owning Requester can indicate problem resolution.",
+        },
+      });
+      return;
+    }
+
+    const updated = await prisma.ticket.update({
+      where: { id: ticket.id },
+      data: { isProblemAppearsResolved: true },
+      select: {
+        id: true,
+        isProblemAppearsResolved: true,
+        status: true,
+      },
+    });
+
+    res.status(200).json(updated);
+  } catch (error) {
+    console.error("Resolution indicator error:", error);
+    res.status(500).json({ error: "Failed to update resolution indicator." });
+  }
+};
+app.patch("/api/tickets/:id/resolve-indication", authenticateToken, handleResolutionIndicator);
+app.patch("/api/tickets/:id/resolution-indicator", authenticateToken, handleResolutionIndicator);
 
 // ---------------------------------------------------------------------------
 // Issue 4 — Category list
@@ -861,7 +1602,16 @@ app.get("/api/tickets/:id", async (req: Request, res: Response) => {
         requestedPriority: true,
         itPriority: true,
         ownerName: true,
+        ownerId: true,
+        owner: {
+          select: {
+            id: true,
+            displayName: true,
+            email: true,
+          },
+        },
         resolutionSummary: true,
+        isProblemAppearsResolved: true,
         requesterId: true,
         version: true,
 
@@ -894,6 +1644,22 @@ app.get("/api/tickets/:id", async (req: Request, res: Response) => {
             deletedAt: true,
             deletedById: true,
             deletionReason: true,
+            createdAt: true,
+          },
+          orderBy: { createdAt: "asc" },
+        },
+        comments: {
+          select: {
+            id: true,
+            ticketId: true,
+            authorId: true,
+            author: {
+              select: {
+                displayName: true,
+                role: true,
+              },
+            },
+            content: true,
             createdAt: true,
           },
           orderBy: { createdAt: "asc" },
@@ -935,7 +1701,10 @@ app.get("/api/tickets/:id", async (req: Request, res: Response) => {
       return;
     }
 
-    res.status(200).json(ticket);
+    res.status(200).json({
+      ...ticket,
+      itPriority: ticket.itPriority || ticket.requestedPriority,
+    });
   } catch (error) {
     console.error("Error fetching ticket detail", error);
     res.status(500).json({ error: "Failed to fetch ticket detail." });

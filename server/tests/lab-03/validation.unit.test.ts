@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { validatePasswordComplexity } from "../../src/services/authService.js";
+import { validateCommentContent } from "../../src/services/validationService.js";
 
 describe("UNIT-01 — Password Complexity Validator (BR-18)", () => {
   it("rejects passwords shorter than 8 characters", () => {
@@ -36,5 +37,45 @@ describe("UNIT-01 — Password Complexity Validator (BR-18)", () => {
     const result = validatePasswordComplexity("SecurePass2026!");
     expect(result.isValid).toBe(true);
     expect(result.errors).toHaveLength(0);
+  });
+});
+
+describe("UNIT-03 — Comment & Note Content Validator (BR-11, FR-28, BR-23)", () => {
+  it("rejects empty string content", () => {
+    const result = validateCommentContent("");
+    expect(result.isValid).toBe(false);
+    expect(result.error).toBe("Content cannot be empty or whitespace-only.");
+  });
+
+  it("rejects whitespace-only content (spaces, tabs, newlines)", () => {
+    const result = validateCommentContent("   \t  \n  ");
+    expect(result.isValid).toBe(false);
+    expect(result.error).toBe("Content cannot be empty or whitespace-only.");
+  });
+
+  it("rejects non-string content", () => {
+    expect(validateCommentContent(null).isValid).toBe(false);
+    expect(validateCommentContent(undefined).isValid).toBe(false);
+    expect(validateCommentContent(12345).isValid).toBe(false);
+    expect(validateCommentContent({}).isValid).toBe(false);
+  });
+
+  it("rejects content exceeding 2000 characters", () => {
+    const longContent = "A".repeat(2001);
+    const result = validateCommentContent(longContent);
+    expect(result.isValid).toBe(false);
+    expect(result.error).toBe("Content must not exceed 2,000 characters.");
+  });
+
+  it("accepts valid trimmed content up to 2000 characters", () => {
+    const validShort = "  Checking radius logs and user certificates.  ";
+    const resShort = validateCommentContent(validShort);
+    expect(resShort.isValid).toBe(true);
+    expect(resShort.trimmed).toBe("Checking radius logs and user certificates.");
+
+    const boundary2000 = "B".repeat(2000);
+    const resBoundary = validateCommentContent(boundary2000);
+    expect(resBoundary.isValid).toBe(true);
+    expect(resBoundary.trimmed).toHaveLength(2000);
   });
 });

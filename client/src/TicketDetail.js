@@ -1,6 +1,35 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useState, useEffect } from "react";
-import { fetchTicketDetail, uploadAttachment, getAttachmentDownloadUrl, softRemoveAttachment, } from "./api.js";
+import { fetchTicketDetail, fetchStaffTicketDetail, assignTicket, updateTicketPriority, updateTicketStatus, createTicketComment, createTicketNote, indicateProblemResolved, fetchStaffUsers, uploadAttachment, getAttachmentDownloadUrl, softRemoveAttachment, } from "./api.js";
+function getPermittedStatusesForUI(currentStatus) {
+    if (!currentStatus)
+        return [];
+    const s = currentStatus.trim().toLowerCase();
+    if (s === "new")
+        return ["Open", "Cancelled"];
+    if (s === "open")
+        return ["InProgress", "WaitingForRequester", "Resolved", "Cancelled"];
+    if (s === "inprogress" || s === "in progress")
+        return ["WaitingForRequester", "Resolved", "Cancelled"];
+    if (s === "waitingforrequester" || s === "waiting for requester")
+        return ["InProgress", "Resolved", "Cancelled"];
+    if (s === "resolved")
+        return ["Closed", "Reopened"];
+    if (s === "closed")
+        return ["Reopened"];
+    if (s === "reopened")
+        return ["InProgress", "WaitingForRequester", "Resolved", "Cancelled"];
+    return [];
+}
+function formatStatusDisplay(status) {
+    if (!status)
+        return "";
+    if (status === "InProgress" || status === "in progress")
+        return "In Progress";
+    if (status === "WaitingForRequester" || status === "waiting for requester")
+        return "Waiting for Requester";
+    return status;
+}
 export default function TicketDetail({ ticketId, currentRequester, onBack, backLabel }) {
     const isStaffOrAdmin = currentRequester?.role === "IT_STAFF" ||
         currentRequester?.role === "ADMINISTRATOR";
@@ -8,6 +37,32 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
     const [ticket, setTicket] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    // Staff Assignment State
+    const [staffUsers, setStaffUsers] = useState([]);
+    const [assigning, setAssigning] = useState(false);
+    const [assignError, setAssignError] = useState(null);
+    // IT Priority State
+    const [updatingPriority, setUpdatingPriority] = useState(false);
+    const [priorityError, setPriorityError] = useState(null);
+    // Status Workflow State
+    const [selectedNextStatus, setSelectedNextStatus] = useState("");
+    const [resolutionSummaryInput, setResolutionSummaryInput] = useState("");
+    const [updatingStatus, setUpdatingStatus] = useState(false);
+    const [statusError, setStatusError] = useState(null);
+    // Requester Problem Resolved State
+    const [resolvingIndicator, setResolvingIndicator] = useState(false);
+    const [resolveIndicatorSuccess, setResolveIndicatorSuccess] = useState(false);
+    const [resolveIndicatorError, setResolveIndicatorError] = useState(null);
+    // Comments State
+    const [comments, setComments] = useState([]);
+    const [commentContent, setCommentContent] = useState("");
+    const [postingComment, setPostingComment] = useState(false);
+    const [commentError, setCommentError] = useState(null);
+    // Internal Notes State (Staff/Admin Only)
+    const [notes, setNotes] = useState([]);
+    const [noteContent, setNoteContent] = useState("");
+    const [postingNote, setPostingNote] = useState(false);
+    const [noteError, setNoteError] = useState(null);
     // Upload state
     const [selectedFile, setSelectedFile] = useState(null);
     const [uploading, setUploading] = useState(false);
@@ -20,13 +75,35 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
     const [removing, setRemoving] = useState(false);
     useEffect(() => {
         let isMounted = true;
-        async function loadTicket() {
+        async function loadData() {
             try {
                 setLoading(true);
                 setError(null);
-                const data = await fetchTicketDetail(ticketId, currentRequester.id);
-                if (isMounted)
+                let data;
+                if (isStaffOrAdmin) {
+                    data = await fetchStaffTicketDetail(ticketId);
+                    try {
+                        const users = await fetchStaffUsers();
+                        if (isMounted)
+                            setStaffUsers(users);
+                    }
+                    catch {
+                        // Ignore staff users fetch failure
+                    }
+                }
+                else {
+                    data = await fetchTicketDetail(ticketId, currentRequester.id);
+                }
+                if (isMounted) {
                     setTicket(data);
+                    setComments(data.comments || []);
+                    if (isStaffOrAdmin && data.internalNotes) {
+                        setNotes(data.internalNotes);
+                    }
+                    if (data.isProblemAppearsResolved) {
+                        setResolveIndicatorSuccess(true);
+                    }
+                }
             }
             catch (err) {
                 if (isMounted)
@@ -37,11 +114,11 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
                     setLoading(false);
             }
         }
-        loadTicket();
+        loadData();
         return () => {
             isMounted = false;
         };
-    }, [ticketId, currentRequester.id]);
+    }, [ticketId, currentRequester.id, isStaffOrAdmin]);
     const activeAttachments = ticket?.attachments.filter((a) => !a.isDeleted) || [];
     const removedAttachments = ticket?.attachments.filter((a) => a.isDeleted) || [];
     const formatFileSize = (bytes) => {
@@ -51,6 +128,179 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
             return `${(bytes / 1024).toFixed(1)} KB`;
         return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
     };
+    // Ownership Claim & Reassignment Handler
+    const handleClaimTicket = async () => {
+        if (!ticket)
+            return;
+        try {
+            setAssigning(true);
+            setAssignError(null);
+            const res = await assignTicket(ticket.id, currentRequester.id);
+            setTicket((prev) => prev
+                ? {
+                    ...prev,
+                    ownerId: res.ownerId,
+                    ownerName: res.owner?.displayName || currentRequester.displayName,
+                    owner: res.owner || { id: currentRequester.id, displayName: currentRequester.displayName },
+                }
+                : prev);
+        }
+        catch (err) {
+            setAssignError(err.message || "Failed to claim ticket.");
+        }
+        finally {
+            setAssigning(false);
+        }
+    };
+    const handleReassignTicket = async (newOwnerIdStr) => {
+        if (!ticket)
+            return;
+        try {
+            setAssigning(true);
+            setAssignError(null);
+            const targetOwnerId = newOwnerIdStr === "" || newOwnerIdStr === "unassigned" ? null : Number(newOwnerIdStr);
+            const res = await assignTicket(ticket.id, targetOwnerId);
+            setTicket((prev) => prev
+                ? {
+                    ...prev,
+                    ownerId: res.ownerId,
+                    ownerName: res.owner?.displayName || (res.ownerId === null ? null : prev.ownerName),
+                    owner: res.owner,
+                }
+                : prev);
+        }
+        catch (err) {
+            setAssignError(err.message || "Failed to reassign ticket.");
+        }
+        finally {
+            setAssigning(false);
+        }
+    };
+    // IT Priority Update Handler
+    const handlePriorityChange = async (newPriority) => {
+        if (!ticket)
+            return;
+        try {
+            setUpdatingPriority(true);
+            setPriorityError(null);
+            const res = await updateTicketPriority(ticket.id, newPriority);
+            setTicket((prev) => prev
+                ? {
+                    ...prev,
+                    itPriority: res.itPriority || newPriority,
+                }
+                : prev);
+        }
+        catch (err) {
+            setPriorityError(err.message || "Failed to update IT priority.");
+        }
+        finally {
+            setUpdatingPriority(false);
+        }
+    };
+    // Status Transition Handler
+    const handleExecuteStatusTransition = async () => {
+        if (!ticket || !selectedNextStatus)
+            return;
+        if (selectedNextStatus === "Resolved" && !resolutionSummaryInput.trim()) {
+            setStatusError("Resolution summary is mandatory when resolving a ticket.");
+            return;
+        }
+        try {
+            setUpdatingStatus(true);
+            setStatusError(null);
+            const res = await updateTicketStatus(ticket.id, selectedNextStatus, selectedNextStatus === "Resolved" ? resolutionSummaryInput.trim() : undefined);
+            setTicket((prev) => prev
+                ? {
+                    ...prev,
+                    status: res.status,
+                    resolutionSummary: res.resolutionSummary !== undefined ? res.resolutionSummary : prev.resolutionSummary,
+                }
+                : prev);
+            setSelectedNextStatus("");
+        }
+        catch (err) {
+            setStatusError(err.message || "Failed to update status.");
+        }
+        finally {
+            setUpdatingStatus(false);
+        }
+    };
+    // Problem Appears Resolved Handler (Requester)
+    const handleProblemResolvedClick = async () => {
+        if (!ticket)
+            return;
+        try {
+            setResolvingIndicator(true);
+            setResolveIndicatorError(null);
+            await indicateProblemResolved(ticket.id);
+            setResolveIndicatorSuccess(true);
+            setTicket((prev) => (prev ? { ...prev, isProblemAppearsResolved: true } : prev));
+        }
+        catch (err) {
+            setResolveIndicatorError(err.message || "Failed to update resolution indicator.");
+        }
+        finally {
+            setResolvingIndicator(false);
+        }
+    };
+    // Comments Form Submission
+    const handleCommentSubmit = async (e) => {
+        e.preventDefault();
+        if (!ticket)
+            return;
+        const trimmed = commentContent.trim();
+        if (!trimmed) {
+            setCommentError("Comment content cannot be empty.");
+            return;
+        }
+        if (trimmed.length > 2000) {
+            setCommentError("Comment cannot exceed 2,000 characters.");
+            return;
+        }
+        try {
+            setPostingComment(true);
+            setCommentError(null);
+            const newComment = await createTicketComment(ticket.id, trimmed);
+            setComments((prev) => [...prev, newComment]);
+            setCommentContent("");
+        }
+        catch (err) {
+            setCommentError(err.message || "Failed to post comment.");
+        }
+        finally {
+            setPostingComment(false);
+        }
+    };
+    // Internal Notes Form Submission (Staff/Admin Only)
+    const handleNoteSubmit = async (e) => {
+        e.preventDefault();
+        if (!ticket)
+            return;
+        const trimmed = noteContent.trim();
+        if (!trimmed) {
+            setNoteError("Internal note content cannot be empty.");
+            return;
+        }
+        if (trimmed.length > 2000) {
+            setNoteError("Internal note cannot exceed 2,000 characters.");
+            return;
+        }
+        try {
+            setPostingNote(true);
+            setNoteError(null);
+            const newNote = await createTicketNote(ticket.id, trimmed);
+            setNotes((prev) => [...prev, newNote]);
+            setNoteContent("");
+        }
+        catch (err) {
+            setNoteError(err.message || "Failed to post internal note.");
+        }
+        finally {
+            setPostingNote(false);
+        }
+    };
+    // Attachment Upload & Remove handlers
     const handleFileChange = (e) => {
         setUploadError(null);
         setUploadSuccess(null);
@@ -92,7 +342,6 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
                 : prev);
             setUploadSuccess(`Attachment "${newAtt.originalFilename}" uploaded successfully.`);
             setSelectedFile(null);
-            // Reset input element
             const fileInput = document.getElementById("attachment-file-input");
             if (fileInput)
                 fileInput.value = "";
@@ -143,7 +392,8 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
         }
     };
     const renderPriorityBadge = (p) => {
-        switch (p.toUpperCase()) {
+        const val = (p || "").toUpperCase();
+        switch (val) {
             case "LOW":
                 return (_jsx("span", { style: { backgroundColor: "#E5E7EB", color: "#374151", padding: "0.25rem 0.65rem", borderRadius: "12px", fontSize: "0.82rem", fontWeight: 600 }, children: "\u2193 Low" }));
             case "MEDIUM":
@@ -157,15 +407,35 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
         }
     };
     const renderStatusBadge = (s) => {
-        return (_jsxs("span", { style: { backgroundColor: "#EAF6EF", color: "#006B3C", border: "1px solid #0B7A46", padding: "0.25rem 0.75rem", borderRadius: "12px", fontSize: "0.85rem", fontWeight: 700 }, children: ["\u25CF ", s] }));
+        return (_jsxs("span", { style: {
+                backgroundColor: "#EAF6EF",
+                color: "#006B3C",
+                border: "1px solid #0B7A46",
+                padding: "0.25rem 0.75rem",
+                borderRadius: "12px",
+                fontSize: "0.85rem",
+                fontWeight: 700,
+            }, children: ["\u25CF ", formatStatusDisplay(s)] }));
+    };
+    const renderRolePill = (role) => {
+        switch (role) {
+            case "IT_STAFF":
+                return (_jsx("span", { className: "badge", style: { backgroundColor: "#E0F2FE", color: "#0369A1", border: "1px solid #7DD3FC", fontSize: "0.75rem" }, children: "\uD83D\uDEE0 IT Staff" }));
+            case "ADMINISTRATOR":
+                return (_jsx("span", { className: "badge", style: { backgroundColor: "#FEF3C7", color: "#B45309", border: "1px solid #FCD34D", fontSize: "0.75rem" }, children: "\uD83D\uDEE1 Admin" }));
+            default:
+                return (_jsx("span", { className: "badge", style: { backgroundColor: "#EAF6EF", color: "#006B3C", border: "1px solid #0B7A46", fontSize: "0.75rem" }, children: "\uD83D\uDC64 Requester" }));
+        }
     };
     if (loading) {
-        return (_jsx("div", { style: { maxWidth: 900, margin: "2rem auto", textAlign: "center", color: "#555" }, children: _jsx("div", { style: { fontSize: "1.2rem", fontWeight: 600 }, children: "Loading ticket details..." }) }));
+        return (_jsx("div", { style: { maxWidth: 960, margin: "2rem auto", textAlign: "center", color: "#555" }, children: _jsx("div", { style: { fontSize: "1.2rem", fontWeight: 600 }, children: "Loading ticket details..." }) }));
     }
     if (error || !ticket) {
-        return (_jsx("div", { style: { maxWidth: 900, margin: "2rem auto" }, children: _jsxs("div", { className: "alert alert-danger shadow-sm", role: "alert", children: [_jsx("h5", { className: "alert-heading fw-bold mb-1", children: "Error Loading Ticket" }), _jsx("p", { className: "mb-3", children: error || "Ticket not found or ownership denied." }), _jsx("button", { type: "button", className: "btn btn-outline-danger btn-sm fw-semibold", onClick: onBack, children: displayBackLabel })] }) }));
+        return (_jsx("div", { style: { maxWidth: 960, margin: "2rem auto" }, children: _jsxs("div", { className: "alert alert-danger shadow-sm", role: "alert", children: [_jsx("h5", { className: "alert-heading fw-bold mb-1", children: "Error Loading Ticket" }), _jsx("p", { className: "mb-3", children: error || "Ticket not found or ownership denied." }), _jsx("button", { type: "button", className: "btn btn-outline-danger btn-sm fw-semibold", onClick: onBack, children: displayBackLabel })] }) }));
     }
-    return (_jsxs("div", { style: { maxWidth: 960, margin: "0 auto", paddingBottom: "3rem" }, children: [_jsxs("div", { className: "d-flex justify-content-between align-items-center mb-3", children: [_jsx("button", { type: "button", onClick: onBack, style: {
+    const permittedNext = getPermittedStatusesForUI(ticket.status);
+    const isTicketOwnerRequester = !isStaffOrAdmin && ticket.requesterId === currentRequester.id;
+    return (_jsxs("div", { style: { maxWidth: 1040, margin: "0 auto", paddingBottom: "3rem" }, children: [_jsxs("div", { className: "d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2", children: [_jsx("button", { type: "button", onClick: onBack, style: {
                             backgroundColor: "#EAF6EF",
                             color: "#006B3C",
                             border: "1px solid #0B7A46",
@@ -174,7 +444,20 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
                             fontSize: "0.9rem",
                             fontWeight: 600,
                             cursor: "pointer",
-                        }, children: displayBackLabel }), _jsx("div", { children: renderStatusBadge(ticket.status) })] }), _jsxs("div", { className: "card shadow-sm mb-4", style: { borderRadius: "8px", border: "1px solid #E0E0E0", overflow: "hidden" }, children: [_jsxs("div", { style: {
+                        }, children: displayBackLabel }), _jsxs("div", { className: "d-flex align-items-center gap-2", children: [ticket.isProblemAppearsResolved && (_jsx("span", { className: "badge", style: {
+                                    backgroundColor: "#DEF7EC",
+                                    color: "#03543F",
+                                    border: "1px solid #31C48D",
+                                    padding: "0.35rem 0.65rem",
+                                    fontSize: "0.82rem",
+                                    fontWeight: 600,
+                                }, children: "\u2713 Problem Marked Resolved" })), _jsx("div", { children: renderStatusBadge(ticket.status) })] })] }), isStaffOrAdmin && (_jsxs("div", { className: "card shadow-sm mb-4", style: {
+                    backgroundColor: "#F8FAFC",
+                    border: "1px solid #CBD5E1",
+                    borderRadius: "8px",
+                }, children: [_jsxs("div", { className: "card-header py-2 px-3 fw-bold d-flex justify-content-between align-items-center", style: { backgroundColor: "#0F172A", color: "#FFFFFF", fontSize: "0.9rem" }, children: [_jsx("span", { children: "\u2699\uFE0F IT Operational Actions" }), _jsxs("span", { style: { fontSize: "0.78rem", fontWeight: "normal", opacity: 0.85 }, children: ["Active Staff: ", currentRequester.displayName] })] }), _jsxs("div", { className: "card-body p-3", children: [_jsxs("div", { className: "row g-3 align-items-center", children: [_jsxs("div", { className: "col-12 col-md-4", children: [_jsx("label", { htmlFor: "ticket-owner-select", className: "fw-bold mb-1", style: { fontSize: "0.82rem", color: "#334155" }, children: "Ticket Owner:" }), _jsxs("div", { className: "d-flex gap-2 align-items-center", children: [_jsxs("select", { id: "ticket-owner-select", className: "form-select form-select-sm", value: ticket.ownerId ? String(ticket.ownerId) : "unassigned", onChange: (e) => handleReassignTicket(e.target.value), disabled: assigning, style: { fontSize: "0.85rem" }, children: [_jsx("option", { value: "unassigned", children: "\u2014 Unassigned \u2014" }), staffUsers.map((u) => (_jsxs("option", { value: String(u.id), children: [u.displayName, " (", u.role === "ADMINISTRATOR" ? "Admin" : "IT Staff", ")"] }, u.id))), ticket.ownerId && !staffUsers.some((u) => u.id === ticket.ownerId) && (_jsx("option", { value: String(ticket.ownerId), children: ticket.ownerName || ticket.owner?.displayName || `User #${ticket.ownerId}` }))] }), !ticket.ownerId && (_jsx("button", { type: "button", id: "claim-ticket-btn", className: "btn btn-sm text-white fw-bold px-3 flex-shrink-0", style: { backgroundColor: "#006B3C" }, onClick: handleClaimTicket, disabled: assigning, children: assigning ? "Claiming..." : "Claim Ticket" }))] }), assignError && (_jsx("div", { className: "text-danger mt-1", style: { fontSize: "0.78rem" }, children: assignError }))] }), _jsxs("div", { className: "col-12 col-md-3", children: [_jsx("label", { htmlFor: "it-priority-select", className: "fw-bold mb-1", style: { fontSize: "0.82rem", color: "#334155" }, children: "IT Priority:" }), _jsxs("select", { id: "it-priority-select", className: "form-select form-select-sm", value: ticket.itPriority || ticket.requestedPriority, onChange: (e) => handlePriorityChange(e.target.value), disabled: updatingPriority, style: { fontSize: "0.85rem" }, children: [_jsx("option", { value: "LOW", children: "Low" }), _jsx("option", { value: "MEDIUM", children: "Medium" }), _jsx("option", { value: "HIGH", children: "High" }), _jsx("option", { value: "URGENT", children: "Urgent" })] }), priorityError && (_jsx("div", { className: "text-danger mt-1", style: { fontSize: "0.78rem" }, children: priorityError }))] }), _jsxs("div", { className: "col-12 col-md-5", children: [_jsx("label", { htmlFor: "next-status-select", className: "fw-bold mb-1", style: { fontSize: "0.82rem", color: "#334155" }, children: "Lifecycle Status:" }), _jsxs("div", { className: "d-flex gap-2", children: [_jsxs("select", { id: "next-status-select", className: "form-select form-select-sm", value: selectedNextStatus, onChange: (e) => setSelectedNextStatus(e.target.value), disabled: updatingStatus || permittedNext.length === 0, style: { fontSize: "0.85rem" }, children: [_jsx("option", { value: "", children: permittedNext.length === 0 ? "(Terminal State)" : "Change status to..." }), permittedNext.map((st) => (_jsxs("option", { value: st, children: ["\u2192 ", formatStatusDisplay(st)] }, st)))] }), _jsx("button", { type: "button", id: "apply-status-transition-btn", className: "btn btn-sm btn-outline-primary fw-bold flex-shrink-0", disabled: updatingStatus ||
+                                                            !selectedNextStatus ||
+                                                            (selectedNextStatus === "Resolved" && !resolutionSummaryInput.trim()), onClick: handleExecuteStatusTransition, children: updatingStatus ? "Updating..." : "Update Status" })] })] })] }), selectedNextStatus === "Resolved" && (_jsxs("div", { className: "mt-3 p-3 border rounded", style: { backgroundColor: "#F0FDF4", borderColor: "#86EFAC" }, children: [_jsxs("label", { className: "fw-bold mb-1 text-success d-block", style: { fontSize: "0.85rem" }, children: ["Resolution Summary ", _jsx("span", { className: "text-danger", children: "*" }), " (Required for Resolved state)"] }), _jsx("textarea", { id: "resolution-summary-input", className: "form-control form-control-sm mb-2", rows: 2, placeholder: "Describe resolution steps taken...", value: resolutionSummaryInput, onChange: (e) => setResolutionSummaryInput(e.target.value) })] })), statusError && (_jsx("div", { className: "alert alert-danger py-1 px-2 mt-2 mb-0", style: { fontSize: "0.82rem" }, children: statusError }))] })] })), isTicketOwnerRequester && (_jsx("div", { className: "mb-4", children: resolveIndicatorSuccess || ticket.isProblemAppearsResolved ? (_jsxs("div", { className: "alert alert-success d-flex align-items-center gap-2 shadow-sm py-3 px-4 mb-0", style: { backgroundColor: "#EAF6EF", borderColor: "#0B7A46", color: "#006B3C" }, children: [_jsx("span", { style: { fontSize: "1.3rem" }, children: "\u2713" }), _jsxs("div", { children: [_jsx("strong", { children: "You indicated this issue appears resolved." }), " IT Staff will verify and formally close the ticket."] })] })) : ((ticket.status === "InProgress" || ticket.status === "WaitingForRequester" || ticket.status === "Open") && (_jsxs("div", { className: "p-3 border rounded d-flex justify-content-between align-items-center flex-wrap gap-2 shadow-sm", style: { backgroundColor: "#F0FDF4", borderColor: "#86EFAC" }, children: [_jsxs("div", { children: [_jsx("div", { className: "fw-bold text-success", style: { fontSize: "0.92rem" }, children: "Did the proposed solution fix your issue?" }), _jsx("div", { className: "text-muted", style: { fontSize: "0.82rem" }, children: "Let IT Staff know that the problem appears resolved from your end." })] }), _jsx("button", { type: "button", id: "problem-appears-resolved-btn", className: "btn btn-sm text-white fw-bold px-3 py-2", style: { backgroundColor: "#006B3C" }, onClick: handleProblemResolvedClick, disabled: resolvingIndicator, children: resolvingIndicator ? "Marking..." : "Problem Appears Resolved" }), resolveIndicatorError && (_jsx("div", { className: "w-100 text-danger", style: { fontSize: "0.8rem" }, children: resolveIndicatorError }))] }))) })), _jsxs("div", { className: "card shadow-sm mb-4", style: { borderRadius: "8px", border: "1px solid #E0E0E0", overflow: "hidden" }, children: [_jsxs("div", { style: {
                             backgroundColor: "#006B3C",
                             color: "#FFFFFF",
                             padding: "1rem 1.5rem",
@@ -183,7 +466,35 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
                             alignItems: "center",
                             flexWrap: "wrap",
                             gap: "0.5rem",
-                        }, children: [_jsxs("div", { children: [_jsx("span", { style: { fontSize: "0.85rem", opacity: 0.9, display: "block" }, children: "Official Ticket Number" }), _jsx("h2", { className: "h4 mb-0 fw-bold", children: ticket.ticketNo })] }), _jsx("div", { style: { textAlign: "right", fontSize: "0.85rem", opacity: 0.9 }, children: _jsxs("span", { children: ["Created: ", new Date(ticket.createdAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })] }) })] }), _jsxs("div", { className: "card-body p-4", style: { backgroundColor: "#FFFFFF" }, children: [_jsxs("div", { className: "row g-3 mb-4", children: [_jsxs("div", { className: "col-12 col-sm-6 col-md-3", children: [_jsx("label", { style: { fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block" }, children: "Requester" }), _jsx("div", { style: { fontSize: "0.95rem", fontWeight: 600, color: "#1F2937" }, children: ticket.requester.displayName }), _jsx("div", { style: { fontSize: "0.8rem", color: "#6B7280" }, children: ticket.requester.email })] }), _jsxs("div", { className: "col-12 col-sm-6 col-md-3", children: [_jsx("label", { style: { fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block" }, children: "Category" }), _jsx("div", { style: { fontSize: "0.95rem", fontWeight: 600, color: "#1F2937" }, children: ticket.category.name })] }), _jsxs("div", { className: "col-12 col-sm-6 col-md-3", children: [_jsx("label", { style: { fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block" }, children: "Related System" }), _jsx("div", { style: { fontSize: "0.95rem", fontWeight: 600, color: "#1F2937" }, children: ticket.relatedSystem.name })] }), _jsxs("div", { className: "col-12 col-sm-6 col-md-3", children: [_jsx("label", { style: { fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block" }, children: "Requested Priority" }), _jsx("div", { style: { marginTop: "0.2rem" }, children: renderPriorityBadge(ticket.requestedPriority) })] }), _jsxs("div", { className: "col-12 col-sm-6 col-md-3", children: [_jsx("label", { style: { fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block" }, children: "IT Priority" }), _jsx("div", { style: { marginTop: "0.2rem" }, children: renderPriorityBadge(ticket.itPriority || ticket.requestedPriority) })] }), _jsxs("div", { className: "col-12 col-sm-6 col-md-3", children: [_jsx("label", { style: { fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block" }, children: "Ticket Owner" }), _jsx("div", { style: { fontSize: "0.95rem", fontWeight: 600, color: "#1F2937" }, children: ticket.ownerName || "Unassigned" })] })] }), _jsx("hr", { style: { borderColor: "#E5E7EB" } }), _jsxs("div", { className: "mb-4", children: [_jsx("label", { style: { fontSize: "0.8rem", fontWeight: 700, color: "#5B6573", display: "block", marginBottom: "0.3rem" }, children: "Summary" }), _jsx("div", { style: {
+                        }, children: [_jsxs("div", { children: [_jsx("span", { style: { fontSize: "0.85rem", opacity: 0.9, display: "block" }, children: "Official Ticket Number" }), _jsx("h2", { className: "h4 mb-0 fw-bold", children: ticket.ticketNo })] }), _jsx("div", { style: { textAlign: "right", fontSize: "0.85rem", opacity: 0.9 }, children: _jsxs("span", { children: ["Created: ", new Date(ticket.createdAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" })] }) })] }), _jsxs("div", { className: "card-body p-4", style: { backgroundColor: "#FFFFFF" }, children: [_jsxs("div", { className: "row g-3 mb-4", children: [_jsxs("div", { className: "col-12 col-sm-6 col-md-3", children: [_jsx("label", { style: { fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block" }, children: "Requester" }), _jsxs("div", { style: {
+                                                    backgroundColor: "#E9ECEF",
+                                                    padding: "0.4rem 0.6rem",
+                                                    borderRadius: "6px",
+                                                    fontSize: "0.92rem",
+                                                    fontWeight: 600,
+                                                    color: "#1F2937",
+                                                }, children: [ticket.requester.displayName, _jsx("div", { style: { fontSize: "0.75rem", color: "#6B7280", fontWeight: "normal" }, children: ticket.requester.email })] })] }), _jsxs("div", { className: "col-12 col-sm-6 col-md-3", children: [_jsx("label", { style: { fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block" }, children: "Category" }), _jsx("div", { style: {
+                                                    backgroundColor: "#E9ECEF",
+                                                    padding: "0.4rem 0.6rem",
+                                                    borderRadius: "6px",
+                                                    fontSize: "0.92rem",
+                                                    fontWeight: 600,
+                                                    color: "#1F2937",
+                                                }, children: ticket.category.name })] }), _jsxs("div", { className: "col-12 col-sm-6 col-md-3", children: [_jsx("label", { style: { fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block" }, children: "Related System" }), _jsx("div", { style: {
+                                                    backgroundColor: "#E9ECEF",
+                                                    padding: "0.4rem 0.6rem",
+                                                    borderRadius: "6px",
+                                                    fontSize: "0.92rem",
+                                                    fontWeight: 600,
+                                                    color: "#1F2937",
+                                                }, children: ticket.relatedSystem.name })] }), _jsxs("div", { className: "col-12 col-sm-6 col-md-3", children: [_jsx("label", { style: { fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block" }, children: "Ticket Owner" }), _jsx("div", { id: "ticket-owner-display", style: {
+                                                    backgroundColor: "#E9ECEF",
+                                                    padding: "0.4rem 0.6rem",
+                                                    borderRadius: "6px",
+                                                    fontSize: "0.92rem",
+                                                    fontWeight: 600,
+                                                    color: ticket.owner || ticket.ownerName ? "#1F2937" : "#6B7280",
+                                                }, children: ticket.owner?.displayName || ticket.ownerName || "Unassigned" })] }), _jsxs("div", { className: "col-12 col-sm-6 col-md-3", children: [_jsx("label", { style: { fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block" }, children: "Requested Priority" }), _jsx("div", { style: { marginTop: "0.2rem" }, children: renderPriorityBadge(ticket.requestedPriority) })] }), _jsxs("div", { className: "col-12 col-sm-6 col-md-3", children: [_jsx("label", { style: { fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block" }, children: "IT Priority" }), _jsx("div", { style: { marginTop: "0.2rem" }, children: renderPriorityBadge(ticket.itPriority || ticket.requestedPriority) })] })] }), _jsx("hr", { style: { borderColor: "#E5E7EB" } }), _jsxs("div", { className: "mb-4", children: [_jsx("label", { style: { fontSize: "0.8rem", fontWeight: 700, color: "#5B6573", display: "block", marginBottom: "0.3rem" }, children: "Summary" }), _jsx("div", { style: {
                                             backgroundColor: "#F9FAFB",
                                             border: "1px solid #E5E7EB",
                                             borderRadius: "6px",
@@ -211,7 +522,29 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
                                             whiteSpace: "pre-wrap",
                                             lineHeight: 1.5,
                                             minHeight: "65px",
-                                        }, children: ticket.resolutionSummary ? (_jsxs("div", { style: { display: "flex", gap: "0.5rem", alignItems: "flex-start" }, children: [_jsx("span", { style: { fontWeight: "bold", fontSize: "1.1rem" }, children: "\u2713" }), _jsx("div", { children: ticket.resolutionSummary })] })) : (_jsx("em", { style: { color: "#9CA3AF" }, children: "No resolution summary provided yet. (Pending IT Staff resolution)" })) })] })] })] }), _jsxs("div", { className: "card shadow-sm mb-4", style: { borderRadius: "8px", border: "1px solid #E0E0E0" }, children: [_jsx("div", { className: "card-header bg-white py-3 px-4 d-flex justify-content-between align-items-center", children: _jsxs("h3", { className: "h6 mb-0 fw-bold text-dark d-flex align-items-center gap-2", children: ["\uD83D\uDCCE Ticket Attachments", _jsxs("span", { className: "badge", style: {
+                                        }, children: ticket.resolutionSummary ? (_jsxs("div", { style: { display: "flex", gap: "0.5rem", alignItems: "flex-start" }, children: [_jsx("span", { style: { fontWeight: "bold", fontSize: "1.1rem" }, children: "\u2713" }), _jsx("div", { children: ticket.resolutionSummary })] })) : (_jsx("em", { style: { color: "#9CA3AF" }, children: "No resolution summary provided yet. (Pending IT Staff resolution)" })) })] })] })] }), _jsxs("div", { className: "row g-4 mb-4", children: [_jsx("div", { className: isStaffOrAdmin ? "col-12 col-lg-6" : "col-12", children: _jsxs("div", { className: "card shadow-sm h-100", style: {
+                                borderRadius: "8px",
+                                border: "2px solid #0B7A46",
+                                backgroundColor: "#FFFFFF",
+                            }, children: [_jsxs("div", { className: "card-header py-2 px-3 fw-bold d-flex justify-content-between align-items-center", style: {
+                                        backgroundColor: "#EAF6EF",
+                                        color: "#006B3C",
+                                        borderBottom: "1px solid #0B7A46",
+                                    }, children: [_jsxs("span", { className: "d-flex align-items-center gap-2", children: ["\uD83D\uDCAC Public Comments", _jsx("span", { className: "badge", style: { backgroundColor: "#006B3C", color: "#FFFFFF" }, children: comments.length })] }), _jsx("span", { style: { fontSize: "0.75rem", fontWeight: "normal", color: "#0B7A46" }, children: "Visible to Requester & Staff" })] }), _jsxs("div", { className: "card-body p-3 d-flex flex-column", style: { minHeight: "260px" }, children: [_jsx("div", { className: "flex-grow-1 overflow-auto mb-3 pe-1", style: { maxHeight: "350px", display: "flex", flexDirection: "column", gap: "0.75rem" }, children: comments.length === 0 ? (_jsx("div", { className: "p-3 text-center text-muted border rounded bg-light", style: { fontSize: "0.85rem" }, children: "No public comments yet. Post the first message below." })) : (comments.map((c) => (_jsxs("div", { className: "p-2 border rounded", style: {
+                                                    backgroundColor: "#F9FAFB",
+                                                    borderColor: "#E5E7EB",
+                                                }, children: [_jsxs("div", { className: "d-flex justify-content-between align-items-center mb-1 flex-wrap gap-1", children: [_jsxs("div", { className: "d-flex align-items-center gap-2", children: [_jsx("strong", { style: { fontSize: "0.88rem", color: "#111827" }, children: c.author?.displayName || `User #${c.authorId}` }), renderRolePill(c.author?.role)] }), _jsx("span", { style: { fontSize: "0.75rem", color: "#6B7280" }, children: new Date(c.createdAt).toLocaleString("en-US", { dateStyle: "short", timeStyle: "short" }) })] }), _jsx("div", { style: { fontSize: "0.9rem", color: "#374151", whiteSpace: "pre-wrap", lineHeight: 1.4 }, children: c.content })] }, c.id)))) }), _jsxs("form", { onSubmit: handleCommentSubmit, className: "pt-2 border-top", children: [commentError && (_jsx("div", { className: "alert alert-danger py-1 px-2 mb-2", style: { fontSize: "0.82rem" }, children: commentError })), _jsxs("div", { className: "mb-2", children: [_jsxs("div", { className: "d-flex justify-content-between align-items-center mb-1", children: [_jsx("label", { style: { fontSize: "0.78rem", fontWeight: 700, color: "#374151", margin: 0 }, children: "Add Public Comment" }), _jsxs("span", { style: { fontSize: "0.75rem", color: commentContent.length > 2000 ? "#B3261E" : "#6B7280" }, children: [commentContent.length, " / 2000"] })] }), _jsx("textarea", { id: "public-comment-input", rows: 3, maxLength: 2000, value: commentContent, onChange: (e) => setCommentContent(e.target.value), placeholder: "Write a message visible to everyone on this ticket...", className: "form-control form-control-sm", disabled: postingComment })] }), _jsx("div", { className: "text-end", children: _jsx("button", { type: "submit", id: "post-public-comment-btn", className: "btn btn-sm text-white fw-bold px-3", style: { backgroundColor: "#006B3C" }, disabled: postingComment || !commentContent.trim() || commentContent.length > 2000, children: postingComment ? "Posting..." : "Post Comment" }) })] })] })] }) }), isStaffOrAdmin && (_jsx("div", { className: "col-12 col-lg-6", id: "internal-notes-container", children: _jsxs("div", { className: "card shadow-sm h-100", style: {
+                                borderRadius: "8px",
+                                border: "2px solid #D97706",
+                                backgroundColor: "#FFFFFF",
+                            }, children: [_jsxs("div", { className: "card-header py-2 px-3 fw-bold d-flex justify-content-between align-items-center", style: {
+                                        backgroundColor: "#FEF3C7",
+                                        color: "#92400E",
+                                        borderBottom: "1px solid #D97706",
+                                    }, children: [_jsxs("span", { className: "d-flex align-items-center gap-2", children: ["\uD83D\uDD12 Private Internal Notes", _jsx("span", { className: "badge", style: { backgroundColor: "#D97706", color: "#FFFFFF" }, children: notes.length })] }), _jsx("span", { style: { fontSize: "0.75rem", fontWeight: "bold", color: "#B45309" }, children: "Staff Only (Hidden from Requester)" })] }), _jsxs("div", { className: "card-body p-3 d-flex flex-column", style: { minHeight: "260px" }, children: [_jsx("div", { className: "flex-grow-1 overflow-auto mb-3 pe-1", style: { maxHeight: "350px", display: "flex", flexDirection: "column", gap: "0.75rem" }, children: notes.length === 0 ? (_jsx("div", { className: "p-3 text-center text-muted border rounded", style: { backgroundColor: "#FFFBEB", fontSize: "0.85rem", borderColor: "#FDE68A" }, children: "No internal notes recorded yet." })) : (notes.map((n) => (_jsxs("div", { className: "p-2 border rounded", style: {
+                                                    backgroundColor: "#FFFBEB",
+                                                    borderColor: "#FDE68A",
+                                                }, children: [_jsxs("div", { className: "d-flex justify-content-between align-items-center mb-1 flex-wrap gap-1", children: [_jsxs("div", { className: "d-flex align-items-center gap-2", children: [_jsx("strong", { style: { fontSize: "0.88rem", color: "#92400E" }, children: n.author?.displayName || `User #${n.authorId}` }), renderRolePill(n.author?.role)] }), _jsx("span", { style: { fontSize: "0.75rem", color: "#78350F" }, children: new Date(n.createdAt).toLocaleString("en-US", { dateStyle: "short", timeStyle: "short" }) })] }), _jsx("div", { style: { fontSize: "0.9rem", color: "#451A03", whiteSpace: "pre-wrap", lineHeight: 1.4 }, children: n.content })] }, n.id)))) }), _jsxs("form", { onSubmit: handleNoteSubmit, className: "pt-2 border-top", children: [noteError && (_jsx("div", { className: "alert alert-danger py-1 px-2 mb-2", style: { fontSize: "0.82rem" }, children: noteError })), _jsxs("div", { className: "mb-2", children: [_jsxs("div", { className: "d-flex justify-content-between align-items-center mb-1", children: [_jsx("label", { style: { fontSize: "0.78rem", fontWeight: 700, color: "#92400E", margin: 0 }, children: "Add Internal Operational Note" }), _jsxs("span", { style: { fontSize: "0.75rem", color: noteContent.length > 2000 ? "#B3261E" : "#78350F" }, children: [noteContent.length, " / 2000"] })] }), _jsx("textarea", { id: "internal-note-input", rows: 3, maxLength: 2000, value: noteContent, onChange: (e) => setNoteContent(e.target.value), placeholder: "Add confidential diagnostic details, logs, or hand-off notes...", className: "form-control form-control-sm", disabled: postingNote, style: { borderColor: "#F59E0B" } })] }), _jsx("div", { className: "text-end", children: _jsx("button", { type: "submit", id: "post-internal-note-btn", className: "btn btn-sm text-white fw-bold px-3", style: { backgroundColor: "#D97706", borderColor: "#B45309" }, disabled: postingNote || !noteContent.trim() || noteContent.length > 2000, children: postingNote ? "Saving Note..." : "Post Internal Note" }) })] })] })] }) }))] }), _jsxs("div", { className: "card shadow-sm mb-4", style: { borderRadius: "8px", border: "1px solid #E0E0E0" }, children: [_jsx("div", { className: "card-header bg-white py-3 px-4 d-flex justify-content-between align-items-center", children: _jsxs("h3", { className: "h6 mb-0 fw-bold text-dark d-flex align-items-center gap-2", children: ["\uD83D\uDCCE Ticket Attachments", _jsxs("span", { className: "badge", style: {
                                         backgroundColor: activeAttachments.length >= 5 ? "#FEE2E2" : "#EAF6EF",
                                         color: activeAttachments.length >= 5 ? "#991B1B" : "#006B3C",
                                         fontSize: "0.78rem",

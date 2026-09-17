@@ -318,3 +318,162 @@ export async function fetchStaffTickets(params = {}) {
     }
     return data;
 }
+export async function fetchStaffTicketDetail(ticketId) {
+    const res = await fetch(`${API_URL}/api/staff/tickets/${ticketId}`, {
+        headers: {
+            "Content-Type": "application/json",
+            ...getAuthHeaders(),
+        },
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        const err = new Error(data?.error?.message || "Failed to fetch staff ticket detail");
+        err.status = res.status;
+        throw err;
+    }
+    return data;
+}
+export async function assignTicket(ticketId, ownerId) {
+    const res = await fetch(`${API_URL}/api/staff/tickets/${ticketId}/assignment`, {
+        method: "PATCH",
+        headers: {
+            "Content-Type": "application/json",
+            ...getAuthHeaders(),
+        },
+        body: JSON.stringify({ ownerId }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        const err = new Error(data?.error?.message || "Failed to assign ticket");
+        err.status = res.status;
+        throw err;
+    }
+    return data;
+}
+export async function updateTicketPriority(ticketId, itPriority) {
+    const res = await fetch(`${API_URL}/api/staff/tickets/${ticketId}/priority`, {
+        method: "PATCH",
+        headers: {
+            "Content-Type": "application/json",
+            ...getAuthHeaders(),
+        },
+        body: JSON.stringify({ itPriority }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        const err = new Error(data?.error?.message || "Failed to update priority");
+        err.status = res.status;
+        throw err;
+    }
+    return data;
+}
+export async function updateTicketStatus(ticketId, status, resolutionSummary) {
+    const res = await fetch(`${API_URL}/api/staff/tickets/${ticketId}/status`, {
+        method: "PATCH",
+        headers: {
+            "Content-Type": "application/json",
+            ...getAuthHeaders(),
+        },
+        body: JSON.stringify({ status, resolutionSummary }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        const err = new Error(data?.error?.message || "Failed to update status");
+        err.status = res.status;
+        throw err;
+    }
+    return data;
+}
+export async function fetchTicketComments(ticketId) {
+    const res = await fetch(`${API_URL}/api/tickets/${ticketId}/comments`, {
+        headers: {
+            ...getAuthHeaders(),
+        },
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        const err = new Error(data?.error?.message || "Failed to fetch comments");
+        err.status = res.status;
+        throw err;
+    }
+    return data;
+}
+export async function createTicketComment(ticketId, content) {
+    const res = await fetch(`${API_URL}/api/tickets/${ticketId}/comments`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            ...getAuthHeaders(),
+        },
+        body: JSON.stringify({ content }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        const err = new Error(data?.error?.message || "Failed to post comment");
+        err.status = res.status;
+        throw err;
+    }
+    return data;
+}
+export async function fetchTicketNotes(ticketId) {
+    const res = await fetch(`${API_URL}/api/staff/tickets/${ticketId}/notes`, {
+        headers: {
+            ...getAuthHeaders(),
+        },
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        const err = new Error(data?.error?.message || "Failed to fetch internal notes");
+        err.status = res.status;
+        throw err;
+    }
+    return data;
+}
+export async function createTicketNote(ticketId, content) {
+    const res = await fetch(`${API_URL}/api/staff/tickets/${ticketId}/notes`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            ...getAuthHeaders(),
+        },
+        body: JSON.stringify({ content }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        const err = new Error(data?.error?.message || "Failed to post internal note");
+        err.status = res.status;
+        throw err;
+    }
+    return data;
+}
+export async function indicateProblemResolved(ticketId) {
+    const res = await fetch(`${API_URL}/api/tickets/${ticketId}/resolve-indication`, {
+        method: "PATCH",
+        headers: {
+            "Content-Type": "application/json",
+            ...getAuthHeaders(),
+        },
+        body: JSON.stringify({ isProblemAppearsResolved: true }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        const err = new Error(data?.error?.message || "Failed to indicate problem resolved");
+        err.status = res.status;
+        throw err;
+    }
+    return data;
+}
+export async function fetchStaffUsers() {
+    const res = await fetch(`${API_URL}/api/staff/users`, {
+        headers: {
+            ...getAuthHeaders(),
+        },
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        const err = new Error(data?.error?.message || "Failed to fetch staff users");
+        err.status = res.status;
+        throw err;
+    }
+    return data;
+}

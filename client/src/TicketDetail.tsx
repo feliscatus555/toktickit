@@ -3,7 +3,20 @@ import {
   RequesterUser,
   TicketDetail as TicketDetailType,
   AttachmentItem,
+  CommentItem,
+  InternalNoteItem,
+  StaffUser,
   fetchTicketDetail,
+  fetchStaffTicketDetail,
+  assignTicket,
+  updateTicketPriority,
+  updateTicketStatus,
+  fetchTicketComments,
+  createTicketComment,
+  fetchTicketNotes,
+  createTicketNote,
+  indicateProblemResolved,
+  fetchStaffUsers,
   uploadAttachment,
   getAttachmentDownloadUrl,
   softRemoveAttachment,
@@ -11,21 +24,73 @@ import {
 
 interface TicketDetailProps {
   ticketId: string;
-  currentRequester: RequesterUser;
+  currentRequester: RequesterUser & { role?: string };
   onBack: () => void;
   backLabel?: string;
 }
 
+function getPermittedStatusesForUI(currentStatus: string): string[] {
+  if (!currentStatus) return [];
+  const s = currentStatus.trim().toLowerCase();
+  if (s === "new") return ["Open", "Cancelled"];
+  if (s === "open") return ["InProgress", "WaitingForRequester", "Resolved", "Cancelled"];
+  if (s === "inprogress" || s === "in progress") return ["WaitingForRequester", "Resolved", "Cancelled"];
+  if (s === "waitingforrequester" || s === "waiting for requester") return ["InProgress", "Resolved", "Cancelled"];
+  if (s === "resolved") return ["Closed", "Reopened"];
+  if (s === "closed") return ["Reopened"];
+  if (s === "reopened") return ["InProgress", "WaitingForRequester", "Resolved", "Cancelled"];
+  return [];
+}
+
+function formatStatusDisplay(status: string): string {
+  if (!status) return "";
+  if (status === "InProgress" || status === "in progress") return "In Progress";
+  if (status === "WaitingForRequester" || status === "waiting for requester") return "Waiting for Requester";
+  return status;
+}
+
 export default function TicketDetail({ ticketId, currentRequester, onBack, backLabel }: TicketDetailProps) {
   const isStaffOrAdmin =
-    (currentRequester as any)?.role === "IT_STAFF" ||
-    (currentRequester as any)?.role === "ADMINISTRATOR";
+    currentRequester?.role === "IT_STAFF" ||
+    currentRequester?.role === "ADMINISTRATOR";
   const displayBackLabel =
     backLabel || (isStaffOrAdmin ? "← Back to Ticket Queue" : "← Back to My Tickets");
 
   const [ticket, setTicket] = useState<TicketDetailType | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Staff Assignment State
+  const [staffUsers, setStaffUsers] = useState<StaffUser[]>([]);
+  const [assigning, setAssigning] = useState<boolean>(false);
+  const [assignError, setAssignError] = useState<string | null>(null);
+
+  // IT Priority State
+  const [updatingPriority, setUpdatingPriority] = useState<boolean>(false);
+  const [priorityError, setPriorityError] = useState<string | null>(null);
+
+  // Status Workflow State
+  const [selectedNextStatus, setSelectedNextStatus] = useState<string>("");
+  const [resolutionSummaryInput, setResolutionSummaryInput] = useState<string>("");
+  const [updatingStatus, setUpdatingStatus] = useState<boolean>(false);
+  const [statusError, setStatusError] = useState<string | null>(null);
+
+  // Requester Problem Resolved State
+  const [resolvingIndicator, setResolvingIndicator] = useState<boolean>(false);
+  const [resolveIndicatorSuccess, setResolveIndicatorSuccess] = useState<boolean>(false);
+  const [resolveIndicatorError, setResolveIndicatorError] = useState<string | null>(null);
+
+  // Comments State
+  const [comments, setComments] = useState<CommentItem[]>([]);
+  const [commentContent, setCommentContent] = useState<string>("");
+  const [postingComment, setPostingComment] = useState<boolean>(false);
+  const [commentError, setCommentError] = useState<string | null>(null);
+
+  // Internal Notes State (Staff/Admin Only)
+  const [notes, setNotes] = useState<InternalNoteItem[]>([]);
+  const [noteContent, setNoteContent] = useState<string>("");
+  const [postingNote, setPostingNote] = useState<boolean>(false);
+  const [noteError, setNoteError] = useState<string | null>(null);
 
   // Upload state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -41,23 +106,46 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
 
   useEffect(() => {
     let isMounted = true;
-    async function loadTicket() {
+    async function loadData() {
       try {
         setLoading(true);
         setError(null);
-        const data = await fetchTicketDetail(ticketId, currentRequester.id);
-        if (isMounted) setTicket(data);
+
+        let data: TicketDetailType;
+        if (isStaffOrAdmin) {
+          data = await fetchStaffTicketDetail(ticketId);
+          try {
+            const users = await fetchStaffUsers();
+            if (isMounted) setStaffUsers(users);
+          } catch {
+            // Ignore staff users fetch failure
+          }
+        } else {
+          data = await fetchTicketDetail(ticketId, currentRequester.id);
+        }
+
+        if (isMounted) {
+          setTicket(data);
+          setComments(data.comments || []);
+          if (isStaffOrAdmin && data.internalNotes) {
+            setNotes(data.internalNotes);
+          }
+          if (data.isProblemAppearsResolved) {
+            setResolveIndicatorSuccess(true);
+          }
+        }
       } catch (err: any) {
         if (isMounted) setError(err.message || "Failed to load ticket details.");
       } finally {
         if (isMounted) setLoading(false);
       }
     }
-    loadTicket();
+
+    loadData();
     return () => {
       isMounted = false;
     };
-  }, [ticketId, currentRequester.id]);
+  }, [ticketId, currentRequester.id, isStaffOrAdmin]);
 
   const activeAttachments = ticket?.attachments.filter((a) => !a.isDeleted) || [];
   const removedAttachments = ticket?.attachments.filter((a) => a.isDeleted) || [];
@@ -68,6 +156,181 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
     return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
   };
 
+  // Ownership Claim & Reassignment Handler
+  const handleClaimTicket = async () => {
+    if (!ticket) return;
+    try {
+      setAssigning(true);
+      setAssignError(null);
+      const res = await assignTicket(ticket.id, currentRequester.id);
+      setTicket((prev) =>
+        prev
+          ? {
+              ...prev,
+              ownerId: res.ownerId,
+              ownerName: res.owner?.displayName || currentRequester.displayName,
+              owner: res.owner || { id: currentRequester.id, displayName: currentRequester.displayName },
+            }
+          : prev
+      );
+    } catch (err: any) {
+      setAssignError(err.message || "Failed to claim ticket.");
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  const handleReassignTicket = async (newOwnerIdStr: string) => {
+    if (!ticket) return;
+    try {
+      setAssigning(true);
+      setAssignError(null);
+      const targetOwnerId = newOwnerIdStr === "" || newOwnerIdStr === "unassigned" ? null : Number(newOwnerIdStr);
+      const res = await assignTicket(ticket.id, targetOwnerId);
+      setTicket((prev) =>
+        prev
+          ? {
+              ...prev,
+              ownerId: res.ownerId,
+              ownerName: res.owner?.displayName || (res.ownerId === null ? null : prev.ownerName),
+              owner: res.owner,
+            }
+          : prev
+      );
+    } catch (err: any) {
+      setAssignError(err.message || "Failed to reassign ticket.");
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  // IT Priority Update Handler
+  const handlePriorityChange = async (newPriority: string) => {
+    if (!ticket) return;
+    try {
+      setUpdatingPriority(true);
+      setPriorityError(null);
+      const res = await updateTicketPriority(ticket.id, newPriority);
+      setTicket((prev) =>
+        prev
+          ? {
+              ...prev,
+              itPriority: res.itPriority || newPriority,
+            }
+          : prev
+      );
+    } catch (err: any) {
+      setPriorityError(err.message || "Failed to update IT priority.");
+    } finally {
+      setUpdatingPriority(false);
+    }
+  };
+
+  // Status Transition Handler
+  const handleExecuteStatusTransition = async () => {
+    if (!ticket || !selectedNextStatus) return;
+    if (selectedNextStatus === "Resolved" && !resolutionSummaryInput.trim()) {
+      setStatusError("Resolution summary is mandatory when resolving a ticket.");
+      return;
+    }
+
+    try {
+      setUpdatingStatus(true);
+      setStatusError(null);
+      const res = await updateTicketStatus(
+        ticket.id,
+        selectedNextStatus,
+        selectedNextStatus === "Resolved" ? resolutionSummaryInput.trim() : undefined
+      );
+
+      setTicket((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: res.status,
+              resolutionSummary: res.resolutionSummary !== undefined ? res.resolutionSummary : prev.resolutionSummary,
+            }
+          : prev
+      );
+      setSelectedNextStatus("");
+    } catch (err: any) {
+      setStatusError(err.message || "Failed to update status.");
+    } finally {
+      setUpdatingStatus(false);
+    }
+  };
+
+  // Problem Appears Resolved Handler (Requester)
+  const handleProblemResolvedClick = async () => {
+    if (!ticket) return;
+    try {
+      setResolvingIndicator(true);
+      setResolveIndicatorError(null);
+      await indicateProblemResolved(ticket.id);
+      setResolveIndicatorSuccess(true);
+      setTicket((prev) => (prev ? { ...prev, isProblemAppearsResolved: true } : prev));
+    } catch (err: any) {
+      setResolveIndicatorError(err.message || "Failed to update resolution indicator.");
+    } finally {
+      setResolvingIndicator(false);
+    }
+  };
+
+  // Comments Form Submission
+  const handleCommentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ticket) return;
+    const trimmed = commentContent.trim();
+    if (!trimmed) {
+      setCommentError("Comment content cannot be empty.");
+      return;
+    }
+    if (trimmed.length > 2000) {
+      setCommentError("Comment cannot exceed 2,000 characters.");
+      return;
+    }
+
+    try {
+      setPostingComment(true);
+      setCommentError(null);
+      const newComment = await createTicketComment(ticket.id, trimmed);
+      setComments((prev) => [...prev, newComment]);
+      setCommentContent("");
+    } catch (err: any) {
+      setCommentError(err.message || "Failed to post comment.");
+    } finally {
+      setPostingComment(false);
+    }
+  };
+
+  // Internal Notes Form Submission (Staff/Admin Only)
+  const handleNoteSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ticket) return;
+    const trimmed = noteContent.trim();
+    if (!trimmed) {
+      setNoteError("Internal note content cannot be empty.");
+      return;
+    }
+    if (trimmed.length > 2000) {
+      setNoteError("Internal note cannot exceed 2,000 characters.");
+      return;
+    }
+
+    try {
+      setPostingNote(true);
+      setNoteError(null);
+      const newNote = await createTicketNote(ticket.id, trimmed);
+      setNotes((prev) => [...prev, newNote]);
+      setNoteContent("");
+    } catch (err: any) {
+      setNoteError(err.message || "Failed to post internal note.");
+    } finally {
+      setPostingNote(false);
+    }
+  };
+
+  // Attachment Upload & Remove handlers
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     setUploadError(null);
     setUploadSuccess(null);
@@ -108,15 +371,14 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
       setTicket((prev) =>
         prev
           ? {
-            ...prev,
-            attachments: [...prev.attachments, newAtt],
-          }
+              ...prev,
+              attachments: [...prev.attachments, newAtt],
+            }
           : prev
       );
 
       setUploadSuccess(`Attachment "${newAtt.originalFilename}" uploaded successfully.`);
       setSelectedFile(null);
-      // Reset input element
       const fileInput = document.getElementById("attachment-file-input") as HTMLInputElement;
       if (fileInput) fileInput.value = "";
     } catch (err: any) {
@@ -147,12 +409,12 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
           attachments: prev.attachments.map((a) =>
             a.id === targetAttachment.id
               ? {
-                ...a,
-                isDeleted: true,
-                deletedAt: res.deletedAt,
-                deletionReason: trimmedReason,
-                deletedById: currentRequester.id,
-              }
+                  ...a,
+                  isDeleted: true,
+                  deletedAt: res.deletedAt,
+                  deletionReason: trimmedReason,
+                  deletedById: currentRequester.id,
+                }
               : a
           ),
         };
@@ -168,7 +430,8 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
   };
 
   const renderPriorityBadge = (p: string) => {
-    switch (p.toUpperCase()) {
+    const val = (p || "").toUpperCase();
+    switch (val) {
       case "LOW":
         return (
           <span style={{ backgroundColor: "#E5E7EB", color: "#374151", padding: "0.25rem 0.65rem", borderRadius: "12px", fontSize: "0.82rem", fontWeight: 600 }}>
@@ -200,15 +463,48 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
 
   const renderStatusBadge = (s: string) => {
     return (
-      <span style={{ backgroundColor: "#EAF6EF", color: "#006B3C", border: "1px solid #0B7A46", padding: "0.25rem 0.75rem", borderRadius: "12px", fontSize: "0.85rem", fontWeight: 700 }}>
-        ● {s}
+      <span
+        style={{
+          backgroundColor: "#EAF6EF",
+          color: "#006B3C",
+          border: "1px solid #0B7A46",
+          padding: "0.25rem 0.75rem",
+          borderRadius: "12px",
+          fontSize: "0.85rem",
+          fontWeight: 700,
+        }}
+      >
+        ● {formatStatusDisplay(s)}
       </span>
     );
   };
 
+  const renderRolePill = (role?: string) => {
+    switch (role) {
+      case "IT_STAFF":
+        return (
+          <span className="badge" style={{ backgroundColor: "#E0F2FE", color: "#0369A1", border: "1px solid #7DD3FC", fontSize: "0.75rem" }}>
+            🛠 IT Staff
+          </span>
+        );
+      case "ADMINISTRATOR":
+        return (
+          <span className="badge" style={{ backgroundColor: "#FEF3C7", color: "#B45309", border: "1px solid #FCD34D", fontSize: "0.75rem" }}>
+            🛡 Admin
+          </span>
+        );
+      default:
+        return (
+          <span className="badge" style={{ backgroundColor: "#EAF6EF", color: "#006B3C", border: "1px solid #0B7A46", fontSize: "0.75rem" }}>
+            👤 Requester
+          </span>
+        );
+    }
+  };
+
   if (loading) {
     return (
-      <div style={{ maxWidth: 900, margin: "2rem auto", textAlign: "center", color: "#555" }}>
+      <div style={{ maxWidth: 960, margin: "2rem auto", textAlign: "center", color: "#555" }}>
         <div style={{ fontSize: "1.2rem", fontWeight: 600 }}>Loading ticket details...</div>
       </div>
     );
@@ -216,7 +512,7 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
 
   if (error || !ticket) {
     return (
-      <div style={{ maxWidth: 900, margin: "2rem auto" }}>
+      <div style={{ maxWidth: 960, margin: "2rem auto" }}>
         <div className="alert alert-danger shadow-sm" role="alert">
           <h5 className="alert-heading fw-bold mb-1">Error Loading Ticket</h5>
           <p className="mb-3">{error || "Ticket not found or ownership denied."}</p>
@@ -228,10 +524,13 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
     );
   }
 
+  const permittedNext = getPermittedStatusesForUI(ticket.status);
+  const isTicketOwnerRequester = !isStaffOrAdmin && ticket.requesterId === currentRequester.id;
+
   return (
-    <div style={{ maxWidth: 960, margin: "0 auto", paddingBottom: "3rem" }}>
-      {/* Top Navigation */}
-      <div className="d-flex justify-content-between align-items-center mb-3">
+    <div style={{ maxWidth: 1040, margin: "0 auto", paddingBottom: "3rem" }}>
+      {/* Top Navigation & Status Bar */}
+      <div className="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <button
           type="button"
           onClick={onBack}
@@ -248,8 +547,233 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
         >
           {displayBackLabel}
         </button>
-        <div>{renderStatusBadge(ticket.status)}</div>
+        <div className="d-flex align-items-center gap-2">
+          {ticket.isProblemAppearsResolved && (
+            <span
+              className="badge"
+              style={{
+                backgroundColor: "#DEF7EC",
+                color: "#03543F",
+                border: "1px solid #31C48D",
+                padding: "0.35rem 0.65rem",
+                fontSize: "0.82rem",
+                fontWeight: 600,
+              }}
+            >
+              ✓ Problem Marked Resolved
+            </span>
+          )}
+          <div>{renderStatusBadge(ticket.status)}</div>
+        </div>
       </div>
+
+      {/* IT Staff & Administrator Operational Toolbar */}
+      {isStaffOrAdmin && (
+        <div
+          className="card shadow-sm mb-4"
+          style={{
+            backgroundColor: "#F8FAFC",
+            border: "1px solid #CBD5E1",
+            borderRadius: "8px",
+          }}
+        >
+          <div
+            className="card-header py-2 px-3 fw-bold d-flex justify-content-between align-items-center"
+            style={{ backgroundColor: "#0F172A", color: "#FFFFFF", fontSize: "0.9rem" }}
+          >
+            <span>⚙️ IT Operational Actions</span>
+            <span style={{ fontSize: "0.78rem", fontWeight: "normal", opacity: 0.85 }}>
+              Active Staff: {currentRequester.displayName}
+            </span>
+          </div>
+          <div className="card-body p-3">
+            <div className="row g-3 align-items-center">
+              {/* Ownership Claim / Reassignment */}
+              <div className="col-12 col-md-4">
+                <label htmlFor="ticket-owner-select" className="fw-bold mb-1" style={{ fontSize: "0.82rem", color: "#334155" }}>
+                  Ticket Owner:
+                </label>
+                <div className="d-flex gap-2 align-items-center">
+                  <select
+                    id="ticket-owner-select"
+                    className="form-select form-select-sm"
+                    value={ticket.ownerId ? String(ticket.ownerId) : "unassigned"}
+                    onChange={(e) => handleReassignTicket(e.target.value)}
+                    disabled={assigning}
+                    style={{ fontSize: "0.85rem" }}
+                  >
+                    <option value="unassigned">— Unassigned —</option>
+                    {staffUsers.map((u) => (
+                      <option key={u.id} value={String(u.id)}>
+                        {u.displayName} ({u.role === "ADMINISTRATOR" ? "Admin" : "IT Staff"})
+                      </option>
+                    ))}
+                    {ticket.ownerId && !staffUsers.some((u) => u.id === ticket.ownerId) && (
+                      <option value={String(ticket.ownerId)}>
+                        {ticket.ownerName || ticket.owner?.displayName || `User #${ticket.ownerId}`}
+                      </option>
+                    )}
+                  </select>
+
+                  {!ticket.ownerId && (
+                    <button
+                      type="button"
+                      id="claim-ticket-btn"
+                      className="btn btn-sm text-white fw-bold px-3 flex-shrink-0"
+                      style={{ backgroundColor: "#006B3C" }}
+                      onClick={handleClaimTicket}
+                      disabled={assigning}
+                    >
+                      {assigning ? "Claiming..." : "Claim Ticket"}
+                    </button>
+                  )}
+                </div>
+                {assignError && (
+                  <div className="text-danger mt-1" style={{ fontSize: "0.78rem" }}>
+                    {assignError}
+                  </div>
+                )}
+              </div>
+
+              {/* IT Priority Selector */}
+              <div className="col-12 col-md-3">
+                <label htmlFor="it-priority-select" className="fw-bold mb-1" style={{ fontSize: "0.82rem", color: "#334155" }}>
+                  IT Priority:
+                </label>
+                <select
+                  id="it-priority-select"
+                  className="form-select form-select-sm"
+                  value={ticket.itPriority || ticket.requestedPriority}
+                  onChange={(e) => handlePriorityChange(e.target.value)}
+                  disabled={updatingPriority}
+                  style={{ fontSize: "0.85rem" }}
+                >
+                  <option value="LOW">Low</option>
+                  <option value="MEDIUM">Medium</option>
+                  <option value="HIGH">High</option>
+                  <option value="URGENT">Urgent</option>
+                </select>
+                {priorityError && (
+                  <div className="text-danger mt-1" style={{ fontSize: "0.78rem" }}>
+                    {priorityError}
+                  </div>
+                )}
+              </div>
+
+              {/* Status Transition Control */}
+              <div className="col-12 col-md-5">
+                <label htmlFor="next-status-select" className="fw-bold mb-1" style={{ fontSize: "0.82rem", color: "#334155" }}>
+                  Lifecycle Status:
+                </label>
+                <div className="d-flex gap-2">
+                  <select
+                    id="next-status-select"
+                    className="form-select form-select-sm"
+                    value={selectedNextStatus}
+                    onChange={(e) => setSelectedNextStatus(e.target.value)}
+                    disabled={updatingStatus || permittedNext.length === 0}
+                    style={{ fontSize: "0.85rem" }}
+                  >
+                    <option value="">
+                      {permittedNext.length === 0 ? "(Terminal State)" : "Change status to..."}
+                    </option>
+                    {permittedNext.map((st) => (
+                      <option key={st} value={st}>
+                        → {formatStatusDisplay(st)}
+                      </option>
+                    ))}
+                  </select>
+
+                  <button
+                    type="button"
+                    id="apply-status-transition-btn"
+                    className="btn btn-sm btn-outline-primary fw-bold flex-shrink-0"
+                    disabled={
+                      updatingStatus ||
+                      !selectedNextStatus ||
+                      (selectedNextStatus === "Resolved" && !resolutionSummaryInput.trim())
+                    }
+                    onClick={handleExecuteStatusTransition}
+                  >
+                    {updatingStatus ? "Updating..." : "Update Status"}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Resolution Summary input (visible when transitioning to Resolved) */}
+            {selectedNextStatus === "Resolved" && (
+              <div className="mt-3 p-3 border rounded" style={{ backgroundColor: "#F0FDF4", borderColor: "#86EFAC" }}>
+                <label className="fw-bold mb-1 text-success d-block" style={{ fontSize: "0.85rem" }}>
+                  Resolution Summary <span className="text-danger">*</span> (Required for Resolved state)
+                </label>
+                <textarea
+                  id="resolution-summary-input"
+                  className="form-control form-control-sm mb-2"
+                  rows={2}
+                  placeholder="Describe resolution steps taken..."
+                  value={resolutionSummaryInput}
+                  onChange={(e) => setResolutionSummaryInput(e.target.value)}
+                />
+              </div>
+            )}
+
+            {statusError && (
+              <div className="alert alert-danger py-1 px-2 mt-2 mb-0" style={{ fontSize: "0.82rem" }}>
+                {statusError}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Requester Problem Resolved Banner / Action */}
+      {isTicketOwnerRequester && (
+        <div className="mb-4">
+          {resolveIndicatorSuccess || ticket.isProblemAppearsResolved ? (
+            <div
+              className="alert alert-success d-flex align-items-center gap-2 shadow-sm py-3 px-4 mb-0"
+              style={{ backgroundColor: "#EAF6EF", borderColor: "#0B7A46", color: "#006B3C" }}
+            >
+              <span style={{ fontSize: "1.3rem" }}>✓</span>
+              <div>
+                <strong>You indicated this issue appears resolved.</strong> IT Staff will verify and formally close the ticket.
+              </div>
+            </div>
+          ) : (
+            (ticket.status === "InProgress" || ticket.status === "WaitingForRequester" || ticket.status === "Open") && (
+              <div
+                className="p-3 border rounded d-flex justify-content-between align-items-center flex-wrap gap-2 shadow-sm"
+                style={{ backgroundColor: "#F0FDF4", borderColor: "#86EFAC" }}
+              >
+                <div>
+                  <div className="fw-bold text-success" style={{ fontSize: "0.92rem" }}>
+                    Did the proposed solution fix your issue?
+                  </div>
+                  <div className="text-muted" style={{ fontSize: "0.82rem" }}>
+                    Let IT Staff know that the problem appears resolved from your end.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  id="problem-appears-resolved-btn"
+                  className="btn btn-sm text-white fw-bold px-3 py-2"
+                  style={{ backgroundColor: "#006B3C" }}
+                  onClick={handleProblemResolvedClick}
+                  disabled={resolvingIndicator}
+                >
+                  {resolvingIndicator ? "Marking..." : "Problem Appears Resolved"}
+                </button>
+                {resolveIndicatorError && (
+                  <div className="w-100 text-danger" style={{ fontSize: "0.8rem" }}>
+                    {resolveIndicatorError}
+                  </div>
+                )}
+              </div>
+            )
+          )}
+        </div>
+      )}
 
       {/* Ticket Header Card */}
       <div
@@ -278,27 +802,71 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
         </div>
 
         <div className="card-body p-4" style={{ backgroundColor: "#FFFFFF" }}>
-          {/* Main Info Grid */}
+          {/* Main Info Grid with Read-Only Shading */}
           <div className="row g-3 mb-4">
             <div className="col-12 col-sm-6 col-md-3">
               <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block" }}>Requester</label>
-              <div style={{ fontSize: "0.95rem", fontWeight: 600, color: "#1F2937" }}>
+              <div
+                style={{
+                  backgroundColor: "#E9ECEF",
+                  padding: "0.4rem 0.6rem",
+                  borderRadius: "6px",
+                  fontSize: "0.92rem",
+                  fontWeight: 600,
+                  color: "#1F2937",
+                }}
+              >
                 {ticket.requester.displayName}
+                <div style={{ fontSize: "0.75rem", color: "#6B7280", fontWeight: "normal" }}>{ticket.requester.email}</div>
               </div>
-              <div style={{ fontSize: "0.8rem", color: "#6B7280" }}>{ticket.requester.email}</div>
             </div>
 
             <div className="col-12 col-sm-6 col-md-3">
               <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block" }}>Category</label>
-              <div style={{ fontSize: "0.95rem", fontWeight: 600, color: "#1F2937" }}>
+              <div
+                style={{
+                  backgroundColor: "#E9ECEF",
+                  padding: "0.4rem 0.6rem",
+                  borderRadius: "6px",
+                  fontSize: "0.92rem",
+                  fontWeight: 600,
+                  color: "#1F2937",
+                }}
+              >
                 {ticket.category.name}
               </div>
             </div>
 
             <div className="col-12 col-sm-6 col-md-3">
               <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block" }}>Related System</label>
-              <div style={{ fontSize: "0.95rem", fontWeight: 600, color: "#1F2937" }}>
+              <div
+                style={{
+                  backgroundColor: "#E9ECEF",
+                  padding: "0.4rem 0.6rem",
+                  borderRadius: "6px",
+                  fontSize: "0.92rem",
+                  fontWeight: 600,
+                  color: "#1F2937",
+                }}
+              >
                 {ticket.relatedSystem.name}
+              </div>
+            </div>
+
+            <div className="col-12 col-sm-6 col-md-3">
+              <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block" }}>Ticket Owner</label>
+              <div
+                id="ticket-owner-display"
+                style={{
+                  backgroundColor: "#E9ECEF",
+                  padding: "0.4rem 0.6rem",
+                  borderRadius: "6px",
+                  fontSize: "0.92rem",
+                  fontWeight: 600,
+                  color: ticket.owner || ticket.ownerName ? "#1F2937" : "#6B7280",
+                }}
+              >
+                {ticket.owner?.displayName || ticket.ownerName || "Unassigned"}
               </div>
             </div>
 
@@ -311,13 +879,6 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
               <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block" }}>IT Priority</label>
               <div style={{ marginTop: "0.2rem" }}>
                 {renderPriorityBadge(ticket.itPriority || ticket.requestedPriority)}
-              </div>
-            </div>
-
-            <div className="col-12 col-sm-6 col-md-3">
-              <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block" }}>Ticket Owner</label>
-              <div style={{ fontSize: "0.95rem", fontWeight: 600, color: "#1F2937" }}>
-                {ticket.ownerName || "Unassigned"}
               </div>
             </div>
           </div>
@@ -397,6 +958,233 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
         </div>
       </div>
 
+      {/* Collaboration Section: Public Comments & Internal Notes */}
+      <div className="row g-4 mb-4">
+        {/* Public Comments Section (Green theme - visible to everyone) */}
+        <div className={isStaffOrAdmin ? "col-12 col-lg-6" : "col-12"}>
+          <div
+            className="card shadow-sm h-100"
+            style={{
+              borderRadius: "8px",
+              border: "2px solid #0B7A46",
+              backgroundColor: "#FFFFFF",
+            }}
+          >
+            <div
+              className="card-header py-2 px-3 fw-bold d-flex justify-content-between align-items-center"
+              style={{
+                backgroundColor: "#EAF6EF",
+                color: "#006B3C",
+                borderBottom: "1px solid #0B7A46",
+              }}
+            >
+              <span className="d-flex align-items-center gap-2">
+                💬 Public Comments
+                <span className="badge" style={{ backgroundColor: "#006B3C", color: "#FFFFFF" }}>
+                  {comments.length}
+                </span>
+              </span>
+              <span style={{ fontSize: "0.75rem", fontWeight: "normal", color: "#0B7A46" }}>
+                Visible to Requester & Staff
+              </span>
+            </div>
+
+            <div className="card-body p-3 d-flex flex-column" style={{ minHeight: "260px" }}>
+              {/* Comments Feed */}
+              <div
+                className="flex-grow-1 overflow-auto mb-3 pe-1"
+                style={{ maxHeight: "350px", display: "flex", flexDirection: "column", gap: "0.75rem" }}
+              >
+                {comments.length === 0 ? (
+                  <div className="p-3 text-center text-muted border rounded bg-light" style={{ fontSize: "0.85rem" }}>
+                    No public comments yet. Post the first message below.
+                  </div>
+                ) : (
+                  comments.map((c) => (
+                    <div
+                      key={c.id}
+                      className="p-2 border rounded"
+                      style={{
+                        backgroundColor: "#F9FAFB",
+                        borderColor: "#E5E7EB",
+                      }}
+                    >
+                      <div className="d-flex justify-content-between align-items-center mb-1 flex-wrap gap-1">
+                        <div className="d-flex align-items-center gap-2">
+                          <strong style={{ fontSize: "0.88rem", color: "#111827" }}>
+                            {c.author?.displayName || `User #${c.authorId}`}
+                          </strong>
+                          {renderRolePill(c.author?.role)}
+                        </div>
+                        <span style={{ fontSize: "0.75rem", color: "#6B7280" }}>
+                          {new Date(c.createdAt).toLocaleString("en-US", { dateStyle: "short", timeStyle: "short" })}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: "0.9rem", color: "#374151", whiteSpace: "pre-wrap", lineHeight: 1.4 }}>
+                        {c.content}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Comment Input Form */}
+              <form onSubmit={handleCommentSubmit} className="pt-2 border-top">
+                {commentError && (
+                  <div className="alert alert-danger py-1 px-2 mb-2" style={{ fontSize: "0.82rem" }}>
+                    {commentError}
+                  </div>
+                )}
+                <div className="mb-2">
+                  <div className="d-flex justify-content-between align-items-center mb-1">
+                    <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "#374151", margin: 0 }}>
+                      Add Public Comment
+                    </label>
+                    <span style={{ fontSize: "0.75rem", color: commentContent.length > 2000 ? "#B3261E" : "#6B7280" }}>
+                      {commentContent.length} / 2000
+                    </span>
+                  </div>
+                  <textarea
+                    id="public-comment-input"
+                    rows={3}
+                    maxLength={2000}
+                    value={commentContent}
+                    onChange={(e) => setCommentContent(e.target.value)}
+                    placeholder="Write a message visible to everyone on this ticket..."
+                    className="form-control form-control-sm"
+                    disabled={postingComment}
+                  />
+                </div>
+                <div className="text-end">
+                  <button
+                    type="submit"
+                    id="post-public-comment-btn"
+                    className="btn btn-sm text-white fw-bold px-3"
+                    style={{ backgroundColor: "#006B3C" }}
+                    disabled={postingComment || !commentContent.trim() || commentContent.length > 2000}
+                  >
+                    {postingComment ? "Posting..." : "Post Comment"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        {/* Internal Notes Section (Amber Lock theme - strictly IT Staff & Admin only, omitted for Requesters) */}
+        {isStaffOrAdmin && (
+          <div className="col-12 col-lg-6" id="internal-notes-container">
+            <div
+              className="card shadow-sm h-100"
+              style={{
+                borderRadius: "8px",
+                border: "2px solid #D97706",
+                backgroundColor: "#FFFFFF",
+              }}
+            >
+              <div
+                className="card-header py-2 px-3 fw-bold d-flex justify-content-between align-items-center"
+                style={{
+                  backgroundColor: "#FEF3C7",
+                  color: "#92400E",
+                  borderBottom: "1px solid #D97706",
+                }}
+              >
+                <span className="d-flex align-items-center gap-2">
+                  🔒 Private Internal Notes
+                  <span className="badge" style={{ backgroundColor: "#D97706", color: "#FFFFFF" }}>
+                    {notes.length}
+                  </span>
+                </span>
+                <span style={{ fontSize: "0.75rem", fontWeight: "bold", color: "#B45309" }}>
+                  Staff Only (Hidden from Requester)
+                </span>
+              </div>
+
+              <div className="card-body p-3 d-flex flex-column" style={{ minHeight: "260px" }}>
+                {/* Notes Feed */}
+                <div
+                  className="flex-grow-1 overflow-auto mb-3 pe-1"
+                  style={{ maxHeight: "350px", display: "flex", flexDirection: "column", gap: "0.75rem" }}
+                >
+                  {notes.length === 0 ? (
+                    <div className="p-3 text-center text-muted border rounded" style={{ backgroundColor: "#FFFBEB", fontSize: "0.85rem", borderColor: "#FDE68A" }}>
+                      No internal notes recorded yet.
+                    </div>
+                  ) : (
+                    notes.map((n) => (
+                      <div
+                        key={n.id}
+                        className="p-2 border rounded"
+                        style={{
+                          backgroundColor: "#FFFBEB",
+                          borderColor: "#FDE68A",
+                        }}
+                      >
+                        <div className="d-flex justify-content-between align-items-center mb-1 flex-wrap gap-1">
+                          <div className="d-flex align-items-center gap-2">
+                            <strong style={{ fontSize: "0.88rem", color: "#92400E" }}>
+                              {n.author?.displayName || `User #${n.authorId}`}
+                            </strong>
+                            {renderRolePill(n.author?.role)}
+                          </div>
+                          <span style={{ fontSize: "0.75rem", color: "#78350F" }}>
+                            {new Date(n.createdAt).toLocaleString("en-US", { dateStyle: "short", timeStyle: "short" })}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: "0.9rem", color: "#451A03", whiteSpace: "pre-wrap", lineHeight: 1.4 }}>
+                          {n.content}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                {/* Note Input Form */}
+                <form onSubmit={handleNoteSubmit} className="pt-2 border-top">
+                  {noteError && (
+                    <div className="alert alert-danger py-1 px-2 mb-2" style={{ fontSize: "0.82rem" }}>
+                      {noteError}
+                    </div>
+                  )}
+                  <div className="mb-2">
+                    <div className="d-flex justify-content-between align-items-center mb-1">
+                      <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "#92400E", margin: 0 }}>
+                        Add Internal Operational Note
+                      </label>
+                      <span style={{ fontSize: "0.75rem", color: noteContent.length > 2000 ? "#B3261E" : "#78350F" }}>
+                        {noteContent.length} / 2000
+                      </span>
+                    </div>
+                    <textarea
+                      id="internal-note-input"
+                      rows={3}
+                      maxLength={2000}
+                      value={noteContent}
+                      onChange={(e) => setNoteContent(e.target.value)}
+                      placeholder="Add confidential diagnostic details, logs, or hand-off notes..."
+                      className="form-control form-control-sm"
+                      disabled={postingNote}
+                      style={{ borderColor: "#F59E0B" }}
+                    />
+                  </div>
+                  <div className="text-end">
+                    <button
+                      type="submit"
+                      id="post-internal-note-btn"
+                      className="btn btn-sm text-white fw-bold px-3"
+                      style={{ backgroundColor: "#D97706", borderColor: "#B45309" }}
+                      disabled={postingNote || !noteContent.trim() || noteContent.length > 2000}
+                    >
+                      {postingNote ? "Saving Note..." : "Post Internal Note"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Attachments Section Card */}
       <div className="card shadow-sm mb-4" style={{ borderRadius: "8px", border: "1px solid #E0E0E0" }}>
