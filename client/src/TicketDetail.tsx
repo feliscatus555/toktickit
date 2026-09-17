@@ -104,6 +104,21 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
   const [removalError, setRemovalError] = useState<string | null>(null);
   const [removing, setRemoving] = useState<boolean>(false);
 
+  // Tabbed view state: 'attachments' | 'comments' | 'notes'
+  const [activeDetailTab, setActiveDetailTab] = useState<"attachments" | "comments" | "notes">("attachments");
+
+  const hiddenTabPanelStyle: React.CSSProperties = {
+    position: "absolute",
+    width: "1px",
+    height: "1px",
+    padding: 0,
+    margin: "-1px",
+    overflow: "hidden",
+    clip: "rect(0, 0, 0, 0)",
+    whiteSpace: "nowrap",
+    border: 0,
+  };
+
   useEffect(() => {
     let isMounted = true;
     async function loadData() {
@@ -958,253 +973,133 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
         </div>
       </div>
 
-      {/* Collaboration Section: Public Comments & Internal Notes */}
-      <div className="row g-4 mb-4">
-        {/* Public Comments Section (Green theme - visible to everyone) */}
-        <div className={isStaffOrAdmin ? "col-12 col-lg-6" : "col-12"}>
-          <div
-            className="card shadow-sm h-100"
-            style={{
-              borderRadius: "8px",
-              border: "2px solid #0B7A46",
-              backgroundColor: "#FFFFFF",
-            }}
-          >
-            <div
-              className="card-header py-2 px-3 fw-bold d-flex justify-content-between align-items-center"
-              style={{
-                backgroundColor: "#EAF6EF",
-                color: "#006B3C",
-                borderBottom: "1px solid #0B7A46",
-              }}
-            >
-              <span className="d-flex align-items-center gap-2">
-                💬 Public Comments
-                <span className="badge" style={{ backgroundColor: "#006B3C", color: "#FFFFFF" }}>
-                  {comments.length}
-                </span>
-              </span>
-              <span style={{ fontSize: "0.75rem", fontWeight: "normal", color: "#0B7A46" }}>
-                Visible to Requester & Staff
-              </span>
-            </div>
-
-            <div className="card-body p-3 d-flex flex-column" style={{ minHeight: "260px" }}>
-              {/* Comments Feed */}
-              <div
-                className="flex-grow-1 overflow-auto mb-3 pe-1"
-                style={{ maxHeight: "350px", display: "flex", flexDirection: "column", gap: "0.75rem" }}
-              >
-                {comments.length === 0 ? (
-                  <div className="p-3 text-center text-muted border rounded bg-light" style={{ fontSize: "0.85rem" }}>
-                    No public comments yet. Post the first message below.
-                  </div>
-                ) : (
-                  comments.map((c) => (
-                    <div
-                      key={c.id}
-                      className="p-2 border rounded"
-                      style={{
-                        backgroundColor: "#F9FAFB",
-                        borderColor: "#E5E7EB",
-                      }}
-                    >
-                      <div className="d-flex justify-content-between align-items-center mb-1 flex-wrap gap-1">
-                        <div className="d-flex align-items-center gap-2">
-                          <strong style={{ fontSize: "0.88rem", color: "#111827" }}>
-                            {c.author?.displayName || `User #${c.authorId}`}
-                          </strong>
-                          {renderRolePill(c.author?.role)}
-                        </div>
-                        <span style={{ fontSize: "0.75rem", color: "#6B7280" }}>
-                          {new Date(c.createdAt).toLocaleString("en-US", { dateStyle: "short", timeStyle: "short" })}
-                        </span>
-                      </div>
-                      <div style={{ fontSize: "0.9rem", color: "#374151", whiteSpace: "pre-wrap", lineHeight: 1.4 }}>
-                        {c.content}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              {/* Comment Input Form */}
-              <form onSubmit={handleCommentSubmit} className="pt-2 border-top">
-                {commentError && (
-                  <div className="alert alert-danger py-1 px-2 mb-2" style={{ fontSize: "0.82rem" }}>
-                    {commentError}
-                  </div>
-                )}
-                <div className="mb-2">
-                  <div className="d-flex justify-content-between align-items-center mb-1">
-                    <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "#374151", margin: 0 }}>
-                      Add Public Comment
-                    </label>
-                    <span style={{ fontSize: "0.75rem", color: commentContent.length > 2000 ? "#B3261E" : "#6B7280" }}>
-                      {commentContent.length} / 2000
-                    </span>
-                  </div>
-                  <textarea
-                    id="public-comment-input"
-                    rows={3}
-                    maxLength={2000}
-                    value={commentContent}
-                    onChange={(e) => setCommentContent(e.target.value)}
-                    placeholder="Write a message visible to everyone on this ticket..."
-                    className="form-control form-control-sm"
-                    disabled={postingComment}
-                  />
-                </div>
-                <div className="text-end">
-                  <button
-                    type="submit"
-                    id="post-public-comment-btn"
-                    className="btn btn-sm text-white fw-bold px-3"
-                    style={{ backgroundColor: "#006B3C" }}
-                    disabled={postingComment || !commentContent.trim() || commentContent.length > 2000}
-                  >
-                    {postingComment ? "Posting..." : "Post Comment"}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-
-        {/* Internal Notes Section (Amber Lock theme - strictly IT Staff & Admin only, omitted for Requesters) */}
-        {isStaffOrAdmin && (
-          <div className="col-12 col-lg-6" id="internal-notes-container">
-            <div
-              className="card shadow-sm h-100"
-              style={{
-                borderRadius: "8px",
-                border: "2px solid #D97706",
-                backgroundColor: "#FFFFFF",
-              }}
-            >
-              <div
-                className="card-header py-2 px-3 fw-bold d-flex justify-content-between align-items-center"
+      {/* Activity & Attachments Tabs Card */}
+      <div className="card shadow-sm mb-4" style={{ borderRadius: "8px", border: "1px solid #E0E0E0", backgroundColor: "#FFFFFF" }}>
+        {/* Navigation Tabs Header */}
+        <div className="card-header bg-white p-0 border-bottom">
+          <ul className="nav nav-tabs card-header-tabs m-0 border-0" role="tablist" style={{ paddingLeft: "1rem", paddingTop: "0.5rem" }}>
+            {/* Attachments Tab Button */}
+            <li className="nav-item" role="presentation">
+              <button
+                type="button"
+                id="tab-btn-attachments"
+                role="tab"
+                aria-selected={activeDetailTab === "attachments"}
+                className={`nav-link fw-semibold ${activeDetailTab === "attachments" ? "active" : ""}`}
+                onClick={() => setActiveDetailTab("attachments")}
                 style={{
-                  backgroundColor: "#FEF3C7",
-                  color: "#92400E",
-                  borderBottom: "1px solid #D97706",
+                  color: activeDetailTab === "attachments" ? "#006B3C" : "#5B6573",
+                  borderBottom: activeDetailTab === "attachments" ? "3px solid #006B3C" : "3px solid transparent",
+                  backgroundColor: activeDetailTab === "attachments" ? "#FFFFFF" : "transparent",
+                  cursor: "pointer",
+                  fontSize: "0.9rem",
+                  padding: "0.6rem 1rem",
                 }}
               >
-                <span className="d-flex align-items-center gap-2">
+                📎 Attachments
+                <span
+                  className="badge ms-2"
+                  style={{
+                    backgroundColor: activeAttachments.length >= 5 ? "#FEE2E2" : activeDetailTab === "attachments" ? "#006B3C" : "#E5E7EB",
+                    color: activeAttachments.length >= 5 ? "#991B1B" : activeDetailTab === "attachments" ? "#FFFFFF" : "#374151",
+                    fontSize: "0.75rem",
+                  }}
+                >
+                  {activeAttachments.length}
+                </span>
+              </button>
+            </li>
+
+            {/* Public Comments Tab Button */}
+            <li className="nav-item" role="presentation">
+              <button
+                type="button"
+                id="tab-btn-public-comments"
+                role="tab"
+                aria-selected={activeDetailTab === "comments"}
+                className={`nav-link fw-semibold ${activeDetailTab === "comments" ? "active" : ""}`}
+                onClick={() => setActiveDetailTab("comments")}
+                style={{
+                  color: activeDetailTab === "comments" ? "#006B3C" : "#5B6573",
+                  borderBottom: activeDetailTab === "comments" ? "3px solid #006B3C" : "3px solid transparent",
+                  backgroundColor: activeDetailTab === "comments" ? "#FFFFFF" : "transparent",
+                  cursor: "pointer",
+                  fontSize: "0.9rem",
+                  padding: "0.6rem 1rem",
+                }}
+              >
+                💬 Public Comments
+                <span
+                  className="badge ms-2"
+                  style={{
+                    backgroundColor: activeDetailTab === "comments" ? "#006B3C" : "#E5E7EB",
+                    color: activeDetailTab === "comments" ? "#FFFFFF" : "#374151",
+                    fontSize: "0.75rem",
+                  }}
+                >
+                  {comments.length}
+                </span>
+              </button>
+            </li>
+
+            {/* Internal Notes Tab Button (Staff/Admin only) */}
+            {isStaffOrAdmin && (
+              <li className="nav-item" role="presentation">
+                <button
+                  type="button"
+                  id="tab-btn-internal-notes"
+                  role="tab"
+                  aria-selected={activeDetailTab === "notes"}
+                  className={`nav-link fw-semibold ${activeDetailTab === "notes" ? "active" : ""}`}
+                  onClick={() => setActiveDetailTab("notes")}
+                  style={{
+                    color: activeDetailTab === "notes" ? "#B45309" : "#5B6573",
+                    borderBottom: activeDetailTab === "notes" ? "3px solid #D97706" : "3px solid transparent",
+                    backgroundColor: activeDetailTab === "notes" ? "#FFFBEB" : "transparent",
+                    cursor: "pointer",
+                    fontSize: "0.9rem",
+                    padding: "0.6rem 1rem",
+                  }}
+                >
                   🔒 Private Internal Notes
-                  <span className="badge" style={{ backgroundColor: "#D97706", color: "#FFFFFF" }}>
+                  <span
+                    className="badge ms-2"
+                    style={{
+                      backgroundColor: activeDetailTab === "notes" ? "#D97706" : "#FEF3C7",
+                      color: activeDetailTab === "notes" ? "#FFFFFF" : "#92400E",
+                      fontSize: "0.75rem",
+                    }}
+                  >
                     {notes.length}
                   </span>
-                </span>
-                <span style={{ fontSize: "0.75rem", fontWeight: "bold", color: "#B45309" }}>
-                  Staff Only (Hidden from Requester)
-                </span>
-              </div>
-
-              <div className="card-body p-3 d-flex flex-column" style={{ minHeight: "260px" }}>
-                {/* Notes Feed */}
-                <div
-                  className="flex-grow-1 overflow-auto mb-3 pe-1"
-                  style={{ maxHeight: "350px", display: "flex", flexDirection: "column", gap: "0.75rem" }}
-                >
-                  {notes.length === 0 ? (
-                    <div className="p-3 text-center text-muted border rounded" style={{ backgroundColor: "#FFFBEB", fontSize: "0.85rem", borderColor: "#FDE68A" }}>
-                      No internal notes recorded yet.
-                    </div>
-                  ) : (
-                    notes.map((n) => (
-                      <div
-                        key={n.id}
-                        className="p-2 border rounded"
-                        style={{
-                          backgroundColor: "#FFFBEB",
-                          borderColor: "#FDE68A",
-                        }}
-                      >
-                        <div className="d-flex justify-content-between align-items-center mb-1 flex-wrap gap-1">
-                          <div className="d-flex align-items-center gap-2">
-                            <strong style={{ fontSize: "0.88rem", color: "#92400E" }}>
-                              {n.author?.displayName || `User #${n.authorId}`}
-                            </strong>
-                            {renderRolePill(n.author?.role)}
-                          </div>
-                          <span style={{ fontSize: "0.75rem", color: "#78350F" }}>
-                            {new Date(n.createdAt).toLocaleString("en-US", { dateStyle: "short", timeStyle: "short" })}
-                          </span>
-                        </div>
-                        <div style={{ fontSize: "0.9rem", color: "#451A03", whiteSpace: "pre-wrap", lineHeight: 1.4 }}>
-                          {n.content}
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-
-                {/* Note Input Form */}
-                <form onSubmit={handleNoteSubmit} className="pt-2 border-top">
-                  {noteError && (
-                    <div className="alert alert-danger py-1 px-2 mb-2" style={{ fontSize: "0.82rem" }}>
-                      {noteError}
-                    </div>
-                  )}
-                  <div className="mb-2">
-                    <div className="d-flex justify-content-between align-items-center mb-1">
-                      <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "#92400E", margin: 0 }}>
-                        Add Internal Operational Note
-                      </label>
-                      <span style={{ fontSize: "0.75rem", color: noteContent.length > 2000 ? "#B3261E" : "#78350F" }}>
-                        {noteContent.length} / 2000
-                      </span>
-                    </div>
-                    <textarea
-                      id="internal-note-input"
-                      rows={3}
-                      maxLength={2000}
-                      value={noteContent}
-                      onChange={(e) => setNoteContent(e.target.value)}
-                      placeholder="Add confidential diagnostic details, logs, or hand-off notes..."
-                      className="form-control form-control-sm"
-                      disabled={postingNote}
-                      style={{ borderColor: "#F59E0B" }}
-                    />
-                  </div>
-                  <div className="text-end">
-                    <button
-                      type="submit"
-                      id="post-internal-note-btn"
-                      className="btn btn-sm text-white fw-bold px-3"
-                      style={{ backgroundColor: "#D97706", borderColor: "#B45309" }}
-                      disabled={postingNote || !noteContent.trim() || noteContent.length > 2000}
-                    >
-                      {postingNote ? "Saving Note..." : "Post Internal Note"}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Attachments Section Card */}
-      <div className="card shadow-sm mb-4" style={{ borderRadius: "8px", border: "1px solid #E0E0E0" }}>
-        <div className="card-header bg-white py-3 px-4 d-flex justify-content-between align-items-center">
-          <h3 className="h6 mb-0 fw-bold text-dark d-flex align-items-center gap-2">
-            📎 Ticket Attachments
-            <span
-              className="badge"
-              style={{
-                backgroundColor: activeAttachments.length >= 5 ? "#FEE2E2" : "#EAF6EF",
-                color: activeAttachments.length >= 5 ? "#991B1B" : "#006B3C",
-                fontSize: "0.78rem",
-              }}
-            >
-              {activeAttachments.length} / 5 Active
-            </span>
-          </h3>
+                </button>
+              </li>
+            )}
+          </ul>
         </div>
 
-        <div className="card-body p-4">
+        {/* Tab Panel: Ticket Attachments */}
+        <div
+          id="tab-panel-attachments"
+          role="tabpanel"
+          style={activeDetailTab === "attachments" ? { padding: "1.5rem" } : hiddenTabPanelStyle}
+        >
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <h3 className="h6 mb-0 fw-bold text-dark d-flex align-items-center gap-2">
+              📎 Ticket Attachments
+              <span
+                className="badge"
+                style={{
+                  backgroundColor: activeAttachments.length >= 5 ? "#FEE2E2" : "#EAF6EF",
+                  color: activeAttachments.length >= 5 ? "#991B1B" : "#006B3C",
+                  fontSize: "0.78rem",
+                }}
+              >
+                {activeAttachments.length} / 5 Active
+              </span>
+            </h3>
+          </div>
+
           {/* Active Attachments List */}
           {activeAttachments.length === 0 ? (
             <div className="p-3 text-center text-muted border rounded bg-light mb-4" style={{ fontSize: "0.9rem" }}>
@@ -1346,6 +1241,211 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
             </div>
           )}
         </div>
+
+        {/* Tab Panel: Public Comments */}
+        <div
+          id="tab-panel-public-comments"
+          role="tabpanel"
+          style={activeDetailTab === "comments" ? { padding: "1.5rem" } : hiddenTabPanelStyle}
+        >
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <h4 className="h6 fw-bold mb-0 text-dark d-flex align-items-center gap-2">
+              Conversation Thread
+              <span className="badge" style={{ backgroundColor: "#006B3C", color: "#FFFFFF" }}>
+                {comments.length}
+              </span>
+            </h4>
+            <span style={{ fontSize: "0.78rem", fontWeight: "normal", color: "#0B7A46", backgroundColor: "#EAF6EF", padding: "0.25rem 0.6rem", borderRadius: "4px" }}>
+              Visible to Requester & Staff
+            </span>
+          </div>
+
+          {/* Comments Feed */}
+          <div
+            className="overflow-auto mb-3 pe-1"
+            style={{ maxHeight: "380px", display: "flex", flexDirection: "column", gap: "0.75rem" }}
+          >
+            {comments.length === 0 ? (
+              <div className="p-3 text-center text-muted border rounded bg-light" style={{ fontSize: "0.85rem" }}>
+                No public comments yet. Post the first message below.
+              </div>
+            ) : (
+              comments.map((c) => (
+                <div
+                  key={c.id}
+                  className="p-3 border rounded"
+                  style={{
+                    backgroundColor: "#F9FAFB",
+                    borderColor: "#E5E7EB",
+                  }}
+                >
+                  <div className="d-flex justify-content-between align-items-center mb-1 flex-wrap gap-1">
+                    <div className="d-flex align-items-center gap-2">
+                      <strong style={{ fontSize: "0.88rem", color: "#111827" }}>
+                        {c.author?.displayName || `User #${c.authorId}`}
+                      </strong>
+                      {renderRolePill(c.author?.role)}
+                    </div>
+                    <span style={{ fontSize: "0.75rem", color: "#6B7280" }}>
+                      {new Date(c.createdAt).toLocaleString("en-US", { dateStyle: "short", timeStyle: "short" })}
+                    </span>
+                  </div>
+                  <div style={{ fontSize: "0.9rem", color: "#374151", whiteSpace: "pre-wrap", lineHeight: 1.4 }}>
+                    {c.content}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Comment Input Form */}
+          <form onSubmit={handleCommentSubmit} className="pt-2 border-top">
+            {commentError && (
+              <div className="alert alert-danger py-1 px-2 mb-2" style={{ fontSize: "0.82rem" }}>
+                {commentError}
+              </div>
+            )}
+            <div className="mb-2">
+              <div className="d-flex justify-content-between align-items-center mb-1">
+                <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "#374151", margin: 0 }}>
+                  Add Public Comment
+                </label>
+                <span style={{ fontSize: "0.75rem", color: commentContent.length > 2000 ? "#B3261E" : "#6B7280" }}>
+                  {commentContent.length} / 2000
+                </span>
+              </div>
+              <textarea
+                id="public-comment-input"
+                rows={3}
+                maxLength={2000}
+                value={commentContent}
+                onChange={(e) => setCommentContent(e.target.value)}
+                placeholder="Write a message visible to everyone on this ticket..."
+                className="form-control form-control-sm"
+                disabled={postingComment}
+              />
+            </div>
+            <div className="text-end">
+              <button
+                type="submit"
+                id="post-public-comment-btn"
+                className="btn btn-sm text-white fw-bold px-3"
+                style={{ backgroundColor: "#006B3C" }}
+                disabled={postingComment || !commentContent.trim() || commentContent.length > 2000}
+              >
+                {postingComment ? "Posting..." : "Post Comment"}
+              </button>
+            </div>
+          </form>
+        </div>
+
+        {/* Tab Panel: Internal Notes (Strictly omitted from DOM if !isStaffOrAdmin) */}
+        {isStaffOrAdmin && (
+          <div
+            id="internal-notes-container"
+            role="tabpanel"
+            style={
+              activeDetailTab === "notes"
+                ? {
+                    padding: "1.5rem",
+                    backgroundColor: "#FFFBEB",
+                    borderRadius: "0 0 8px 8px",
+                  }
+                : hiddenTabPanelStyle
+            }
+          >
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <h4 className="h6 fw-bold mb-0 d-flex align-items-center gap-2" style={{ color: "#92400E" }}>
+                Internal Staff Log
+                <span className="badge" style={{ backgroundColor: "#D97706", color: "#FFFFFF" }}>
+                  {notes.length}
+                </span>
+              </h4>
+              <span style={{ fontSize: "0.78rem", fontWeight: "bold", color: "#B45309", backgroundColor: "#FEF3C7", padding: "0.25rem 0.6rem", borderRadius: "4px", border: "1px solid #FDE68A" }}>
+                Staff Only (Hidden from Requester)
+              </span>
+            </div>
+
+            {/* Notes Feed */}
+            <div
+              className="overflow-auto mb-3 pe-1"
+              style={{ maxHeight: "380px", display: "flex", flexDirection: "column", gap: "0.75rem" }}
+            >
+              {notes.length === 0 ? (
+                <div className="p-3 text-center text-muted border rounded" style={{ backgroundColor: "#FFFBEB", fontSize: "0.85rem", borderColor: "#FDE68A" }}>
+                  No internal notes recorded yet.
+                </div>
+              ) : (
+                notes.map((n) => (
+                  <div
+                    key={n.id}
+                    className="p-3 border rounded"
+                    style={{
+                      backgroundColor: "#FFFFFF",
+                      borderColor: "#FDE68A",
+                    }}
+                  >
+                    <div className="d-flex justify-content-between align-items-center mb-1 flex-wrap gap-1">
+                      <div className="d-flex align-items-center gap-2">
+                        <strong style={{ fontSize: "0.88rem", color: "#92400E" }}>
+                          {n.author?.displayName || `User #${n.authorId}`}
+                        </strong>
+                        {renderRolePill(n.author?.role)}
+                      </div>
+                      <span style={{ fontSize: "0.75rem", color: "#78350F" }}>
+                        {new Date(n.createdAt).toLocaleString("en-US", { dateStyle: "short", timeStyle: "short" })}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: "0.9rem", color: "#451A03", whiteSpace: "pre-wrap", lineHeight: 1.4 }}>
+                      {n.content}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Note Input Form */}
+            <form onSubmit={handleNoteSubmit} className="pt-2 border-top" style={{ borderColor: "#FDE68A" }}>
+              {noteError && (
+                <div className="alert alert-danger py-1 px-2 mb-2" style={{ fontSize: "0.82rem" }}>
+                  {noteError}
+                </div>
+              )}
+              <div className="mb-2">
+                <div className="d-flex justify-content-between align-items-center mb-1">
+                  <label style={{ fontSize: "0.78rem", fontWeight: 700, color: "#92400E", margin: 0 }}>
+                    Add Internal Operational Note
+                  </label>
+                  <span style={{ fontSize: "0.75rem", color: noteContent.length > 2000 ? "#B3261E" : "#78350F" }}>
+                    {noteContent.length} / 2000
+                  </span>
+                </div>
+                <textarea
+                  id="internal-note-input"
+                  rows={3}
+                  maxLength={2000}
+                  value={noteContent}
+                  onChange={(e) => setNoteContent(e.target.value)}
+                  placeholder="Add confidential diagnostic details, logs, or hand-off notes..."
+                  className="form-control form-control-sm"
+                  disabled={postingNote}
+                  style={{ borderColor: "#F59E0B" }}
+                />
+              </div>
+              <div className="text-end">
+                <button
+                  type="submit"
+                  id="post-internal-note-btn"
+                  className="btn btn-sm text-white fw-bold px-3"
+                  style={{ backgroundColor: "#D97706", borderColor: "#B45309" }}
+                  disabled={postingNote || !noteContent.trim() || noteContent.length > 2000}
+                >
+                  {postingNote ? "Saving Note..." : "Post Internal Note"}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
       </div>
 
       {/* Removal Confirmation Modal */}

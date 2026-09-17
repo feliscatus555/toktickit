@@ -105,12 +105,14 @@ test.describe("Playwright End-to-End — Lab 03 Staff Operations & Collaboration
     }
 
     // 4. Post Private Internal Note (Staff Only)
+    await page.locator("#tab-btn-internal-notes").click();
     const noteText = "Configured radius timeout and route table on gateway.";
     await page.locator("#internal-note-input").fill(noteText);
     await page.locator("#post-internal-note-btn").click();
     await expect(page.getByText(noteText)).toBeVisible();
 
     // 5. Post Public Comment
+    await page.locator("#tab-btn-public-comments").click();
     const commentText = "We have updated the VPN server profiles. Please verify.";
     await page.locator("#public-comment-input").fill(commentText);
     await page.locator("#post-public-comment-btn").click();
@@ -137,9 +139,11 @@ test.describe("Playwright End-to-End — Lab 03 Staff Operations & Collaboration
 
     // AC-04: Verify Internal Notes are completely absent from Requester DOM
     await expect(page.locator("#internal-notes-container")).not.toBeVisible();
+    await expect(page.locator("#tab-btn-internal-notes")).not.toBeVisible();
     await expect(page.getByText(noteText)).not.toBeVisible();
 
-    // Verify Public Comment IS visible
+    // Verify Public Comment IS visible (switch to Comments tab)
+    await page.locator("#tab-btn-public-comments").click();
     await expect(page.getByText(commentText)).toBeVisible();
 
     // Click "Problem Appears Resolved"
