@@ -829,32 +829,38 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
               </div>
             )}
 
-            {/* Lifecycle Status Box (Staff/Admin Only) */}
+            {/* Current Status Box (Staff/Admin Only) */}
             {isStaffOrAdmin && (
               <div className="col-12 col-sm-12 col-md-5">
                 <label
                   htmlFor="next-status-select"
                   style={{ fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block", marginBottom: "0.3rem" }}
                 >
-                  Lifecycle Status:
+                  Current Status:
                 </label>
                 <div className="d-flex gap-2">
                   <select
                     id="next-status-select"
                     className="form-select form-select-sm"
-                    value={selectedNextStatus}
+                    value={selectedNextStatus || ""}
                     onChange={(e) => setSelectedNextStatus(e.target.value)}
                     disabled={updatingStatus || permittedNext.length === 0}
                     style={{ fontSize: "0.85rem" }}
                   >
-                    <option value="">
-                      {permittedNext.length === 0 ? "(Terminal State)" : "Change status to..."}
-                    </option>
-                    {permittedNext.map((st) => (
-                      <option key={st} value={st}>
-                        → {formatStatusDisplay(st)}
-                      </option>
-                    ))}
+                    {permittedNext.length === 0 ? (
+                      <option value="">{formatStatusDisplay(ticket.status)} (Terminal State)</option>
+                    ) : (
+                      <>
+                        <option value="" disabled>
+                          {formatStatusDisplay(ticket.status)}
+                        </option>
+                        {permittedNext.map((st) => (
+                          <option key={st} value={st}>
+                            {formatStatusDisplay(st)}
+                          </option>
+                        ))}
+                      </>
+                    )}
                   </select>
 
                   <button
