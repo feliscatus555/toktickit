@@ -232,11 +232,15 @@ export default function App() {
                     className="btn btn-sm text-white fw-semibold"
                     style={{
                       backgroundColor:
-                        activeTab === "queue" || (activeTab === "ticket-detail" && currentUser.role === "IT_STAFF")
+                        activeTab === "queue" ||
+                        (activeTab === "ticket-detail" &&
+                          (currentUser.role === "IT_STAFF" || currentUser.role === "ADMINISTRATOR"))
                           ? "#0B7A46"
                           : "transparent",
                       border:
-                        activeTab === "queue" || (activeTab === "ticket-detail" && currentUser.role === "IT_STAFF")
+                        activeTab === "queue" ||
+                        (activeTab === "ticket-detail" &&
+                          (currentUser.role === "IT_STAFF" || currentUser.role === "ADMINISTRATOR"))
                           ? "1px solid #EAF6EF"
                           : "1px solid transparent",
                       borderRadius: "6px",
@@ -429,11 +433,15 @@ export default function App() {
                 className="btn btn-sm text-white fw-semibold flex-fill text-center"
                 style={{
                   backgroundColor:
-                    activeTab === "queue" || (activeTab === "ticket-detail" && currentUser.role === "IT_STAFF")
+                    activeTab === "queue" ||
+                    (activeTab === "ticket-detail" &&
+                      (currentUser.role === "IT_STAFF" || currentUser.role === "ADMINISTRATOR"))
                       ? "#0B7A46"
                       : "transparent",
                   border:
-                    activeTab === "queue" || (activeTab === "ticket-detail" && currentUser.role === "IT_STAFF")
+                    activeTab === "queue" ||
+                    (activeTab === "ticket-detail" &&
+                      (currentUser.role === "IT_STAFF" || currentUser.role === "ADMINISTRATOR"))
                       ? "1px solid #EAF6EF"
                       : "1px solid transparent",
                   borderRadius: "6px",
@@ -510,13 +518,31 @@ export default function App() {
           <TicketDetail
             ticketId={selectedTicketId}
             currentRequester={currentUser}
-            onBack={() => setActiveTab(currentUser.role === "IT_STAFF" ? "queue" : "my-tickets")}
+            onBack={() =>
+              setActiveTab(
+                currentUser.role === "IT_STAFF" || currentUser.role === "ADMINISTRATOR"
+                  ? "queue"
+                  : "my-tickets"
+              )
+            }
           />
         ) : (
           <CreateTicket
             activeRequester={currentUser}
-            onSuccess={() => setActiveTab(currentUser.role === "IT_STAFF" ? "queue" : "my-tickets")}
-            onCancel={() => setActiveTab(currentUser.role === "IT_STAFF" ? "queue" : "my-tickets")}
+            onSuccess={() =>
+              setActiveTab(
+                currentUser.role === "IT_STAFF" || currentUser.role === "ADMINISTRATOR"
+                  ? "queue"
+                  : "my-tickets"
+              )
+            }
+            onCancel={() =>
+              setActiveTab(
+                currentUser.role === "IT_STAFF" || currentUser.role === "ADMINISTRATOR"
+                  ? "queue"
+                  : "my-tickets"
+              )
+            }
           />
         )}
       </main>

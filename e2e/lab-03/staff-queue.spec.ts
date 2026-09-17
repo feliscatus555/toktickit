@@ -85,7 +85,8 @@ test.describe("Playwright End-to-End — Lab 03 IT Staff Ticket Queue (Feature-1
     await expect(page.getByText("Official Ticket Number")).toBeVisible();
 
     // Back to Queue returns to Ticket Queue
-    const backBtn = page.getByRole("button", { name: /Back/i }).first();
+    const backBtn = page.getByRole("button", { name: /Back to Ticket Queue/i });
+    await expect(backBtn).toBeVisible();
     await backBtn.click();
     await expect(page.getByRole("heading", { name: "IT Staff Ticket Queue" })).toBeVisible();
 
