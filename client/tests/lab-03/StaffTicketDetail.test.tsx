@@ -380,5 +380,56 @@ describe("Lab 3 Ticket Detail Screen Component Tests (Feature-11)", () => {
         ).toBeInTheDocument();
       });
     });
+
+    it("renders resolution summary validation error when transitioning to Resolved with empty text (UI Spec 2.1 & 4.4)", async () => {
+      render(
+        <TicketDetail
+          ticketId="ticket-uuid-123"
+          currentRequester={mockStaffUser}
+          onBack={vi.fn()}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByLabelText(/current status:/i)).toBeInTheDocument();
+      });
+
+      const select = screen.getByLabelText(/current status:/i);
+      fireEvent.change(select, { target: { value: "Resolved" } });
+
+      await waitFor(() => {
+        expect(screen.getByPlaceholderText(/describe resolution steps taken/i)).toBeInTheDocument();
+      });
+
+      const confirmBtn = screen.getByRole("button", { name: /confirm resolve/i });
+      fireEvent.click(confirmBtn);
+
+      await waitFor(() => {
+        expect(screen.getByText(/resolution summary is mandatory when resolving a ticket/i)).toBeInTheDocument();
+        expect(document.getElementById("status-validation-error")).toBeInTheDocument();
+      });
+    });
+
+    it("renders safe failure error banner when fetchStaffTicketDetail fails (UI Spec 10)", async () => {
+      vi.mocked(api.fetchStaffTicketDetail).mockRejectedValueOnce(
+        new Error("Failed to load ticket details: Internal Server Error")
+      );
+
+      render(
+        <TicketDetail
+          ticketId="ticket-uuid-123"
+          currentRequester={mockStaffUser}
+          onBack={vi.fn()}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByRole("alert")).toBeInTheDocument();
+        expect(screen.getByText(/error loading ticket/i)).toBeInTheDocument();
+        expect(screen.getByText(/failed to load ticket details/i)).toBeInTheDocument();
+        expect(document.getElementById("ticket-detail-error-banner")).toBeInTheDocument();
+      });
+    });
   });
 });
+

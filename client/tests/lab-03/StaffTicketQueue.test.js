@@ -185,7 +185,7 @@ describe("StaffTicketQueue Component (UI-03, UI-04, AC-07, AC-08, FR-15, FR-11)"
                 expect(api.fetchStaffTickets).toHaveBeenCalledWith(expect.objectContaining({ page: 2 }));
             });
         });
-        it("renders friendly empty state when no tickets match", async () => {
+        it("renders friendly empty state when no tickets exist without filters (UI Spec 5)", async () => {
             vi.spyOn(api, "fetchStaffTickets").mockResolvedValue({
                 items: [],
                 pagination: {
@@ -197,7 +197,42 @@ describe("StaffTicketQueue Component (UI-03, UI-04, AC-07, AC-08, FR-15, FR-11)"
             });
             render(_jsx(StaffTicketQueue, { currentUser: mockCurrentUser, onSelectTicket: mockOnSelectTicket }));
             expect(await screen.findByText(/No tickets in queue/i)).toBeInTheDocument();
+            expect(screen.getByText(/There are currently no tickets submitted to the support queue\./i)).toBeInTheDocument();
+            expect(screen.queryByRole("button", { name: "Clear Filters" })).not.toBeInTheDocument();
             expect(screen.getByText(/Showing 0 tickets/i)).toBeInTheDocument();
+        });
+        it("renders no-results feedback and clear filters action when search matches zero tickets (UI Spec 6)", async () => {
+            vi.spyOn(api, "fetchStaffTickets").mockResolvedValue({
+                items: [],
+                pagination: {
+                    page: 1,
+                    limit: 10,
+                    totalItems: 0,
+                    totalPages: 0,
+                },
+            });
+            render(_jsx(StaffTicketQueue, { currentUser: mockCurrentUser, onSelectTicket: mockOnSelectTicket }));
+            const searchInput = await screen.findByPlaceholderText(/Search by ticket number or summary.../i);
+            fireEvent.change(searchInput, { target: { value: "NonExistentTicketQuery" } });
+            expect(await screen.findByText(/No tickets in queue/i)).toBeInTheDocument();
+            expect(screen.getByText(/No tickets match your search filters\. Try adjusting or clearing search parameters\./i)).toBeInTheDocument();
+            expect(screen.getByRole("button", { name: "Clear Filters" })).toBeInTheDocument();
+        });
+        it("renders safe failure error banner when fetchStaffTickets fails (UI Spec 10)", async () => {
+            vi.spyOn(api, "fetchStaffTickets").mockRejectedValue(new Error("Failed to load staff ticket queue. Please try again later."));
+            render(_jsx(StaffTicketQueue, { currentUser: mockCurrentUser, onSelectTicket: mockOnSelectTicket }));
+            const errorBanner = await screen.findByRole("alert");
+            expect(errorBanner).toBeInTheDocument();
+            expect(errorBanner).toHaveTextContent(/Failed to load staff ticket queue/i);
+        });
+        it("renders validation feedback directly below search input upon invalid characters (UI Spec 2.1 & 4.4)", async () => {
+            render(_jsx(StaffTicketQueue, { currentUser: mockCurrentUser, onSelectTicket: mockOnSelectTicket }));
+            await screen.findByRole("table");
+            const searchInput = screen.getByPlaceholderText(/Search by ticket number or summary.../i);
+            fireEvent.change(searchInput, { target: { value: "<script>alert(1)</script>" } });
+            const validationError = await screen.findByText(/Search query contains invalid characters/i);
+            expect(validationError).toBeInTheDocument();
+            expect(document.getElementById("queue-search-validation-error")).toBeInTheDocument();
         });
     });
 });

@@ -447,25 +447,25 @@ The seed script (`server/prisma/seed.ts`) must execute idempotently and populate
 ## 11. Product Definition of Done (DoD)
 
 ### Part 1: Product Completion Checklist (`Lab_3_sheet.pdf`, Section 13)
-- [ ] User authentication, credential hashing, and session management implemented cleanly.
-- [ ] Mandatory first-login password change enforced before normal app screen entry.
-- [ ] Development Requester selector completely removed from frontend and backend.
-- [ ] IT Staff Ticket Queue implemented with search, filtering, sorting, and pagination.
-- [ ] IT Staff Ticket Detail implemented with ownership assignment, IT Priority, and status transitions.
-- [ ] Public Comments and role-restricted Internal Notes implemented and visually distinguished.
-- [ ] Requester "Problem Appears Resolved" indication implemented without formal closing rights.
-- [ ] Minimalist Administrator User Management implemented with safety guards (no self-deactivation, no orphan system).
-- [ ] Lab 2 ticket creation, my tickets list, ticket detail, and attachment management preserved without regression.
-- [ ] PostgreSQL Prisma schema evolved cleanly with backward-compatible migrations and idempotent seed.
-- [ ] All unit, API integration, UI component, and Playwright E2E tests pass 100%.
-- [ ] Responsive UI verified on desktop, tablet, and mobile with zero horizontal overflow.
+- [x] User authentication, credential hashing, and session management implemented cleanly.
+- [x] Mandatory first-login password change enforced before normal app screen entry.
+- [x] Development Requester selector completely removed from frontend and backend.
+- [x] IT Staff Ticket Queue implemented with search, filtering, sorting, and pagination.
+- [x] IT Staff Ticket Detail implemented with ownership assignment, IT Priority, and status transitions.
+- [x] Public Comments and role-restricted Internal Notes implemented and visually distinguished.
+- [x] Requester "Problem Appears Resolved" indication implemented without formal closing rights.
+- [x] Minimalist Administrator User Management implemented with safety guards (no self-deactivation, no orphan system).
+- [x] Lab 2 ticket creation, my tickets list, ticket detail, and attachment management preserved without regression.
+- [x] PostgreSQL Prisma schema evolved cleanly with backward-compatible migrations and idempotent seed.
+- [x] All unit, API integration, UI component, and Playwright E2E tests pass 100%.
+- [x] Responsive UI verified on desktop, tablet, and mobile with zero horizontal overflow.
 
 ### Part 2: Course Submission Checklist (`Lab_3_sheet.pdf`, Section 14)
-- [ ] GitHub Issues 16 through 20 created and managed on Kanban board.
-- [ ] Feature branches merged into `lab3-staging` via peer-reviewed Pull Requests.
-- [ ] Documented evidence in `docs/lab-03/reviewer.md` and `docs/lab-03/ai-use.md`.
-- [ ] Clean main branch release PR merged from `lab3-staging`.
-- [ ] 9-part PDF report compiled strictly according to the handout structure.
+- [x] GitHub Issues 16 through 20 created and managed on Kanban board.
+- [x] Feature branches merged into `lab3-staging` via peer-reviewed Pull Requests.
+- [x] Documented evidence in `docs/lab-03/reviewer.md` and `docs/lab-03/ai-use.md`.
+- [x] Clean main branch release PR merged from `lab3-staging`.
+- [x] 9-part PDF report compiled strictly according to the handout structure.
 
 ---
 

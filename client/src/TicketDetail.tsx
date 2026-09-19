@@ -557,11 +557,11 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
 
   if (error || !ticket) {
     return (
-      <div style={{ maxWidth: 960, margin: "2rem auto" }}>
-        <div className="alert alert-danger shadow-sm" role="alert">
+      <div style={{ maxWidth: 960, margin: "2rem auto", padding: "0 1rem" }}>
+        <div id="ticket-detail-error-banner" className="alert alert-danger shadow-sm" role="alert" style={{ backgroundColor: "#FCE8E6", borderColor: "#B3261E", color: "#B3261E" }}>
           <h5 className="alert-heading fw-bold mb-1">Error Loading Ticket</h5>
           <p className="mb-3">{error || "Ticket not found or ownership denied."}</p>
-          <button type="button" className="btn btn-outline-danger btn-sm fw-semibold" onClick={onBack}>
+          <button id="ticket-error-back-btn" type="button" className="btn btn-outline-danger btn-sm fw-semibold" onClick={onBack}>
             {displayBackLabel}
           </button>
         </div>
@@ -891,7 +891,7 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
                     </>
                   )}
                 </select>
-                {statusError && (
+                {statusError && selectedNextStatus !== "Resolved" && (
                   <div className="alert alert-danger py-1 px-2 mt-2 mb-0" style={{ fontSize: "0.82rem" }}>
                     {statusError}
                   </div>
@@ -901,9 +901,13 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
 
             {/* Resolution Summary input (visible when transitioning to Resolved) */}
             {isStaffOrAdmin && selectedNextStatus === "Resolved" && (
-              <div className="col-12 mt-2 p-3 border rounded" style={{ backgroundColor: "#F0FDF4", borderColor: "#86EFAC" }}>
+              <div
+                id="resolution-summary-container"
+                className="col-12 mt-2 p-3 border rounded"
+                style={{ backgroundColor: "#F0FDF4", borderColor: statusError ? "#B3261E" : "#86EFAC" }}
+              >
                 <label className="fw-bold mb-1 text-success d-block" style={{ fontSize: "0.85rem" }}>
-                  Resolution Summary <span className="text-danger">*</span> (Required for Resolved state)
+                  Resolution Summary <span style={{ color: "#B3261E" }}>*</span> (Required for Resolved state)
                 </label>
                 <textarea
                   id="resolution-summary-input"
@@ -911,8 +915,31 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
                   rows={2}
                   placeholder="Describe resolution steps taken..."
                   value={resolutionSummaryInput}
-                  onChange={(e) => setResolutionSummaryInput(e.target.value)}
+                  onChange={(e) => {
+                    setResolutionSummaryInput(e.target.value);
+                    if (statusError) setStatusError(null);
+                  }}
+                  style={{
+                    borderColor: statusError ? "#B3261E" : undefined,
+                  }}
                 />
+                {statusError && (
+                  <div
+                    id="status-validation-error"
+                    role="alert"
+                    style={{
+                      color: "#B3261E",
+                      fontSize: "0.82rem",
+                      marginBottom: "0.5rem",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.25rem",
+                    }}
+                  >
+                    <span>⚠</span>
+                    <span>{statusError}</span>
+                  </div>
+                )}
                 <div className="d-flex gap-2 justify-content-end">
                   <button
                     type="button"
@@ -931,7 +958,7 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
                     id="confirm-resolve-btn"
                     className="btn btn-sm text-white fw-bold"
                     style={{ backgroundColor: "#006B3C" }}
-                    disabled={updatingStatus || !resolutionSummaryInput.trim()}
+                    disabled={updatingStatus}
                     onClick={handleConfirmResolve}
                   >
                     {updatingStatus ? "Resolving..." : "Confirm Resolve"}

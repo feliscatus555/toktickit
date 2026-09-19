@@ -477,3 +477,79 @@ export async function fetchStaffUsers() {
     }
     return data;
 }
+export async function fetchAdminUsers(params) {
+    const queryParams = new URLSearchParams();
+    if (params?.search)
+        queryParams.set("search", params.search);
+    if (params?.role && params.role !== "ALL")
+        queryParams.set("role", params.role);
+    const qs = queryParams.toString();
+    const url = `${API_URL}/api/admin/users${qs ? `?${qs}` : ""}`;
+    const res = await fetch(url, {
+        headers: {
+            ...getAuthHeaders(),
+        },
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        const err = new Error(data?.error?.message || "Failed to fetch users");
+        err.status = res.status;
+        err.data = data;
+        throw err;
+    }
+    return data;
+}
+export async function createAdminUser(userData) {
+    const res = await fetch(`${API_URL}/api/admin/users`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            ...getAuthHeaders(),
+        },
+        body: JSON.stringify(userData),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        const err = new Error(data?.error?.message || "Failed to create user");
+        err.status = res.status;
+        err.data = data;
+        throw err;
+    }
+    return data;
+}
+export async function updateAdminUser(id, userData) {
+    const res = await fetch(`${API_URL}/api/admin/users/${id}`, {
+        method: "PATCH",
+        headers: {
+            "Content-Type": "application/json",
+            ...getAuthHeaders(),
+        },
+        body: JSON.stringify(userData),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        const err = new Error(data?.error?.message || "Failed to update user");
+        err.status = res.status;
+        err.data = data;
+        throw err;
+    }
+    return data;
+}
+export async function resetUserPassword(id, newInitialPassword) {
+    const res = await fetch(`${API_URL}/api/admin/users/${id}/reset-password`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            ...getAuthHeaders(),
+        },
+        body: JSON.stringify({ newInitialPassword }),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        const err = new Error(data?.error?.message || "Failed to reset password");
+        err.status = res.status;
+        err.data = data;
+        throw err;
+    }
+    return data;
+}

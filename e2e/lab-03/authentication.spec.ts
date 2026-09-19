@@ -52,7 +52,7 @@ test.describe("Playwright End-to-End — Lab 03 Authentication Foundation (Featu
     await expect(page.getByRole("button", { name: /Change Requester/i })).not.toBeVisible();
     await expect(page.locator("#requester-select")).not.toBeVisible();
 
-    // 8. Sign out and verify session termination
+    // 8. Sign out and verify session termination (AC-06, FR-06)
     await page.locator("#profile-dropdown-trigger").click();
     const logoutBtn = page.locator("#logout-button");
     await expect(logoutBtn).toBeVisible();
@@ -61,6 +61,22 @@ test.describe("Playwright End-to-End — Lab 03 Authentication Foundation (Featu
     // 9. Verify redirected back to Login screen
     await expect(page.getByText("Sign in to your account")).toBeVisible();
     await expect(page.locator("#login-email")).toBeVisible();
+
+    // 10. Direct access blocked: reload page and verify still gated at login
+    await page.reload();
+    await expect(page.locator("#login-email")).toBeVisible();
+    await expect(page.locator("#nav-my-tickets")).not.toBeVisible();
+    await expect(page.locator("#user-identity-badge")).not.toBeVisible();
+
+    // 11. Verify token and user session cleared from localStorage
+    const storedToken = await page.evaluate(() => localStorage.getItem("toktickit_auth_token"));
+    const storedUser = await page.evaluate(() => localStorage.getItem("toktickit_auth_user"));
+    expect(storedToken).toBeNull();
+    expect(storedUser).toBeNull();
+
+    // 12. Direct API call blocked with 401 Unauthorized
+    const apiRes = await page.request.get("http://localhost:3000/api/auth/me");
+    expect(apiRes.status()).toBe(401);
   });
 
   test("E2E-02: Initial password login and mandatory change flow (AC-02, FR-03)", async ({
