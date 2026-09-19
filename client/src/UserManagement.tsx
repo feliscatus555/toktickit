@@ -419,7 +419,11 @@ export default function UserManagement({ currentUser }: UserManagementProps) {
 
       {/* Global Error Banner */}
       {error && (
-        <div className="alert alert-danger shadow-sm py-2 px-3 mb-3" style={{ fontSize: "0.9rem" }}>
+        <div
+          id="user-management-error-banner"
+          className="alert alert-danger shadow-sm py-2 px-3 mb-3"
+          style={{ fontSize: "0.9rem" }}
+        >
           {error}
         </div>
       )}

@@ -331,7 +331,7 @@ export default function UserManagement({ currentUser }) {
                     borderColor: "#0B7A46",
                     color: "#006B3C",
                     borderRadius: "6px",
-                }, children: [_jsxs("div", { className: "d-flex align-items-center gap-2", children: [_jsx("span", { children: "\u2713" }), _jsx("span", { className: "fw-semibold", style: { fontSize: "0.9rem" }, children: successMessage })] }), _jsx("button", { type: "button", className: "btn-close", style: { fontSize: "0.75rem" }, onClick: () => setSuccessMessage(null) })] })), error && (_jsx("div", { className: "alert alert-danger shadow-sm py-2 px-3 mb-3", style: { fontSize: "0.9rem" }, children: error })), _jsx("div", { className: "card shadow-sm mb-4", style: {
+                }, children: [_jsxs("div", { className: "d-flex align-items-center gap-2", children: [_jsx("span", { children: "\u2713" }), _jsx("span", { className: "fw-semibold", style: { fontSize: "0.9rem" }, children: successMessage })] }), _jsx("button", { type: "button", className: "btn-close", style: { fontSize: "0.75rem" }, onClick: () => setSuccessMessage(null) })] })), error && (_jsx("div", { id: "user-management-error-banner", className: "alert alert-danger shadow-sm py-2 px-3 mb-3", style: { fontSize: "0.9rem" }, children: error })), _jsx("div", { className: "card shadow-sm mb-4", style: {
                     borderRadius: "8px",
                     border: "1px solid #E0E0E0",
                     backgroundColor: "#FFFFFF",
