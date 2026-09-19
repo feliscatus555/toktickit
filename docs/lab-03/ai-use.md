@@ -5,16 +5,16 @@
 ## Selected key prompts (6–10)
 | # | Prompt (summarised) | What I did with the result |
 |---|---------------------|----------------------------|
-| 1 | We are starting TokTickIT lab 2 from the completed lab 1, Read the provided documents and create Evidence Gate: Pass or Block | I used it to find if the baseline lab 1 we had was missing anything crucial. |
-| 2 | Read the provided documents and draft a specificaions.md for lab 2 | I used it to create a draft for the specifications we need which will be refined later. |
-| 3 | Summarize my issues and features for lab 2 and provide the acceptence criteria for each one. | I used it to help me decide and what git bracnches i need to make, and the issues to make in Github. |
-| 4 | Tell me the step by step instructions to resolve issue 1 of lab 2 | I used it to to get an overview of the steps i would need to do to solve the issue. |
-| 5 | Can you check if all of the acceptence for feature 5 is satisfied | I used it to help me double check if the acceptence criterias are all cleared. |
-| 6 | Does the my-tickets.api.test.ts account for failure tests, and follow the tests.md guidelines | I used it to make sure that the tests made for the feature covered all the bases.|
+| 1 | We are starting TokTickIT lab 3 from the completed lab 2, Read the provided documents and create Evidence Gate: Pass or Block | I found that there was a problem with the database from lab2 |
+| 2 | Draft a specificaions.md for lab 3 based on the provided files. | The agent made a draft of specifications which i later edited and refined. |
+| 3 | Go over all the new features that need to be implemented for lab 3. | I used it to look at what new features we will have, and the scope for each one. |
+| 4 | Give me the list of accounts I can use for testing. | Since there's alot of testing to do, I needed a way to remember the accounts I can use. |
+| 5 | Help me implement the authentication feature. | I used it to help me implement the first feature. |
+| 6 | Create the tests for feature 11, and make sure it follows tests.md guidelines. | I used it to create tests that follow the requirements.|
 
 
 ## Reflection
 Two or three sentences: what made your prompts better, and one place you had to
 correct or reject what the agent produced.
 
-For lab 2, I was less hands on with the project compared to lab 1,and while it seems easy to let the AI do all the coding, I still had to make sure that what the AI made followed all the rules established in the various specifications files made at the start. Sometimes, trouble shooting is needed, and I would have to ask the AI about some of the decisions it's made, and where it got the information from.
+In general, I think I took less time working on lab 3 than lab 2, and that's because I got more familiar with how to properly prompt the agent, and make sure that it focuses on the task at hand, but I still had some places where I had to stop the agent, because it became stuck in a loop, where nothing productive was being done.
