@@ -266,7 +266,7 @@ export default function StaffTicketQueue({ onSelectTicket, currentUser, }) {
     };
     const startRecord = totalItems === 0 ? 0 : (page - 1) * limit + 1;
     const endRecord = Math.min(page * limit, totalItems);
-    return (_jsxs("div", { style: { maxWidth: "1280px", margin: "0 auto" }, children: [_jsx("style", { children: `
+    return (_jsxs("div", { style: { maxWidth: "1440px", margin: "0 auto" }, children: [_jsx("style", { children: `
         .staff-queue-desktop {
           display: block;
         }
@@ -450,7 +450,7 @@ export default function StaffTicketQueue({ onSelectTicket, currentUser, }) {
                             backgroundColor: "#FFFFFF",
                             borderRadius: "8px",
                             boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-                            overflow: "hidden",
+                            overflowX: "auto",
                             border: "1px solid #E5E7EB",
                         }, children: _jsxs("table", { id: "staff-queue-table", style: {
                                 width: "100%",

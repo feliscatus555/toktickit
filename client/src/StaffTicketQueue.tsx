@@ -368,7 +368,7 @@ export default function StaffTicketQueue({
   const endRecord = Math.min(page * limit, totalItems);
 
   return (
-    <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+    <div style={{ maxWidth: "1440px", margin: "0 auto" }}>
       <style>{`
         .staff-queue-desktop {
           display: block;
@@ -767,7 +767,7 @@ export default function StaffTicketQueue({
               backgroundColor: "#FFFFFF",
               borderRadius: "8px",
               boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-              overflow: "hidden",
+              overflowX: "auto",
               border: "1px solid #E5E7EB",
             }}
           >

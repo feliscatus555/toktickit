@@ -326,7 +326,7 @@ export default function UserManagement({ currentUser }) {
                 borderRadius: "12px",
             }, children: "\u25CF Inactive" }));
     };
-    return (_jsxs("div", { style: { maxWidth: "1200px", margin: "0 auto" }, children: [successMessage && (_jsxs("div", { className: "alert alert-success d-flex align-items-center justify-content-between shadow-sm py-2 px-3 mb-3", style: {
+    return (_jsxs("div", { style: { maxWidth: "1440px", margin: "0 auto" }, children: [successMessage && (_jsxs("div", { className: "alert alert-success d-flex align-items-center justify-content-between shadow-sm py-2 px-3 mb-3", style: {
                     backgroundColor: "#EAF6EF",
                     borderColor: "#0B7A46",
                     color: "#006B3C",
