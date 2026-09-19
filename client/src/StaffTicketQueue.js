@@ -13,6 +13,7 @@ export default function StaffTicketQueue({ onSelectTicket, currentUser, }) {
     const [error, setError] = useState(null);
     // Filter and Query state
     const [search, setSearch] = useState("");
+    const [searchValidation, setSearchValidation] = useState(null);
     const [category, setCategory] = useState("");
     const [status, setStatus] = useState("");
     const [priority, setPriority] = useState("");
@@ -67,8 +68,18 @@ export default function StaffTicketQueue({ onSelectTicket, currentUser, }) {
     }, [search, category, status, priority, owner, sortBy, sortOrder, page]);
     // Reset to page 1 whenever filters change
     const handleSearchChange = (e) => {
-        setSearch(e.target.value);
+        const val = e.target.value;
+        setSearch(val);
         setPage(1);
+        if (val.length > 100) {
+            setSearchValidation("Search query cannot exceed 100 characters.");
+        }
+        else if (/[<>{};"'%\\]/.test(val)) {
+            setSearchValidation("Search query contains invalid characters. Please use letters, numbers, or ticket number format.");
+        }
+        else {
+            setSearchValidation(null);
+        }
     };
     const handleCategoryChange = (e) => {
         setCategory(e.target.value);
@@ -88,6 +99,7 @@ export default function StaffTicketQueue({ onSelectTicket, currentUser, }) {
     };
     const handleClearFilters = () => {
         setSearch("");
+        setSearchValidation(null);
         setCategory("");
         setStatus("");
         setPriority("");
@@ -328,7 +340,7 @@ export default function StaffTicketQueue({ onSelectTicket, currentUser, }) {
                                                     padding: "0.55rem 0.75rem 0.55rem 2rem",
                                                     fontSize: "0.9rem",
                                                     borderRadius: "6px",
-                                                    border: "1px solid #D1D5DB",
+                                                    border: searchValidation ? "1px solid #B3261E" : "1px solid #D1D5DB",
                                                     outline: "none",
                                                     boxSizing: "border-box",
                                                 } }), _jsx("span", { style: {
@@ -336,9 +348,16 @@ export default function StaffTicketQueue({ onSelectTicket, currentUser, }) {
                                                     left: "0.65rem",
                                                     top: "50%",
                                                     transform: "translateY(-50%)",
-                                                    color: "#9CA3AF",
+                                                    color: searchValidation ? "#B3261E" : "#9CA3AF",
                                                     pointerEvents: "none",
-                                                }, children: "\uD83D\uDD0D" })] })] }), _jsxs("div", { children: [_jsx("label", { htmlFor: categorySelectId, style: {
+                                                }, children: "\uD83D\uDD0D" })] }), searchValidation && (_jsxs("div", { id: "queue-search-validation-error", role: "alert", style: {
+                                            color: "#B3261E",
+                                            fontSize: "0.8rem",
+                                            marginTop: "0.35rem",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: "0.25rem",
+                                        }, children: [_jsx("span", { children: "\u26A0" }), _jsx("span", { children: searchValidation })] }))] }), _jsxs("div", { children: [_jsx("label", { htmlFor: categorySelectId, style: {
                                             display: "block",
                                             fontSize: "0.8rem",
                                             fontWeight: 700,
@@ -407,7 +426,7 @@ export default function StaffTicketQueue({ onSelectTicket, currentUser, }) {
                                 fontSize: "0.85rem",
                                 fontWeight: 600,
                                 cursor: "pointer",
-                            }, children: "\u2715 Clear Filters" }) }))] }), error && (_jsx("div", { style: {
+                            }, children: "\u2715 Clear Filters" }) }))] }), error && (_jsx("div", { id: "queue-error-banner", role: "alert", style: {
                     padding: "1rem",
                     marginBottom: "1.5rem",
                     backgroundColor: "#FCE8E6",
