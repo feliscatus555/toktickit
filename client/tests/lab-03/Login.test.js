@@ -71,4 +71,36 @@ describe("Login Component (UI-01, AC-01, FR-01)", () => {
         expect(await screen.findByText(/Invalid email address or password\./i)).toBeInTheDocument();
         expect(mockOnLoginSuccess).not.toHaveBeenCalled();
     });
+    it("renders busy spinner and disables interactive inputs while login request is in-flight (UI-01, UI Spec 2)", async () => {
+        let resolveLoginPromise;
+        vi.spyOn(api, "login").mockImplementation(() => new Promise((resolve) => {
+            resolveLoginPromise = resolve;
+        }));
+        render(_jsx(Login, { onLoginSuccess: mockOnLoginSuccess }));
+        const emailInput = screen.getByLabelText(/^Email address/i);
+        const passwordInput = screen.getByPlaceholderText(/Enter password/i);
+        const submitBtn = screen.getByRole("button", { name: /Sign In/i });
+        fireEvent.change(emailInput, { target: { value: "somchai.p@kmutt.ac.th" } });
+        fireEvent.change(passwordInput, { target: { value: "Password123!" } });
+        fireEvent.click(submitBtn);
+        // Verify busy state
+        expect(await screen.findByText(/Signing in\.\.\./i)).toBeInTheDocument();
+        expect(submitBtn).toBeDisabled();
+        expect(emailInput).toBeDisabled();
+        expect(passwordInput).toBeDisabled();
+        // Resolve login to cleanup
+        resolveLoginPromise({
+            token: "fake-token",
+            user: {
+                id: 1,
+                email: "somchai.p@kmutt.ac.th",
+                displayName: "Somchai",
+                role: "REQUESTER",
+                mustChangePassword: false,
+            },
+        });
+        await waitFor(() => {
+            expect(mockOnLoginSuccess).toHaveBeenCalled();
+        });
+    });
 });

@@ -6,18 +6,17 @@
 ## Pull Requests I authored (reviewed by my partner)
 | PR | Branch | Reviewer verdict |
 |----|--------|------------------|
-| foundation of the project, front end and back end starts succesfully #6 | feature/1-project-foundation | Approved |
-| Health check working #7 | feature/2-health-check | Looks good, approved  |
-| Prisma category model creation and seeding #8 | feature/3-category-seed | All in order, approved. |
-| Feature/4 category list #9 | feature/4-category-list | Approved, well done |
-| Lab 1 release #10 | lab1-staging | Approved |
+| https://github.com/feliscatus555/toktickit/pull/24 | feature/9-auth-foundation | Everything looks good and passes |
+| https://github.com/feliscatus555/toktickit/pull/25 | feature/10-staff-queue | Looks good. |
+| https://github.com/feliscatus555/toktickit/pull/26 | feature/11-staff-ticket-operations | Approved |
+| https://github.com/feliscatus555/toktickit/pull/27 | feature/12-customer-update-respect | Everything works. Approved |
+| https://github.com/feliscatus555/toktickit/pull/28 | lab3-staging | Approved |
 
-Reviewer comment: Why not remove this commented line?
+Reviewer comment: Approved
 
-How I responded: I intentionally left the comment as it's not something i need right now, but might potentially need in the future.
+How I responded: Thank you, I appreciate it.
 
-![alt text](image-2.png)
 
 ## Pull Requests I reviewed for my partner
-My comment: < The appropriate code has been made for issue 2, well done. >
-Partner's response: < Thank you. >
+My comment: < Keep up the good work. >
+Partner's response: < Thank you >

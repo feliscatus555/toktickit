@@ -124,26 +124,26 @@ npm run test:e2e
 
 Per `Lab_3_sheet.pdf`, Section 14 (Part 9), the visual checklist confirms:
 
-- [ ] **Desktop Viewport (`1280px`)**:
+- [x] **Desktop Viewport (`1280px`)**:
   - Full application shell header showing authenticated user name and role badge (`Requester`, `IT Staff`, or `Admin`).
   - Navigation links filtered strictly by role.
   - IT Staff Ticket Queue displays all 8 justified columns with proper text truncation and tooltips.
   - Ticket Detail displays two-column layout with distinct styling for Public Comments (green) and Internal Notes (amber).
   - User Management table renders all user columns and modal actions cleanly.
-- [ ] **Tablet Viewport (`768px`)**:
+- [x] **Tablet Viewport (`768px`)**:
   - Two-column grid wraps cleanly without clipping form labels or badges.
   - Ticket Queue table maintains touch-friendly scroll or flexible cell distribution.
   - User Management controls stack gracefully.
-- [ ] **Mobile Viewport (`375px`)**:
+- [x] **Mobile Viewport (`375px`)**:
   - Single-column vertical layout.
   - Ticket Queue table converts to stacked card view with bold Ticket Number headers and status pills.
   - Zero horizontal page scrolling (`overflow-x: hidden`).
   - Form buttons and action links satisfy minimum $44 \times 44\text{px}$ touch target size.
-- [ ] **Zen Green Visual Consistency**:
+- [x] **Zen Green Visual Consistency**:
   - Primary Green `#006B3C` used for header and primary buttons.
   - Pale Green `#EAF6EF` used for selection and public comment accent.
   - Muted gray-green `#E9ECEF` used for read-only shaded fields.
   - Dark Red `#B3261E` used for validation error text placed immediately below inputs.
   - Amber `#D97706` used exclusively for Internal Notes and warning alerts.
-- [ ] **Non-Color Indicators**:
+- [x] **Non-Color Indicators**:
   - All status, priority, and role indicators include visible text and geometric icons/shapes.

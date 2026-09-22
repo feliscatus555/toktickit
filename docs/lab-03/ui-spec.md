@@ -214,20 +214,20 @@ Per `Lab_3_sheet.pdf`, Section 8.6, the UI defines explicit handling for standar
 
 Per `Lab_3_sheet.pdf`, Section 8.7 and Section 14 (Part 9):
 
-- [ ] **Desktop Viewport (`>= 992px`)**:
+- [x] **Desktop Viewport (`>= 992px`)**:
   - Top navbar with full horizontal menu and user display.
   - Multi-column ticket queue table with clear column alignment.
   - Ticket detail layout with two-column split: operational metadata on left, comments/notes feed on right.
-- [ ] **Tablet Viewport (`768px - 991px`)**:
+- [x] **Tablet Viewport (`768px - 991px`)**:
   - Two-column metadata grouping.
   - Responsive table container with preserved cell readability.
   - Form fields span full width of their grid column.
-- [ ] **Mobile Viewport (`< 768px`)**:
+- [x] **Mobile Viewport (`< 768px`)**:
   - Navbar collapses to hamburger menu or compact header.
   - Ticket queue table transforms into stacked cards.
   - Zero horizontal page scrolling (`overflow-x: hidden`).
   - Touch targets meet minimum size ($\ge 44 \times 44\text{px}$).
-- [ ] **Accessibility (WCAG 2.2 AA)**:
+- [x] **Accessibility (WCAG 2.2 AA)**:
   - Color contrast ratio $\ge 4.5:1$ for normal text against background.
   - Visible focus outlines (`#0B7A46`) on all interactive inputs and buttons.
   - `aria-label` attributes on icon-only buttons.

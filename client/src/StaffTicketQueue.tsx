@@ -29,6 +29,7 @@ export default function StaffTicketQueue({
 
   // Filter and Query state
   const [search, setSearch] = useState<string>("");
+  const [searchValidation, setSearchValidation] = useState<string | null>(null);
   const [category, setCategory] = useState<string>("");
   const [status, setStatus] = useState<string>("");
   const [priority, setPriority] = useState<string>("");
@@ -90,8 +91,17 @@ export default function StaffTicketQueue({
 
   // Reset to page 1 whenever filters change
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearch(e.target.value);
+    const val = e.target.value;
+    setSearch(val);
     setPage(1);
+
+    if (val.length > 100) {
+      setSearchValidation("Search query cannot exceed 100 characters.");
+    } else if (/[<>{};"'%\\]/.test(val)) {
+      setSearchValidation("Search query contains invalid characters. Please use letters, numbers, or ticket number format.");
+    } else {
+      setSearchValidation(null);
+    }
   };
 
   const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -116,6 +126,7 @@ export default function StaffTicketQueue({
 
   const handleClearFilters = () => {
     setSearch("");
+    setSearchValidation(null);
     setCategory("");
     setStatus("");
     setPriority("");
@@ -368,7 +379,7 @@ export default function StaffTicketQueue({
   const endRecord = Math.min(page * limit, totalItems);
 
   return (
-    <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
+    <div style={{ maxWidth: "1440px", margin: "0 auto" }}>
       <style>{`
         .staff-queue-desktop {
           display: block;
@@ -479,7 +490,7 @@ export default function StaffTicketQueue({
                   padding: "0.55rem 0.75rem 0.55rem 2rem",
                   fontSize: "0.9rem",
                   borderRadius: "6px",
-                  border: "1px solid #D1D5DB",
+                  border: searchValidation ? "1px solid #B3261E" : "1px solid #D1D5DB",
                   outline: "none",
                   boxSizing: "border-box",
                 }}
@@ -490,13 +501,30 @@ export default function StaffTicketQueue({
                   left: "0.65rem",
                   top: "50%",
                   transform: "translateY(-50%)",
-                  color: "#9CA3AF",
+                  color: searchValidation ? "#B3261E" : "#9CA3AF",
                   pointerEvents: "none",
                 }}
               >
                 🔍
               </span>
             </div>
+            {searchValidation && (
+              <div
+                id="queue-search-validation-error"
+                role="alert"
+                style={{
+                  color: "#B3261E",
+                  fontSize: "0.8rem",
+                  marginTop: "0.35rem",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.25rem",
+                }}
+              >
+                <span>⚠</span>
+                <span>{searchValidation}</span>
+              </div>
+            )}
           </div>
 
           {/* Category Filter */}
@@ -681,6 +709,8 @@ export default function StaffTicketQueue({
       {/* Error State */}
       {error && (
         <div
+          id="queue-error-banner"
+          role="alert"
           style={{
             padding: "1rem",
             marginBottom: "1.5rem",
@@ -767,7 +797,7 @@ export default function StaffTicketQueue({
               backgroundColor: "#FFFFFF",
               borderRadius: "8px",
               boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
-              overflow: "hidden",
+              overflowX: "auto",
               border: "1px solid #E5E7EB",
             }}
           >

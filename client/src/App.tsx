@@ -13,8 +13,9 @@ import CreateTicket from "./CreateTicket.js";
 import MyTickets from "./MyTickets.js";
 import TicketDetail from "./TicketDetail.js";
 import StaffTicketQueue from "./StaffTicketQueue.js";
+import UserManagement from "./UserManagement.js";
 
-type ActiveTab = "my-tickets" | "queue" | "create-ticket" | "ticket-detail";
+type ActiveTab = "my-tickets" | "queue" | "create-ticket" | "ticket-detail" | "user-management";
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
@@ -29,8 +30,13 @@ export default function App() {
     const token = getAuthToken();
     if (token) {
       const u = getStoredAuthUser();
-      if (u && (u.role === "IT_STAFF" || u.role === "ADMINISTRATOR")) {
-        return "queue";
+      if (u) {
+        if (u.role === "ADMINISTRATOR") {
+          return "user-management";
+        }
+        if (u.role === "IT_STAFF") {
+          return "queue";
+        }
       }
     }
     return "my-tickets";
@@ -68,7 +74,13 @@ export default function App() {
 
   function handleLoginSuccess(user: AuthUser) {
     setCurrentUser(user);
-    setActiveTab(user.role === "REQUESTER" ? "my-tickets" : "queue");
+    if (user.role === "ADMINISTRATOR") {
+      setActiveTab("user-management");
+    } else if (user.role === "IT_STAFF") {
+      setActiveTab("queue");
+    } else {
+      setActiveTab("my-tickets");
+    }
   }
 
   function handlePasswordChanged(user: AuthUser) {
@@ -276,6 +288,28 @@ export default function App() {
                     📋 My Tickets
                   </button>
                 )}
+                {currentUser.role === "ADMINISTRATOR" && (
+                  <button
+                    id="nav-user-management"
+                    type="button"
+                    onClick={() => setActiveTab("user-management")}
+                    className="btn btn-sm text-white fw-semibold"
+                    style={{
+                      backgroundColor:
+                        activeTab === "user-management" ? "#0B7A46" : "transparent",
+                      border:
+                        activeTab === "user-management"
+                          ? "1px solid #EAF6EF"
+                          : "1px solid transparent",
+                      borderRadius: "6px",
+                      padding: "0.4rem 0.85rem",
+                      whiteSpace: "nowrap",
+                      fontSize: "0.88rem",
+                    }}
+                  >
+                    👥 User Management
+                  </button>
+                )}
                 <button
                   id="nav-create-ticket"
                   type="button"
@@ -477,6 +511,28 @@ export default function App() {
                 📋 My Tickets
               </button>
             )}
+            {currentUser.role === "ADMINISTRATOR" && (
+              <button
+                id="mobile-nav-user-management"
+                type="button"
+                onClick={() => setActiveTab("user-management")}
+                className="btn btn-sm text-white fw-semibold flex-fill text-center"
+                style={{
+                  backgroundColor:
+                    activeTab === "user-management" ? "#0B7A46" : "transparent",
+                  border:
+                    activeTab === "user-management"
+                      ? "1px solid #EAF6EF"
+                      : "1px solid transparent",
+                  borderRadius: "6px",
+                  padding: "0.4rem 0.6rem",
+                  fontSize: "0.85rem",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                👥 Users
+              </button>
+            )}
             <button
               id="mobile-nav-create-ticket"
               type="button"
@@ -503,7 +559,9 @@ export default function App() {
 
       {/* Main Content Body */}
       <main className="container-fluid px-3 px-md-5 py-4">
-        {activeTab === "queue" ? (
+        {activeTab === "user-management" && currentUser.role === "ADMINISTRATOR" ? (
+          <UserManagement currentUser={currentUser} />
+        ) : activeTab === "queue" ? (
           <StaffTicketQueue
             currentUser={currentUser}
             onSelectTicket={handleSelectTicket}

@@ -7,6 +7,7 @@ import CreateTicket from "./CreateTicket.js";
 import MyTickets from "./MyTickets.js";
 import TicketDetail from "./TicketDetail.js";
 import StaffTicketQueue from "./StaffTicketQueue.js";
+import UserManagement from "./UserManagement.js";
 export default function App() {
     const [currentUser, setCurrentUser] = useState(() => {
         const token = getAuthToken();
@@ -19,8 +20,13 @@ export default function App() {
         const token = getAuthToken();
         if (token) {
             const u = getStoredAuthUser();
-            if (u && (u.role === "IT_STAFF" || u.role === "ADMINISTRATOR")) {
-                return "queue";
+            if (u) {
+                if (u.role === "ADMINISTRATOR") {
+                    return "user-management";
+                }
+                if (u.role === "IT_STAFF") {
+                    return "queue";
+                }
             }
         }
         return "my-tickets";
@@ -55,7 +61,15 @@ export default function App() {
     }, []);
     function handleLoginSuccess(user) {
         setCurrentUser(user);
-        setActiveTab(user.role === "REQUESTER" ? "my-tickets" : "queue");
+        if (user.role === "ADMINISTRATOR") {
+            setActiveTab("user-management");
+        }
+        else if (user.role === "IT_STAFF") {
+            setActiveTab("queue");
+        }
+        else {
+            setActiveTab("my-tickets");
+        }
     }
     function handlePasswordChanged(user) {
         setCurrentUser(user);
@@ -159,7 +173,16 @@ export default function App() {
                                                         padding: "0.4rem 0.85rem",
                                                         whiteSpace: "nowrap",
                                                         fontSize: "0.88rem",
-                                                    }, children: "\uD83D\uDCCB My Tickets" })), _jsxs("button", { id: "nav-create-ticket", type: "button", onClick: () => setActiveTab("create-ticket"), className: "btn btn-sm text-white fw-semibold", style: {
+                                                    }, children: "\uD83D\uDCCB My Tickets" })), currentUser.role === "ADMINISTRATOR" && (_jsx("button", { id: "nav-user-management", type: "button", onClick: () => setActiveTab("user-management"), className: "btn btn-sm text-white fw-semibold", style: {
+                                                        backgroundColor: activeTab === "user-management" ? "#0B7A46" : "transparent",
+                                                        border: activeTab === "user-management"
+                                                            ? "1px solid #EAF6EF"
+                                                            : "1px solid transparent",
+                                                        borderRadius: "6px",
+                                                        padding: "0.4rem 0.85rem",
+                                                        whiteSpace: "nowrap",
+                                                        fontSize: "0.88rem",
+                                                    }, children: "\uD83D\uDC65 User Management" })), _jsxs("button", { id: "nav-create-ticket", type: "button", onClick: () => setActiveTab("create-ticket"), className: "btn btn-sm text-white fw-semibold", style: {
                                                         backgroundColor: activeTab === "create-ticket" ? "#0B7A46" : "transparent",
                                                         border: activeTab === "create-ticket"
                                                             ? "1px solid #EAF6EF"
@@ -228,7 +251,16 @@ export default function App() {
                                         padding: "0.4rem 0.6rem",
                                         fontSize: "0.85rem",
                                         whiteSpace: "nowrap",
-                                    }, children: "\uD83D\uDCCB My Tickets" })), _jsxs("button", { id: "mobile-nav-create-ticket", type: "button", onClick: () => setActiveTab("create-ticket"), className: "btn btn-sm text-white fw-semibold flex-fill text-center", style: {
+                                    }, children: "\uD83D\uDCCB My Tickets" })), currentUser.role === "ADMINISTRATOR" && (_jsx("button", { id: "mobile-nav-user-management", type: "button", onClick: () => setActiveTab("user-management"), className: "btn btn-sm text-white fw-semibold flex-fill text-center", style: {
+                                        backgroundColor: activeTab === "user-management" ? "#0B7A46" : "transparent",
+                                        border: activeTab === "user-management"
+                                            ? "1px solid #EAF6EF"
+                                            : "1px solid transparent",
+                                        borderRadius: "6px",
+                                        padding: "0.4rem 0.6rem",
+                                        fontSize: "0.85rem",
+                                        whiteSpace: "nowrap",
+                                    }, children: "\uD83D\uDC65 Users" })), _jsxs("button", { id: "mobile-nav-create-ticket", type: "button", onClick: () => setActiveTab("create-ticket"), className: "btn btn-sm text-white fw-semibold flex-fill text-center", style: {
                                         backgroundColor: activeTab === "create-ticket" ? "#0B7A46" : "transparent",
                                         border: activeTab === "create-ticket"
                                             ? "1px solid #EAF6EF"
@@ -237,7 +269,7 @@ export default function App() {
                                         padding: "0.4rem 0.6rem",
                                         fontSize: "0.85rem",
                                         whiteSpace: "nowrap",
-                                    }, children: [_jsx("span", { style: { color: "#FFFFFF", fontWeight: "bold", marginRight: "4px" }, children: "+" }), " ", "Create Ticket"] })] })] }) }), _jsx("main", { className: "container-fluid px-3 px-md-5 py-4", children: activeTab === "queue" ? (_jsx(StaffTicketQueue, { currentUser: currentUser, onSelectTicket: handleSelectTicket })) : activeTab === "my-tickets" ? (_jsx(MyTickets, { activeRequester: currentUser, onCreateTicketClick: () => setActiveTab("create-ticket"), onSelectTicket: handleSelectTicket })) : activeTab === "ticket-detail" && selectedTicketId ? (_jsx(TicketDetail, { ticketId: selectedTicketId, currentRequester: currentUser, onBack: () => setActiveTab(currentUser.role === "IT_STAFF" || currentUser.role === "ADMINISTRATOR"
+                                    }, children: [_jsx("span", { style: { color: "#FFFFFF", fontWeight: "bold", marginRight: "4px" }, children: "+" }), " ", "Create Ticket"] })] })] }) }), _jsx("main", { className: "container-fluid px-3 px-md-5 py-4", children: activeTab === "user-management" && currentUser.role === "ADMINISTRATOR" ? (_jsx(UserManagement, { currentUser: currentUser })) : activeTab === "queue" ? (_jsx(StaffTicketQueue, { currentUser: currentUser, onSelectTicket: handleSelectTicket })) : activeTab === "my-tickets" ? (_jsx(MyTickets, { activeRequester: currentUser, onCreateTicketClick: () => setActiveTab("create-ticket"), onSelectTicket: handleSelectTicket })) : activeTab === "ticket-detail" && selectedTicketId ? (_jsx(TicketDetail, { ticketId: selectedTicketId, currentRequester: currentUser, onBack: () => setActiveTab(currentUser.role === "IT_STAFF" || currentUser.role === "ADMINISTRATOR"
                         ? "queue"
                         : "my-tickets") })) : (_jsx(CreateTicket, { activeRequester: currentUser, onSuccess: () => setActiveTab(currentUser.role === "IT_STAFF" || currentUser.role === "ADMINISTRATOR"
                         ? "queue"
