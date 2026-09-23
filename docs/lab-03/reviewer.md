@@ -9,7 +9,7 @@
 | https://github.com/feliscatus555/toktickit/pull/24 | feature/9-auth-foundation | Everything looks good and passes |
 | https://github.com/feliscatus555/toktickit/pull/25 | feature/10-staff-queue | Looks good. |
 | https://github.com/feliscatus555/toktickit/pull/26 | feature/11-staff-ticket-operations | Approved |
-| https://github.com/feliscatus555/toktickit/pull/27 | feature/12-customer-update-respect | Everything works. Approved |
+| https://github.com/feliscatus555/toktickit/pull/27 | feature/12-customer-update-respect | All good |
 | https://github.com/feliscatus555/toktickit/pull/28 | lab3-staging | Approved |
 
 Reviewer comment: Approved
