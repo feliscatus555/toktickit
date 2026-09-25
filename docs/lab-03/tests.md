@@ -1,7 +1,7 @@
 # Lab 3 Test Plan, Traceability and Results Specification — TokTickIT
 
 ## Document Control & Citation Reference
-* **Document Status**: Draft Sprint 3 Test Strategy & Traceability Specification
+* **Document Status**: Approved Test Strategy, Execution & Traceability Specification
 * **Target Sprint**: Lab 3 — TokTickIT Users, Roles, IT Staff Ticketing, and Admin Screens
 * **Base References**:
   * `docs/lab-03/Lab_3_sheet.pdf` (Section 10 *Test DD and TDD Deliverable*, Section 12 *Required Repository Increment*, Section 14 Part 3)
@@ -27,48 +27,48 @@ TokTickIT applies Test-Driven Development (TDD) and Test-Driven Specification (T
 
 ## 2. Planned-Test Table
 
-Per `Lab_3_sheet.pdf`, Section 10 and Section 12, all planned tests are categorized and mapped below:
+Per `Lab_3_sheet.pdf`, Section 10 and Section 12, all planned tests are categorized, mapped, and verified below:
 
 | Test ID | Level | Requirement / AC | What It Tests | Expected Result | Automated Test File Path | Status |
 |---|---|---|---|---|---|---|
-| **UNIT-01** | Unit | BR-18 | Password complexity validator | Rejects passwords missing uppercase, number, or special char; accepts valid | `server/tests/lab-03/validation.unit.test.ts` | Planned |
-| **UNIT-02** | Unit | BR-22 | Ticket status transition engine | Validates permitted status transitions; rejects invalid jumps | `server/tests/lab-03/status-transition.unit.test.ts` | Planned |
-| **UNIT-03** | Unit | BR-23 | Comment/note content validator | Rejects empty or whitespace-only content; accepts trimmed text <= 2000 chars | `server/tests/lab-03/validation.unit.test.ts` | Planned |
-| **API-01** | API | AC-01, FR-01 | Valid user authentication (`POST /api/auth/login`) | Returns HTTP 200 with authenticated user identity, role, and session token | `server/tests/lab-03/auth.api.test.ts` | Planned |
-| **API-02** | API | AC-05, FR-02 | Inactive user login attempt | Returns HTTP 401 Unauthorized with safe error message | `server/tests/lab-03/auth.api.test.ts` | Planned |
-| **API-03** | API | AC-02, FR-03 | User requiring password change accessing app | `mustChangePassword = true` restricts access until changed | `server/tests/lab-03/auth.api.test.ts` | Planned |
-| **API-04** | API | AC-02, FR-04 | Password change (`POST /api/auth/change-password`) | Saves new hashed password, clears flag, returns HTTP 200 | `server/tests/lab-03/auth.api.test.ts` | Planned |
-| **API-05** | API | AC-06, FR-06 | User logout (`POST /api/auth/logout`) | Invalidates session; subsequent request returns HTTP 401 | `server/tests/lab-03/auth.api.test.ts` | Planned |
-| **API-06** | API | AC-03, FR-09 | Requester ownership anti-tampering | Backend applies authenticated identity, ignoring client `requesterId` | `server/tests/lab-03/authorization.api.test.ts` | Planned |
-| **API-07** | API | AC-03, FR-17 | Requester accessing IT Staff queue | Returns HTTP 403 Forbidden; queue data is protected | `server/tests/lab-03/authorization.api.test.ts` | Planned |
-| **API-08** | API | AC-04, FR-26 | Requester requesting Internal Notes | Returns HTTP 403 Forbidden without leaking note content | `server/tests/lab-03/comments-notes.api.test.ts` | Planned |
-| **API-09** | API | AC-07, FR-10 | IT Staff Ticket Queue retrieval | Returns HTTP 200 with tickets across all requesters and pagination metadata | `server/tests/lab-03/staff-queue.api.test.ts` | Planned |
-| **API-10** | API | AC-08, FR-11 | IT Staff Queue search and filtering | Filters tickets by category, priority, status, and summary keyword | `server/tests/lab-03/staff-queue.api.test.ts` | Planned |
-| **API-11** | API | AC-09, FR-20 | Ticket ownership claim and reassignment | Updates `ownerId` to specified active IT Staff/Admin; rejects inactive | `server/tests/lab-03/staff-ticket-detail.api.test.ts` | Planned |
-| **API-12** | API | AC-10, FR-21 | IT Priority update | Updates `itPriority` without altering `requestedPriority` | `server/tests/lab-03/staff-ticket-detail.api.test.ts` | Planned |
-| **API-13** | API | AC-11, FR-23 | Ticket status transition enforcement | Valid transition updates status; invalid transition returns HTTP 422 | `server/tests/lab-03/staff-ticket-detail.api.test.ts` | Planned |
-| **API-14** | API | AC-12, FR-24 | Public Comment creation and retrieval | Saves append-only comment; author and timestamp recorded | `server/tests/lab-03/comments-notes.api.test.ts` | Planned |
-| **API-15** | API | AC-13, FR-25 | Internal Note creation by IT Staff | Saves append-only internal note; visible only to IT Staff/Admin | `server/tests/lab-03/comments-notes.api.test.ts` | Planned |
-| **API-16** | API | AC-14, FR-29 | Requester resolution indication | Sets `isProblemAppearsResolved = true`; does not close ticket | `server/tests/lab-03/staff-ticket-detail.api.test.ts` | Planned |
-| **API-17** | API | AC-15, FR-32 | Admin user list retrieval | Returns all users with search and role filter; non-admin gets 403 | `server/tests/lab-03/users-admin.api.test.ts` | Planned |
-| **API-18** | API | AC-16, FR-34 | Admin user creation and duplicate email rejection | Creates user with initial password; duplicate email returns HTTP 409 | `server/tests/lab-03/users-admin.api.test.ts` | Planned |
-| **API-19** | API | AC-17, FR-38 | Admin self-deactivation prevention | Admin deactivating own account returns HTTP 422 error | `server/tests/lab-03/users-admin.api.test.ts` | Planned |
-| **API-20** | API | AC-18, FR-39 | Last active Admin deactivation prevention | Deactivating sole active Admin returns HTTP 422 error | `server/tests/lab-03/users-admin.api.test.ts` | Planned |
-| **API-21** | API | FR-37 | Reset initial password by Admin | Sets new initial password and marks `mustChangePassword = true` | `server/tests/lab-03/users-admin.api.test.ts` | Planned |
-| **UI-01** | UI | AC-01, FR-01 | Login screen rendering & validation | Renders email/password inputs, busy spinner, and safe failure text | `client/tests/lab-03/Login.test.tsx` | Planned |
-| **UI-02** | UI | AC-02, FR-03 | Change password checklist rules | Dynamic checkmarks update as user satisfies password criteria | `client/tests/lab-03/ChangePassword.test.tsx` | Planned |
-| **UI-03** | UI | AC-07, FR-15 | IT Staff Ticket Queue table rendering | Renders justified columns, status badges, priority badges, and owner | `client/tests/lab-03/StaffTicketQueue.test.tsx` | Planned |
-| **UI-04** | UI | AC-08, FR-11 | Queue search and filter reactivity | Typing search query or changing filter updates table and pagination | `client/tests/lab-03/StaffTicketQueue.test.tsx` | Planned |
-| **UI-05** | UI | AC-09, FR-20 | Ticket Detail claim action and owner change | Clicking "Claim" immediately updates owner display | `client/tests/lab-03/StaffTicketDetail.test.tsx` | Planned |
-| **UI-06** | UI | AC-12, AC-13 | Visual distinction of Comments vs Notes | Comments render with green theme; Notes render with amber lock theme | `client/tests/lab-03/StaffTicketDetail.test.tsx` | Planned |
-| **UI-07** | UI | AC-15, FR-33 | Admin User Management table rendering | Renders user list with Name, Email, Role pill, and Status badge | `client/tests/lab-03/UserManagement.test.tsx` | Planned |
-| **UI-08** | UI | AC-16, FR-34 | Admin Create User form and initial password | Modal validates fields, shows password helper, handles duplicate error | `client/tests/lab-03/UserManagement.test.tsx` | Planned |
-| **UI-09** | UI | AC-17, FR-38 | Self-deactivation warning and disablement | Deactivate button disabled or triggers safety error on own row | `client/tests/lab-03/UserManagement.test.tsx` | Planned |
-| **E2E-01** | E2E | AC-01, FR-01 | Full authentication and role navigation flow | User logs in, shell displays name/role, navigates permitted screens | `e2e/lab-03/authentication.spec.ts` | Planned |
-| **E2E-02** | E2E | AC-02, FR-03 | Initial password login and mandatory change | First-time user forced to change password before entering app | `e2e/lab-03/authentication.spec.ts` | Planned |
-| **E2E-03** | E2E | AC-07..14 | IT Staff queue and ticket operational flow | Staff finds ticket in queue, claims it, sets priority, adds note | `e2e/lab-03/staff-ticket-flow.spec.ts` | Planned |
-| **E2E-04** | E2E | AC-14, FR-29 | Requester resolution indication workflow | Requester clicks "Problem Appears Resolved", Staff sees updated state | `e2e/lab-03/staff-ticket-flow.spec.ts` | Planned |
-| **E2E-05** | E2E | AC-15..19 | Administrator user administration lifecycle | Admin creates user, resets password, and verifies safety guards | `e2e/lab-03/user-administration.spec.ts` | Planned |
+| **UNIT-01** | Unit | BR-18 | Password complexity validator | Rejects passwords missing uppercase, number, or special char; accepts valid | `server/tests/lab-03/validation.unit.test.ts` | Passed |
+| **UNIT-02** | Unit | BR-22 | Ticket status transition engine | Validates permitted status transitions; rejects invalid jumps | `server/tests/lab-03/status-transition.unit.test.ts` | Passed |
+| **UNIT-03** | Unit | BR-23 | Comment/note content validator | Rejects empty or whitespace-only content; accepts trimmed text <= 2000 chars | `server/tests/lab-03/validation.unit.test.ts` | Passed |
+| **API-01** | API | AC-01, FR-01 | Valid user authentication (`POST /api/auth/login`) | Returns HTTP 200 with authenticated user identity, role, and session token | `server/tests/lab-03/auth.api.test.ts` | Passed |
+| **API-02** | API | AC-05, FR-02 | Inactive user login attempt | Returns HTTP 401 Unauthorized with safe error message | `server/tests/lab-03/auth.api.test.ts` | Passed |
+| **API-03** | API | AC-02, FR-03 | User requiring password change accessing app | `mustChangePassword = true` restricts access until changed | `server/tests/lab-03/auth.api.test.ts` | Passed |
+| **API-04** | API | AC-02, FR-04 | Password change (`POST /api/auth/change-password`) | Saves new hashed password, clears flag, returns HTTP 200 | `server/tests/lab-03/auth.api.test.ts` | Passed |
+| **API-05** | API | AC-06, FR-06 | User logout (`POST /api/auth/logout`) | Invalidates session; subsequent request returns HTTP 401 | `server/tests/lab-03/auth.api.test.ts` | Passed |
+| **API-06** | API | AC-03, FR-09 | Requester ownership anti-tampering | Backend applies authenticated identity, ignoring client `requesterId` | `server/tests/lab-03/authorization.api.test.ts` | Passed |
+| **API-07** | API | AC-03, FR-17 | Requester accessing IT Staff queue | Returns HTTP 403 Forbidden; queue data is protected | `server/tests/lab-03/authorization.api.test.ts` | Passed |
+| **API-08** | API | AC-04, FR-26 | Requester requesting Internal Notes | Returns HTTP 403 Forbidden without leaking note content | `server/tests/lab-03/comments-notes.api.test.ts` | Passed |
+| **API-09** | API | AC-07, FR-10 | IT Staff Ticket Queue retrieval | Returns HTTP 200 with tickets across all requesters and pagination metadata | `server/tests/lab-03/staff-queue.api.test.ts` | Passed |
+| **API-10** | API | AC-08, FR-11 | IT Staff Queue search and filtering | Filters tickets by category, priority, status, and summary keyword | `server/tests/lab-03/staff-queue.api.test.ts` | Passed |
+| **API-11** | API | AC-09, FR-20 | Ticket ownership claim and reassignment | Updates `ownerId` to specified active IT Staff/Admin; rejects inactive | `server/tests/lab-03/staff-ticket-detail.api.test.ts` | Passed |
+| **API-12** | API | AC-10, FR-21 | IT Priority update | Updates `itPriority` without altering `requestedPriority` | `server/tests/lab-03/staff-ticket-detail.api.test.ts` | Passed |
+| **API-13** | API | AC-11, FR-23 | Ticket status transition enforcement | Valid transition updates status; invalid transition returns HTTP 422 | `server/tests/lab-03/staff-ticket-detail.api.test.ts` | Passed |
+| **API-14** | API | AC-12, FR-24 | Public Comment creation and retrieval | Saves append-only comment; author and timestamp recorded | `server/tests/lab-03/comments-notes.api.test.ts` | Passed |
+| **API-15** | API | AC-13, FR-25 | Internal Note creation by IT Staff | Saves append-only internal note; visible only to IT Staff/Admin | `server/tests/lab-03/comments-notes.api.test.ts` | Passed |
+| **API-16** | API | AC-14, FR-29 | Requester resolution indication | Sets `isProblemAppearsResolved = true`; does not close ticket | `server/tests/lab-03/staff-ticket-detail.api.test.ts` | Passed |
+| **API-17** | API | AC-15, FR-32 | Admin user list retrieval | Returns all users with search and role filter; non-admin gets 403 | `server/tests/lab-03/users-admin.api.test.ts` | Passed |
+| **API-18** | API | AC-16, FR-34 | Admin user creation and duplicate email rejection | Creates user with initial password; duplicate email returns HTTP 409 | `server/tests/lab-03/users-admin.api.test.ts` | Passed |
+| **API-19** | API | AC-17, FR-38 | Admin self-deactivation prevention | Admin deactivating own account returns HTTP 422 error | `server/tests/lab-03/users-admin.api.test.ts` | Passed |
+| **API-20** | API | AC-18, FR-39 | Last active Admin deactivation prevention | Deactivating sole active Admin returns HTTP 422 error | `server/tests/lab-03/users-admin.api.test.ts` | Passed |
+| **API-21** | API | FR-37 | Reset initial password by Admin | Sets new initial password and marks `mustChangePassword = true` | `server/tests/lab-03/users-admin.api.test.ts` | Passed |
+| **UI-01** | UI | AC-01, FR-01 | Login screen rendering & validation | Renders email/password inputs, busy spinner, and safe failure text | `client/tests/lab-03/Login.test.tsx` | Passed |
+| **UI-02** | UI | AC-02, FR-03 | Change password checklist rules | Dynamic checkmarks update as user satisfies password criteria | `client/tests/lab-03/ChangePassword.test.tsx` | Passed |
+| **UI-03** | UI | AC-07, FR-15 | IT Staff Ticket Queue table rendering | Renders justified columns, status badges, priority badges, and owner | `client/tests/lab-03/StaffTicketQueue.test.tsx` | Passed |
+| **UI-04** | UI | AC-08, FR-11 | Queue search and filter reactivity | Typing search query or changing filter updates table and pagination | `client/tests/lab-03/StaffTicketQueue.test.tsx` | Passed |
+| **UI-05** | UI | AC-09, FR-20 | Ticket Detail claim action and owner change | Clicking "Claim" immediately updates owner display | `client/tests/lab-03/StaffTicketDetail.test.tsx` | Passed |
+| **UI-06** | UI | AC-12, AC-13 | Visual distinction of Comments vs Notes | Comments render with green theme; Notes render with amber lock theme | `client/tests/lab-03/StaffTicketDetail.test.tsx` | Passed |
+| **UI-07** | UI | AC-15, FR-33 | Admin User Management table rendering | Renders user list with Name, Email, Role pill, and Status badge | `client/tests/lab-03/UserManagement.test.tsx` | Passed |
+| **UI-08** | UI | AC-16, FR-34 | Admin Create User form and initial password | Modal validates fields, shows password helper, handles duplicate error | `client/tests/lab-03/UserManagement.test.tsx` | Passed |
+| **UI-09** | UI | AC-17, FR-38 | Self-deactivation warning and disablement | Deactivate button disabled or triggers safety error on own row | `client/tests/lab-03/UserManagement.test.tsx` | Passed |
+| **E2E-01** | E2E | AC-01, FR-01 | Full authentication and role navigation flow | User logs in, shell displays name/role, navigates permitted screens | `e2e/lab-03/authentication.spec.ts` | Passed |
+| **E2E-02** | E2E | AC-02, FR-03 | Initial password login and mandatory change | First-time user forced to change password before entering app | `e2e/lab-03/authentication.spec.ts` | Passed |
+| **E2E-03** | E2E | AC-07..14 | IT Staff queue and ticket operational flow | Staff finds ticket in queue, claims it, sets priority, adds note | `e2e/lab-03/staff-ticket-flow.spec.ts` | Passed |
+| **E2E-04** | E2E | AC-14, FR-29 | Requester resolution indication workflow | Requester clicks "Problem Appears Resolved", Staff sees updated state | `e2e/lab-03/staff-ticket-flow.spec.ts` | Passed |
+| **E2E-05** | E2E | AC-15..19 | Administrator user administration lifecycle | Admin creates user, resets password, and verifies safety guards | `e2e/lab-03/user-administration.spec.ts` | Passed |
 
 ---
 
