@@ -1,4 +1,5 @@
 import { getPrisma } from "../src/prisma.js";
+import bcrypt from "bcryptjs";
 
 // Issue 3 — seed the four supported categories.
 // The four names are: Account and Access, Hardware, Software, Network.
@@ -21,23 +22,47 @@ async function main() {
   }
   console.log("Categories seeded successfully");
 
-  //feature 5 of lab 2
-  const requesters = [
-    { email: "somchai.p@kmutt.ac.th", displayName: "Somchai Pattana", isActive: true },
-    { email: "ananya.s@kmutt.ac.th", displayName: "Ananya Srisuk", isActive: true },
-    { email: "chattarin.k@kmutt.ac.th", displayName: "Chattarin Kiat", isActive: true },
-    { email: "nattaya.w@kmutt.ac.th", displayName: "Nattaya Wong", isActive: true },
-    { email: "inactive.test@kmutt.ac.th", displayName: "Inactive Test User", isActive: false },
+  // Lab 3 Users (Requesters, IT Staff, Administrator)
+  const defaultPasswordHash = await bcrypt.hash("Password123!", 10);
+  const initialPasswordHash = await bcrypt.hash("InitialPassword123!", 10);
+
+  const users = [
+    // Active Requesters
+    { email: "somchai.p@kmutt.ac.th", displayName: "Somchai Pattana", role: "REQUESTER" as const, isActive: true, mustChangePassword: false, passwordHash: defaultPasswordHash },
+    { email: "ananya.s@kmutt.ac.th", displayName: "Ananya Srisuk", role: "REQUESTER" as const, isActive: true, mustChangePassword: false, passwordHash: defaultPasswordHash },
+    { email: "chattarin.k@kmutt.ac.th", displayName: "Chattarin Kiat", role: "REQUESTER" as const, isActive: true, mustChangePassword: false, passwordHash: defaultPasswordHash },
+    { email: "nattaya.w@kmutt.ac.th", displayName: "Nattaya Wong", role: "REQUESTER" as const, isActive: true, mustChangePassword: false, passwordHash: defaultPasswordHash },
+    { email: "jennifer.anderson@kmutt.ac.th", displayName: "Jennifer Anderson", role: "REQUESTER" as const, isActive: true, mustChangePassword: false, passwordHash: defaultPasswordHash },
+    // Inactive Requester
+    { email: "inactive.test@kmutt.ac.th", displayName: "Inactive Test User", role: "REQUESTER" as const, isActive: false, mustChangePassword: false, passwordHash: defaultPasswordHash },
+    // User requiring password change
+    { email: "initial.user@kmutt.ac.th", displayName: "Initial Password User", role: "REQUESTER" as const, isActive: true, mustChangePassword: true, passwordHash: initialPasswordHash },
+
+    // Active IT Staff
+    { email: "sarah.johnson@kmutt.ac.th", displayName: "Sarah Johnson", role: "IT_STAFF" as const, isActive: true, mustChangePassword: false, passwordHash: defaultPasswordHash },
+    { email: "michael.brown@kmutt.ac.th", displayName: "Michael Brown", role: "IT_STAFF" as const, isActive: true, mustChangePassword: false, passwordHash: defaultPasswordHash },
+    { email: "david.lee@kmutt.ac.th", displayName: "David Lee", role: "IT_STAFF" as const, isActive: true, mustChangePassword: false, passwordHash: defaultPasswordHash },
+    // Inactive IT Staff
+    { email: "kevin.patel@kmutt.ac.th", displayName: "Kevin Patel", role: "IT_STAFF" as const, isActive: false, mustChangePassword: false, passwordHash: defaultPasswordHash },
+
+    // Active Administrator
+    { email: "john.smith@kmutt.ac.th", displayName: "John Smith", role: "ADMINISTRATOR" as const, isActive: true, mustChangePassword: false, passwordHash: defaultPasswordHash },
   ];
 
-  for (const r of requesters) {
-    await prisma.requesterUser.upsert({
-      where: { email: r.email },
-      update: { displayName: r.displayName, isActive: r.isActive },
-      create: r,
+  for (const u of users) {
+    await prisma.user.upsert({
+      where: { email: u.email },
+      update: {
+        displayName: u.displayName,
+        role: u.role,
+        isActive: u.isActive,
+        mustChangePassword: u.mustChangePassword,
+        passwordHash: u.passwordHash,
+      },
+      create: u,
     });
   }
-  console.log("Requesters seeded successfully");
+  console.log("Users seeded successfully");
 
   // Feature 6 of Lab 2 - Related Systems
   const relatedSystems = [
