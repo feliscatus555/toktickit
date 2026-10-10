@@ -87,6 +87,8 @@ export default function ActionsTaken({
 
   const handleStartCreate = () => {
     resetCreateForm();
+    setEditingActionId(null);
+    setEditError(null);
     setIsCreating(true);
   };
 
@@ -138,16 +140,18 @@ export default function ActionsTaken({
   };
 
   const handleStartEdit = (action: ActionTakenItem) => {
+    setIsCreating(false);
     setEditingActionId(action.id);
     setEditDescription(action.description);
     setEditResult(action.result);
     setEditFollowUpRequired(action.followUpRequired);
     setEditFollowUpNote(action.followUpNote || "");
     setEditAttachmentNotes(action.attachmentNotes || "");
-    // Format for datetime-local
     try {
       const d = new Date(action.actionDateTime);
-      setEditActionDateTime(d.toISOString().slice(0, 16));
+      const pad = (n: number) => String(n).padStart(2, "0");
+      const localIso = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      setEditActionDateTime(localIso);
     } catch {
       setEditActionDateTime("");
     }
@@ -257,7 +261,7 @@ export default function ActionsTaken({
           </span>
         </div>
 
-        {isStaffOrAdmin && !isCreating && (
+        {isStaffOrAdmin && !isCreating && !editingActionId && (
           <button
             type="button"
             className="btn btn-sm text-white fw-semibold d-flex align-items-center gap-1"
@@ -440,205 +444,262 @@ export default function ActionsTaken({
           </div>
         )}
 
+        {/* Edit Mode Form */}
+        {editingActionId && (
+          <div
+            className="p-3 mb-4 rounded border"
+            id="action-taken-edit-form-container"
+            style={{
+              backgroundColor: "#F8FAF8",
+              borderColor: "#C8E6C9",
+              width: "100%",
+              boxSizing: "border-box",
+            }}
+          >
+            <div className="d-flex justify-content-between align-items-center mb-3">
+              <h4 className="h6 fw-bold mb-0 d-flex align-items-center gap-2" style={{ color: "#1B4332" }}>
+                <span>✏️</span> Edit Action Taken
+              </h4>
+              <span
+                className="badge"
+                style={{
+                  backgroundColor: "#E0F2FE",
+                  color: "#0369A1",
+                  fontSize: "0.75rem",
+                  fontWeight: 600,
+                }}
+              >
+                Editing Mode
+              </span>
+            </div>
+
+            {editError && (
+              <div
+                className="alert alert-danger py-2 mb-3 small"
+                role="alert"
+                id="action-taken-edit-error"
+              >
+                {editError}
+              </div>
+            )}
+
+            <form
+              id={`action-taken-edit-form-${editingActionId}`}
+              onSubmit={handleEditSubmit}
+              noValidate
+              style={{ width: "100%" }}
+            >
+              <div className="row g-3">
+                <div className="col-12 col-md-6">
+                  <label htmlFor="input-edit-action-date-time" className="form-label small fw-semibold text-secondary">
+                    Action Date / Time
+                  </label>
+                  <input
+                    type="datetime-local"
+                    className="form-control form-control-sm"
+                    id="input-edit-action-date-time"
+                    value={editActionDateTime}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setEditActionDateTime(e.target.value)}
+                  />
+                </div>
+
+                <div className="col-12 col-md-6">
+                  <label htmlFor="input-edit-action-attachment-notes" className="form-label small fw-semibold text-secondary">
+                    Attachment Notes (Optional file hints)
+                  </label>
+                  <input
+                    type="text"
+                    className="form-control form-control-sm"
+                    id="input-edit-action-attachment-notes"
+                    placeholder="e.g. switch-log.txt, error-trace.png"
+                    value={editAttachmentNotes}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => setEditAttachmentNotes(e.target.value)}
+                  />
+                </div>
+
+                <div className="col-12">
+                  <label htmlFor="input-edit-action-description" className="form-label small fw-semibold text-secondary">
+                    Action Description <span className="text-danger">*</span>
+                  </label>
+                  <textarea
+                    className="form-control form-control-sm"
+                    id="input-edit-action-description"
+                    rows={2}
+                    placeholder="Describe technical action performed..."
+                    required
+                    value={editDescription}
+                    onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setEditDescription(e.target.value)}
+                  />
+                </div>
+
+                <div className="col-12">
+                  <label htmlFor="input-edit-action-result" className="form-label small fw-semibold text-secondary">
+                    Result <span className="text-danger">*</span>
+                  </label>
+                  <textarea
+                    className="form-control form-control-sm"
+                    id="input-edit-action-result"
+                    rows={2}
+                    placeholder="Outcome, observations, or diagnostic findings..."
+                    required
+                    value={editResult}
+                    onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setEditResult(e.target.value)}
+                  />
+                </div>
+
+                <div className="col-12">
+                  <div className="form-check">
+                    <input
+                      className="form-check-input"
+                      type="checkbox"
+                      id="input-edit-action-followup-required"
+                      checked={editFollowUpRequired}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => setEditFollowUpRequired(e.target.checked)}
+                    />
+                    <label className="form-check-label small fw-semibold text-secondary" htmlFor="input-edit-action-followup-required">
+                      Follow-Up Required?
+                    </label>
+                  </div>
+                </div>
+
+                {editFollowUpRequired && (
+                  <div className="col-12" id="edit-action-followup-note-group">
+                    <label htmlFor="input-edit-action-followup-note" className="form-label small fw-semibold text-warning-emphasis">
+                      Follow-up Note <span className="text-danger">*</span>
+                    </label>
+                    <textarea
+                      className="form-control form-control-sm"
+                      id="input-edit-action-followup-note"
+                      rows={2}
+                      placeholder="Specify follow-up steps, testing window, or required monitoring..."
+                      required={editFollowUpRequired}
+                      value={editFollowUpNote}
+                      onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setEditFollowUpNote(e.target.value)}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="d-flex justify-content-end gap-2 mt-3">
+                <button
+                  type="button"
+                  className="btn btn-sm btn-outline-secondary"
+                  id="btn-cancel-edit-action-taken"
+                  onClick={handleCancelEdit}
+                  disabled={editSubmitting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-sm text-white fw-semibold"
+                  id="btn-update-action-taken"
+                  disabled={editSubmitting}
+                  style={{ backgroundColor: "#1B4332", borderColor: "#1B4332" }}
+                >
+                  {editSubmitting ? "Updating..." : "Save Changes"}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
         {/* List of Actions Taken */}
-        {!loading && actions.length > 0 && (
+        {!loading && actions.length > 0 && !editingActionId && (
           <div className="table-responsive" id="actions-taken-list-container">
-            <table className="table table-hover align-middle mb-0" id="actions-taken-table" style={{ fontSize: "0.875rem" }}>
+            <table
+              className="table table-hover align-middle mb-0"
+              id="actions-taken-table"
+              style={{
+                fontSize: "0.84rem",
+                width: "100%",
+                tableLayout: "fixed",
+              }}
+            >
               <thead className="table-light text-secondary small">
                 <tr>
-                  <th scope="col" style={{ minWidth: "140px" }}>Date / Time</th>
-                  <th scope="col" style={{ minWidth: "140px" }}>Performed By</th>
-                  <th scope="col" style={{ minWidth: "220px" }}>Action Description</th>
-                  <th scope="col" style={{ minWidth: "220px" }}>Result</th>
-                  <th scope="col" style={{ minWidth: "140px" }}>Follow-up</th>
-                  <th scope="col" style={{ minWidth: "120px" }}>Attachment Notes</th>
-                  {isStaffOrAdmin && <th scope="col" style={{ minWidth: "70px" }}>Actions</th>}
+                  <th scope="col" style={{ width: "13%" }}>Date / Time</th>
+                  <th scope="col" style={{ width: "14%" }}>Performed By</th>
+                  <th scope="col" style={{ width: isStaffOrAdmin ? "23%" : "27%" }}>Action Description</th>
+                  <th scope="col" style={{ width: isStaffOrAdmin ? "21%" : "24%" }}>Result</th>
+                  <th scope="col" style={{ width: "10%" }}>Follow-up</th>
+                  <th scope="col" style={{ width: isStaffOrAdmin ? "11%" : "12%" }}>Attachment Notes</th>
+                  {isStaffOrAdmin && <th scope="col" style={{ width: "8%", textAlign: "center" }}>Actions</th>}
                 </tr>
               </thead>
               <tbody>
-                {actions.map((action) => {
-                  const isEditingThis = editingActionId === action.id;
-
-                  if (isEditingThis) {
-                    return (
-                      <tr key={action.id} className="table-warning" id={`action-edit-row-${action.id}`}>
-                        <td colSpan={isStaffOrAdmin ? 7 : 6} className="p-3">
-                          <form id={`action-taken-edit-form-${action.id}`} onSubmit={handleEditSubmit} noValidate>
-                            <h6 className="fw-bold mb-2 text-dark">Edit Action Taken</h6>
-                            {editError && (
-                              <div className="alert alert-danger py-1 small mb-2">{editError}</div>
-                            )}
-                            <div className="row g-2 mb-2">
-                              <div className="col-12 col-md-6">
-                                <label className="form-label small mb-1 fw-semibold">Action Date / Time</label>
-                                <input
-                                  type="datetime-local"
-                                  className="form-control form-control-sm"
-                                  value={editActionDateTime}
-                                  onChange={(e: ChangeEvent<HTMLInputElement>) => setEditActionDateTime(e.target.value)}
-                                />
-                              </div>
-                              <div className="col-12 col-md-6">
-                                <label className="form-label small mb-1 fw-semibold">Attachment Notes</label>
-                                <input
-                                  type="text"
-                                  className="form-control form-control-sm"
-                                  value={editAttachmentNotes}
-                                  onChange={(e: ChangeEvent<HTMLInputElement>) => setEditAttachmentNotes(e.target.value)}
-                                />
-                              </div>
-                              <div className="col-12">
-                                <label className="form-label small mb-1 fw-semibold">Description *</label>
-                                <textarea
-                                  className="form-control form-control-sm"
-                                  rows={2}
-                                  required
-                                  value={editDescription}
-                                  onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setEditDescription(e.target.value)}
-                                />
-                              </div>
-                              <div className="col-12">
-                                <label className="form-label small mb-1 fw-semibold">Result *</label>
-                                <textarea
-                                  className="form-control form-control-sm"
-                                  rows={2}
-                                  required
-                                  value={editResult}
-                                  onChange={(e: ChangeEvent<HTMLTextAreaElement>) => setEditResult(e.target.value)}
-                                />
-                              </div>
-                              <div className="col-12">
-                                <div className="form-check">
-                                  <input
-                                    className="form-check-input"
-                                    type="checkbox"
-                                    id={`edit-followup-${action.id}`}
-                                    checked={editFollowUpRequired}
-                                    onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                                      setEditFollowUpRequired(e.target.checked)
-                                    }
-                                  />
-                                  <label className="form-check-label small" htmlFor={`edit-followup-${action.id}`}>
-                                    Follow-Up Required?
-                                  </label>
-                                </div>
-                              </div>
-                              {editFollowUpRequired && (
-                                <div className="col-12">
-                                  <label className="form-label small mb-1 fw-semibold text-warning-emphasis">
-                                    Follow-up Note *
-                                  </label>
-                                  <textarea
-                                    className="form-control form-control-sm"
-                                    rows={2}
-                                    required={editFollowUpRequired}
-                                    value={editFollowUpNote}
-                                    onChange={(e: ChangeEvent<HTMLTextAreaElement>) =>
-                                      setEditFollowUpNote(e.target.value)
-                                    }
-                                  />
-                                </div>
-                              )}
-                            </div>
-                            <div className="d-flex justify-content-end gap-2">
-                              <button
-                                type="button"
-                                className="btn btn-sm btn-outline-secondary"
-                                onClick={handleCancelEdit}
-                                disabled={editSubmitting}
-                              >
-                                Cancel
-                              </button>
-                              <button
-                                type="submit"
-                                className="btn btn-sm btn-success"
-                                disabled={editSubmitting}
-                                id="btn-update-action-taken"
-                              >
-                                {editSubmitting ? "Updating..." : "Save Changes"}
-                              </button>
-                            </div>
-                          </form>
-                        </td>
-                      </tr>
-                    );
-                  }
-
-                  return (
-                    <tr key={action.id} id={`action-row-${action.id}`}>
-                      <td className="text-secondary small font-monospace">
-                        {formatTimestamp(action.actionDateTime)}
-                      </td>
-                      <td>
-                        <div className="fw-semibold text-dark">
-                          {action.performedBy?.displayName || `User #${action.performedById}`}
-                        </div>
-                        <span
-                          className="badge"
-                          style={{
-                            backgroundColor:
-                              action.performedBy?.role === "ADMINISTRATOR" ? "#FEF3C7" : "#E0F2FE",
-                            color:
-                              action.performedBy?.role === "ADMINISTRATOR" ? "#92400E" : "#0369A1",
-                            fontSize: "0.7rem",
-                          }}
-                        >
-                          {action.performedBy?.role || "IT_STAFF"}
-                        </span>
-                      </td>
-                      <td className="text-wrap" style={{ maxWidth: "300px" }}>
-                        {action.description}
-                      </td>
-                      <td className="text-wrap" style={{ maxWidth: "300px" }}>
-                        {action.result}
-                      </td>
-                      <td>
-                        {action.followUpRequired ? (
-                          <div>
-                            <span className="badge bg-warning text-dark mb-1">Required</span>
-                            {action.followUpNote && (
-                              <div
-                                className="small text-muted p-1 rounded bg-light border"
-                                style={{ fontSize: "0.75rem" }}
-                              >
-                                {action.followUpNote}
-                              </div>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="badge bg-light text-secondary border">No</span>
-                        )}
-                      </td>
-                      <td className="small text-muted">
-                        {action.attachmentNotes ? (
-                          <span className="text-truncate d-inline-block" style={{ maxWidth: "150px" }}>
-                            📎 {action.attachmentNotes}
-                          </span>
-                        ) : (
-                          <span className="text-secondary opacity-50">—</span>
-                        )}
-                      </td>
-                      {isStaffOrAdmin && (
-                        <td>
-                          {canEditAction(action) ? (
-                            <button
-                              type="button"
-                              className="btn btn-outline-secondary btn-sm py-0 px-2"
-                              id={`btn-edit-action-${action.id}`}
-                              onClick={() => handleStartEdit(action)}
-                              title="Edit Action Taken"
-                              style={{ fontSize: "0.75rem" }}
+                {actions.map((action) => (
+                  <tr key={action.id} id={`action-row-${action.id}`}>
+                    <td className="text-secondary small font-monospace" style={{ wordBreak: "break-word" }}>
+                      {formatTimestamp(action.actionDateTime)}
+                    </td>
+                    <td style={{ wordBreak: "break-word" }}>
+                      <div className="fw-semibold text-dark">
+                        {action.performedBy?.displayName || `User #${action.performedById}`}
+                      </div>
+                      <span
+                        className="badge"
+                        style={{
+                          backgroundColor:
+                            action.performedBy?.role === "ADMINISTRATOR" ? "#FEF3C7" : "#E0F2FE",
+                          color:
+                            action.performedBy?.role === "ADMINISTRATOR" ? "#92400E" : "#0369A1",
+                          fontSize: "0.7rem",
+                        }}
+                      >
+                        {action.performedBy?.role || "IT_STAFF"}
+                      </span>
+                    </td>
+                    <td className="text-wrap" style={{ wordBreak: "break-word", overflowWrap: "anywhere" }}>
+                      {action.description}
+                    </td>
+                    <td className="text-wrap" style={{ wordBreak: "break-word", overflowWrap: "anywhere" }}>
+                      {action.result}
+                    </td>
+                    <td style={{ wordBreak: "break-word" }}>
+                      {action.followUpRequired ? (
+                        <div>
+                          <span className="badge bg-warning text-dark mb-1">Required</span>
+                          {action.followUpNote && (
+                            <div
+                              className="small text-muted p-1 rounded bg-light border"
+                              style={{ fontSize: "0.75rem", wordBreak: "break-word" }}
                             >
-                              Edit
-                            </button>
-                          ) : (
-                            <span className="text-muted" style={{ fontSize: "0.75rem" }}>—</span>
+                              {action.followUpNote}
+                            </div>
                           )}
-                        </td>
+                        </div>
+                      ) : (
+                        <span className="badge bg-light text-secondary border">No</span>
                       )}
-                    </tr>
-                  );
-                })}
+                    </td>
+                    <td className="small text-muted" style={{ wordBreak: "break-word", overflowWrap: "anywhere" }}>
+                      {action.attachmentNotes ? (
+                        <span>📎 {action.attachmentNotes}</span>
+                      ) : (
+                        <span className="text-secondary opacity-50">—</span>
+                      )}
+                    </td>
+                    {isStaffOrAdmin && (
+                      <td style={{ textAlign: "center" }}>
+                        {canEditAction(action) ? (
+                          <button
+                            type="button"
+                            className="btn btn-outline-secondary btn-sm py-0 px-2"
+                            id={`btn-edit-action-${action.id}`}
+                            onClick={() => handleStartEdit(action)}
+                            title="Edit Action Taken"
+                            style={{ fontSize: "0.75rem" }}
+                          >
+                            Edit
+                          </button>
+                        ) : (
+                          <span className="text-muted" style={{ fontSize: "0.75rem" }}>—</span>
+                        )}
+                      </td>
+                    )}
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

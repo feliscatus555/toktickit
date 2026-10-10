@@ -178,8 +178,9 @@ test.describe("Playwright End-to-End — Lab 04 Actions Taken Flow (Feature-13)"
     await page.locator("#btn-update-action-taken").click();
 
     // Verify row was updated in place
-    await expect(page.locator("tr", { hasText: updatedDesc })).toBeVisible();
-    await expect(page.getByText("Optic dBm levels verified at -4.2 dBm")).toBeVisible();
+    const updatedRow = page.locator("tr", { hasText: updatedDesc });
+    await expect(updatedRow).toBeVisible();
+    await expect(updatedRow.getByText("Optic dBm levels verified at -4.2 dBm")).toBeVisible();
   });
 });
 
