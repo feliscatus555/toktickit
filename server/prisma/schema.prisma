@@ -46,6 +46,7 @@ model User {
   assignedTickets    Ticket[]       @relation("OwnerTickets")
   comments           Comment[]
   internalNotes      InternalNote[]
+  actionsTaken       ActionTaken[]  @relation("StaffActionsTaken")
 }
 
 enum RequestedPriority {
@@ -100,6 +101,7 @@ model Ticket {
   attachments               Attachment[]
   comments                  Comment[]
   internalNotes             InternalNote[]
+  actionsTaken              ActionTaken[]
   createdAt                 DateTime          @default(now())
   updatedAt                 DateTime          @updatedAt
 }
@@ -138,4 +140,23 @@ model InternalNote {
   author    User     @relation(fields: [authorId], references: [id])
   content   String
   createdAt DateTime @default(now())
+}
+
+model ActionTaken {
+  id               String   @id @default(uuid())
+  ticketId         String
+  ticket           Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  performedById    Int
+  performedBy      User     @relation("StaffActionsTaken", fields: [performedById], references: [id])
+  actionDateTime   DateTime @default(now())
+  description      String
+  result           String
+  followUpRequired Boolean  @default(false)
+  followUpNote     String?
+  attachmentNotes  String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([ticketId])
+  @@index([performedById])
 }

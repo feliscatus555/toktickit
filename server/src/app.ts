@@ -20,7 +20,7 @@ import {
   validatePasswordComplexity,
 } from "./services/authService.js";
 import { isValidStatusTransition, normalizeStatus } from "./services/statusTransition.js";
-import { validateCommentContent } from "./services/validationService.js";
+import { validateCommentContent, validateActionTakenInput } from "./services/validationService.js";
 
 const uploadsDir = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(uploadsDir)) {
@@ -524,6 +524,25 @@ app.get(
               createdAt: true,
             },
             orderBy: { createdAt: "asc" },
+          },
+          actionsTaken: {
+            select: {
+              id: true,
+              ticketId: true,
+              performedById: true,
+              performedBy: {
+                select: { id: true, displayName: true, email: true, role: true },
+              },
+              actionDateTime: true,
+              description: true,
+              result: true,
+              followUpRequired: true,
+              followUpNote: true,
+              attachmentNotes: true,
+              createdAt: true,
+              updatedAt: true,
+            },
+            orderBy: [{ actionDateTime: "asc" }, { createdAt: "asc" }],
           },
           createdAt: true,
           updatedAt: true,
@@ -2062,6 +2081,25 @@ app.get("/api/tickets/:id", async (req: Request, res: Response) => {
           },
           orderBy: { createdAt: "asc" },
         },
+        actionsTaken: {
+          select: {
+            id: true,
+            ticketId: true,
+            performedById: true,
+            performedBy: {
+              select: { id: true, displayName: true, email: true, role: true },
+            },
+            actionDateTime: true,
+            description: true,
+            result: true,
+            followUpRequired: true,
+            followUpNote: true,
+            attachmentNotes: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+          orderBy: [{ actionDateTime: "asc" }, { createdAt: "asc" }],
+        },
         createdAt: true,
         updatedAt: true,
       },
@@ -2377,6 +2415,271 @@ app.delete("/api/attachments/:id", async (req: Request, res: Response) => {
     res.status(500).json({ error: "Failed to soft-remove attachment." });
   }
 });
+
+// ===========================================================================
+// Feature-13 — Actions Taken (Child Work Tracking)
+// ===========================================================================
+
+// POST /api/tickets/:id/actions-taken (also supports /api/staff/tickets/:id/actions-taken)
+app.post(
+  ["/api/tickets/:id/actions-taken", "/api/staff/tickets/:id/actions-taken"],
+  authenticateToken,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (req.user?.mustChangePassword) {
+        res.status(403).json({
+          error: {
+            code: "MUST_CHANGE_PASSWORD",
+            message: "Password change is required before accessing application resources.",
+          },
+          message: "Password change is required before accessing application resources.",
+        });
+        return;
+      }
+
+      if (req.user?.role !== "IT_STAFF" && req.user?.role !== "ADMINISTRATOR") {
+        res.status(403).json({
+          error: "Requesters are not permitted to create Actions Taken.",
+          message: "Requesters are not permitted to create Actions Taken.",
+          details: null,
+        });
+        return;
+      }
+
+      const prisma = getPrisma();
+      const ticket = await prisma.ticket.findUnique({
+        where: { id: req.params.id },
+        select: { id: true },
+      });
+
+      if (!ticket) {
+        res.status(404).json({
+          error: "Ticket not found.",
+          message: "Ticket not found.",
+          details: null,
+        });
+        return;
+      }
+
+      const validation = validateActionTakenInput(req.body, false);
+      if (!validation.isValid || !validation.data) {
+        res.status(400).json({
+          error: validation.error || "Invalid action taken input.",
+          message: validation.error || "Invalid action taken input.",
+          details: null,
+        });
+        return;
+      }
+
+      const action = await prisma.actionTaken.create({
+        data: {
+          ticketId: ticket.id,
+          performedById: req.user.id,
+          actionDateTime: validation.data.actionDateTime,
+          description: validation.data.description,
+          result: validation.data.result,
+          followUpRequired: validation.data.followUpRequired,
+          followUpNote: validation.data.followUpNote,
+          attachmentNotes: validation.data.attachmentNotes,
+        },
+        include: {
+          performedBy: {
+            select: { id: true, displayName: true, email: true, role: true },
+          },
+        },
+      });
+
+      res.status(201).json(action);
+    } catch (error) {
+      console.error("Create Action Taken error:", error);
+      res.status(500).json({ error: "Failed to create Action Taken." });
+    }
+  }
+);
+
+// GET /api/tickets/:id/actions-taken (also supports /api/staff/tickets/:id/actions-taken)
+app.get(
+  ["/api/tickets/:id/actions-taken", "/api/staff/tickets/:id/actions-taken"],
+  authenticateToken,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (req.user?.mustChangePassword) {
+        res.status(403).json({
+          error: {
+            code: "MUST_CHANGE_PASSWORD",
+            message: "Password change is required before accessing application resources.",
+          },
+        });
+        return;
+      }
+
+      const prisma = getPrisma();
+      const ticket = await prisma.ticket.findUnique({
+        where: { id: req.params.id },
+        select: { id: true, requesterId: true },
+      });
+
+      if (!ticket) {
+        res.status(404).json({
+          error: "Ticket not found.",
+          message: "Ticket not found.",
+          details: null,
+        });
+        return;
+      }
+
+      if (req.user?.role === "REQUESTER" && ticket.requesterId !== req.user.id) {
+        res.status(403).json({
+          error: "Access denied: you do not own this ticket",
+          message: "Access denied: you do not own this ticket",
+          details: null,
+        });
+        return;
+      }
+
+      const actions = await prisma.actionTaken.findMany({
+        where: { ticketId: req.params.id },
+        include: {
+          performedBy: {
+            select: { id: true, displayName: true, email: true, role: true },
+          },
+        },
+        orderBy: [{ actionDateTime: "asc" }, { createdAt: "asc" }],
+      });
+
+      res.status(200).json(actions);
+    } catch (error) {
+      console.error("List Actions Taken error:", error);
+      res.status(500).json({ error: "Failed to retrieve Actions Taken." });
+    }
+  }
+);
+
+// PATCH /api/tickets/:id/actions-taken/:actionId
+app.patch(
+  [
+    "/api/tickets/:id/actions-taken/:actionId",
+    "/api/staff/tickets/:id/actions-taken/:actionId",
+  ],
+  authenticateToken,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (req.user?.mustChangePassword) {
+        res.status(403).json({
+          error: {
+            code: "MUST_CHANGE_PASSWORD",
+            message: "Password change is required before accessing application resources.",
+          },
+        });
+        return;
+      }
+
+      if (req.user?.role !== "IT_STAFF" && req.user?.role !== "ADMINISTRATOR") {
+        res.status(403).json({
+          error: "Requesters are not permitted to update Actions Taken.",
+          message: "Requesters are not permitted to update Actions Taken.",
+        });
+        return;
+      }
+
+      const prisma = getPrisma();
+      const ticket = await prisma.ticket.findUnique({
+        where: { id: req.params.id },
+        select: { id: true },
+      });
+
+      if (!ticket) {
+        res.status(404).json({ error: "Ticket not found.", message: "Ticket not found." });
+        return;
+      }
+
+      const action = await prisma.actionTaken.findFirst({
+        where: { id: req.params.actionId, ticketId: ticket.id },
+      });
+
+      if (!action) {
+        res.status(404).json({ error: "Action Taken not found.", message: "Action Taken not found." });
+        return;
+      }
+
+      if (req.user?.role !== "ADMINISTRATOR" && action.performedById !== req.user?.id) {
+        res.status(403).json({
+          error: "Only the author or an Administrator can edit an Action Taken",
+          message: "Only the author or an Administrator can edit an Action Taken",
+        });
+        return;
+      }
+
+      const validation = validateActionTakenInput(req.body, true);
+      if (!validation.isValid) {
+        res.status(400).json({
+          error: validation.error || "Invalid input.",
+          message: validation.error || "Invalid input.",
+        });
+        return;
+      }
+
+      const newFollowUpRequired =
+        req.body.followUpRequired !== undefined
+          ? Boolean(req.body.followUpRequired)
+          : action.followUpRequired;
+
+      let newFollowUpNote: string | null = action.followUpNote;
+      if (newFollowUpRequired) {
+        const noteToTest =
+          req.body.followUpNote !== undefined ? req.body.followUpNote : action.followUpNote;
+        if (typeof noteToTest !== "string" || noteToTest.trim().length === 0) {
+          res.status(400).json({
+            error: "Follow-up note is required when follow-up is needed.",
+            message: "Follow-up note is required when follow-up is needed.",
+          });
+          return;
+        }
+        newFollowUpNote = noteToTest.trim();
+      } else {
+        newFollowUpNote = null;
+      }
+
+      let newActionDateTime = action.actionDateTime;
+      if (req.body.actionDateTime !== undefined && req.body.actionDateTime !== null) {
+        const parsed = new Date(req.body.actionDateTime);
+        if (isNaN(parsed.getTime())) {
+          res.status(400).json({ error: "Invalid action date/time.", message: "Invalid action date/time." });
+          return;
+        }
+        newActionDateTime = parsed;
+      }
+
+      const updated = await prisma.actionTaken.update({
+        where: { id: action.id },
+        data: {
+          description:
+            req.body.description !== undefined ? req.body.description.trim() : undefined,
+          result: req.body.result !== undefined ? req.body.result.trim() : undefined,
+          followUpRequired: newFollowUpRequired,
+          followUpNote: newFollowUpNote,
+          attachmentNotes:
+            req.body.attachmentNotes !== undefined
+              ? req.body.attachmentNotes
+                ? req.body.attachmentNotes.trim()
+                : null
+              : undefined,
+          actionDateTime: newActionDateTime,
+        },
+        include: {
+          performedBy: {
+            select: { id: true, displayName: true, email: true, role: true },
+          },
+        },
+      });
+
+      res.status(200).json(updated);
+    } catch (error) {
+      console.error("Update Action Taken error:", error);
+      res.status(500).json({ error: "Failed to update Action Taken." });
+    }
+  }
+);
 
 export default app;
 

@@ -1,0 +1,218 @@
+import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { useState, useEffect } from "react";
+import { fetchActionsTaken, createActionTaken, updateActionTaken, } from "./api.js";
+export default function ActionsTaken({ ticketId, isStaffOrAdmin, currentUser, initialActions, onActionAdded, }) {
+    const [actions, setActions] = useState(initialActions || []);
+    const [loading, setLoading] = useState(!initialActions);
+    const [fetchError, setFetchError] = useState(null);
+    // Create Mode State
+    const [isCreating, setIsCreating] = useState(false);
+    const [description, setDescription] = useState("");
+    const [result, setResult] = useState("");
+    const [followUpRequired, setFollowUpRequired] = useState(false);
+    const [followUpNote, setFollowUpNote] = useState("");
+    const [attachmentNotes, setAttachmentNotes] = useState("");
+    const [actionDateTime, setActionDateTime] = useState("");
+    const [submitting, setSubmitting] = useState(false);
+    const [formError, setFormError] = useState(null);
+    // Edit Mode State
+    const [editingActionId, setEditingActionId] = useState(null);
+    const [editDescription, setEditDescription] = useState("");
+    const [editResult, setEditResult] = useState("");
+    const [editFollowUpRequired, setEditFollowUpRequired] = useState(false);
+    const [editFollowUpNote, setEditFollowUpNote] = useState("");
+    const [editAttachmentNotes, setEditAttachmentNotes] = useState("");
+    const [editActionDateTime, setEditActionDateTime] = useState("");
+    const [editSubmitting, setEditSubmitting] = useState(false);
+    const [editError, setEditError] = useState(null);
+    const loadActions = async () => {
+        try {
+            setLoading(true);
+            setFetchError(null);
+            const data = await fetchActionsTaken(ticketId);
+            setActions(data);
+        }
+        catch (err) {
+            console.error("Failed to load actions taken:", err);
+            setFetchError(err?.message || "Failed to load actions taken.");
+        }
+        finally {
+            setLoading(false);
+        }
+    };
+    useEffect(() => {
+        if (Array.isArray(initialActions)) {
+            setActions(initialActions);
+            setLoading(false);
+        }
+        else {
+            loadActions();
+        }
+    }, [ticketId, initialActions]);
+    const resetCreateForm = () => {
+        setDescription("");
+        setResult("");
+        setFollowUpRequired(false);
+        setFollowUpNote("");
+        setAttachmentNotes("");
+        setActionDateTime("");
+        setFormError(null);
+        setIsCreating(false);
+    };
+    const handleStartCreate = () => {
+        resetCreateForm();
+        setIsCreating(true);
+    };
+    const handleCreateSubmit = async (e) => {
+        e.preventDefault();
+        setFormError(null);
+        const trimmedDesc = description.trim();
+        if (!trimmedDesc) {
+            setFormError("Action description is required.");
+            return;
+        }
+        const trimmedResult = result.trim();
+        if (!trimmedResult) {
+            setFormError("Action result is required.");
+            return;
+        }
+        const trimmedFollowUp = followUpNote.trim();
+        if (followUpRequired && !trimmedFollowUp) {
+            setFormError("Follow-up note is required when follow-up is needed.");
+            return;
+        }
+        setSubmitting(true);
+        try {
+            const payload = {
+                description: trimmedDesc,
+                result: trimmedResult,
+                followUpRequired,
+                followUpNote: followUpRequired ? trimmedFollowUp : null,
+                attachmentNotes: attachmentNotes.trim() || null,
+                actionDateTime: actionDateTime ? new Date(actionDateTime).toISOString() : undefined,
+            };
+            const newAction = await createActionTaken(ticketId, payload);
+            setActions((prev) => [...prev, newAction]);
+            resetCreateForm();
+            if (onActionAdded) {
+                onActionAdded(newAction);
+            }
+        }
+        catch (err) {
+            console.error("Error creating action taken:", err);
+            setFormError(err?.data?.error?.message || err?.data?.error || err?.message || "Failed to save action taken.");
+        }
+        finally {
+            setSubmitting(false);
+        }
+    };
+    const handleStartEdit = (action) => {
+        setEditingActionId(action.id);
+        setEditDescription(action.description);
+        setEditResult(action.result);
+        setEditFollowUpRequired(action.followUpRequired);
+        setEditFollowUpNote(action.followUpNote || "");
+        setEditAttachmentNotes(action.attachmentNotes || "");
+        // Format for datetime-local
+        try {
+            const d = new Date(action.actionDateTime);
+            setEditActionDateTime(d.toISOString().slice(0, 16));
+        }
+        catch {
+            setEditActionDateTime("");
+        }
+        setEditError(null);
+    };
+    const handleCancelEdit = () => {
+        setEditingActionId(null);
+        setEditError(null);
+    };
+    const handleEditSubmit = async (e) => {
+        e.preventDefault();
+        if (!editingActionId)
+            return;
+        setEditError(null);
+        const trimmedDesc = editDescription.trim();
+        if (!trimmedDesc) {
+            setEditError("Action description cannot be empty.");
+            return;
+        }
+        const trimmedResult = editResult.trim();
+        if (!trimmedResult) {
+            setEditError("Action result cannot be empty.");
+            return;
+        }
+        const trimmedFollowUp = editFollowUpNote.trim();
+        if (editFollowUpRequired && !trimmedFollowUp) {
+            setEditError("Follow-up note is required when follow-up is needed.");
+            return;
+        }
+        setEditSubmitting(true);
+        try {
+            const payload = {
+                description: trimmedDesc,
+                result: trimmedResult,
+                followUpRequired: editFollowUpRequired,
+                followUpNote: editFollowUpRequired ? trimmedFollowUp : null,
+                attachmentNotes: editAttachmentNotes.trim() || null,
+                actionDateTime: editActionDateTime ? new Date(editActionDateTime).toISOString() : undefined,
+            };
+            const updated = await updateActionTaken(ticketId, editingActionId, payload);
+            setActions((prev) => prev.map((a) => (a.id === updated.id ? updated : a)));
+            setEditingActionId(null);
+        }
+        catch (err) {
+            console.error("Error updating action taken:", err);
+            setEditError(err?.data?.error?.message || err?.data?.error || err?.message || "Failed to update action taken.");
+        }
+        finally {
+            setEditSubmitting(false);
+        }
+    };
+    const canEditAction = (action) => {
+        if (!isStaffOrAdmin)
+            return false;
+        if (currentUser.role === "ADMINISTRATOR")
+            return true;
+        return action.performedById === currentUser.id;
+    };
+    const formatTimestamp = (iso) => {
+        try {
+            const d = new Date(iso);
+            return d.toLocaleString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+            });
+        }
+        catch {
+            return iso;
+        }
+    };
+    return (_jsxs("div", { className: "card border-0 shadow-sm mb-4", id: "actions-taken-section", style: {
+            borderRadius: "10px",
+            backgroundColor: "#FFFFFF",
+            border: "1px solid #E2E8F0",
+        }, children: [_jsxs("div", { className: "card-header bg-transparent d-flex justify-content-between align-items-center py-3", style: { borderBottom: "1px solid #E2E8F0" }, children: [_jsxs("div", { className: "d-flex align-items-center gap-2", children: [_jsxs("h3", { className: "h6 mb-0 fw-bold text-dark d-flex align-items-center gap-2", children: [_jsx("span", { children: "\uD83D\uDEE0\uFE0F" }), " Actions Taken"] }), _jsx("span", { className: "badge rounded-pill", id: "actions-taken-count-badge", style: {
+                                    backgroundColor: "#D8F3DC",
+                                    color: "#1B4332",
+                                    fontWeight: 600,
+                                    fontSize: "0.8rem",
+                                }, children: actions.length })] }), isStaffOrAdmin && !isCreating && (_jsxs("button", { type: "button", className: "btn btn-sm text-white fw-semibold d-flex align-items-center gap-1", id: "btn-add-action-taken", onClick: handleStartCreate, style: {
+                            backgroundColor: "#1B4332",
+                            borderColor: "#1B4332",
+                            borderRadius: "6px",
+                        }, children: [_jsx("span", { children: "+" }), " Add Action Taken"] }))] }), _jsxs("div", { className: "card-body p-3 p-md-4", children: [fetchError && (_jsx("div", { className: "alert alert-danger mb-3 py-2", role: "alert", children: fetchError })), isCreating && (_jsxs("div", { className: "p-3 mb-4 rounded border", id: "action-taken-create-form-container", style: { backgroundColor: "#F8FAF8", borderColor: "#D8F3DC" }, children: [_jsx("h4", { className: "h6 fw-bold mb-3", style: { color: "#1B4332" }, children: "Record Action Taken" }), formError && (_jsx("div", { className: "alert alert-danger py-2 mb-3", role: "alert", id: "action-taken-form-error", children: formError })), _jsxs("form", { id: "action-taken-create-form", onSubmit: handleCreateSubmit, noValidate: true, children: [_jsxs("div", { className: "row g-3", children: [_jsxs("div", { className: "col-12 col-md-6", children: [_jsx("label", { htmlFor: "input-action-date-time", className: "form-label small fw-semibold text-secondary", children: "Action Date / Time (Optional, defaults to now)" }), _jsx("input", { type: "datetime-local", className: "form-control form-control-sm", id: "input-action-date-time", value: actionDateTime, onChange: (e) => setActionDateTime(e.target.value) })] }), _jsxs("div", { className: "col-12 col-md-6", children: [_jsx("label", { htmlFor: "input-action-attachment-notes", className: "form-label small fw-semibold text-secondary", children: "Attachment Notes (Optional file hints)" }), _jsx("input", { type: "text", className: "form-control form-control-sm", id: "input-action-attachment-notes", placeholder: "e.g. switch-log.txt, error-trace.png", value: attachmentNotes, onChange: (e) => setAttachmentNotes(e.target.value) })] }), _jsxs("div", { className: "col-12", children: [_jsxs("label", { htmlFor: "input-action-description", className: "form-label small fw-semibold text-secondary", children: ["Action Description ", _jsx("span", { className: "text-danger", children: "*" })] }), _jsx("textarea", { className: "form-control form-control-sm", id: "input-action-description", rows: 2, placeholder: "Describe technical action performed (e.g. checked AP radio channel, restarted daemon)...", required: true, value: description, onChange: (e) => setDescription(e.target.value) })] }), _jsxs("div", { className: "col-12", children: [_jsxs("label", { htmlFor: "input-action-result", className: "form-label small fw-semibold text-secondary", children: ["Result ", _jsx("span", { className: "text-danger", children: "*" })] }), _jsx("textarea", { className: "form-control form-control-sm", id: "input-action-result", rows: 2, placeholder: "Outcome, observations, or diagnostic findings...", required: true, value: result, onChange: (e) => setResult(e.target.value) })] }), _jsx("div", { className: "col-12", children: _jsxs("div", { className: "form-check", children: [_jsx("input", { className: "form-check-input", type: "checkbox", id: "input-action-followup-required", checked: followUpRequired, onChange: (e) => setFollowUpRequired(e.target.checked) }), _jsx("label", { className: "form-check-label small fw-semibold text-secondary", htmlFor: "input-action-followup-required", children: "Follow-Up Required?" })] }) }), followUpRequired && (_jsxs("div", { className: "col-12", id: "action-followup-note-group", children: [_jsxs("label", { htmlFor: "input-action-followup-note", className: "form-label small fw-semibold text-warning-emphasis", children: ["Follow-up Note ", _jsx("span", { className: "text-danger", children: "*" })] }), _jsx("textarea", { className: "form-control form-control-sm", id: "input-action-followup-note", rows: 2, placeholder: "Specify follow-up steps, testing window, or required monitoring...", required: followUpRequired, value: followUpNote, onChange: (e) => setFollowUpNote(e.target.value) })] }))] }), _jsxs("div", { className: "d-flex justify-content-end gap-2 mt-3", children: [_jsx("button", { type: "button", className: "btn btn-sm btn-outline-secondary", id: "btn-cancel-action-taken", onClick: resetCreateForm, disabled: submitting, children: "Cancel" }), _jsx("button", { type: "submit", className: "btn btn-sm text-white fw-semibold", id: "btn-save-action-taken", disabled: submitting, style: { backgroundColor: "#1B4332", borderColor: "#1B4332" }, children: submitting ? "Saving..." : "Save Action Taken" })] })] })] })), loading && (_jsxs("div", { className: "text-center py-4 text-muted small", id: "actions-taken-loading", children: [_jsx("div", { className: "spinner-border spinner-border-sm text-success me-2", role: "status" }), "Loading actions taken..."] })), !loading && actions.length === 0 && !isCreating && (_jsxs("div", { className: "text-center py-4 rounded", id: "actions-taken-empty", style: { backgroundColor: "#F8FAF8", border: "1px dashed #E2E8F0" }, children: [_jsx("p", { className: "text-muted small mb-0", children: "No actions taken recorded yet." }), isStaffOrAdmin && (_jsx("small", { className: "text-secondary d-block mt-1", children: "Click \"+ Add Action Taken\" above to document work done on this ticket." }))] })), !loading && actions.length > 0 && (_jsx("div", { className: "table-responsive", id: "actions-taken-list-container", children: _jsxs("table", { className: "table table-hover align-middle mb-0", id: "actions-taken-table", style: { fontSize: "0.875rem" }, children: [_jsx("thead", { className: "table-light text-secondary small", children: _jsxs("tr", { children: [_jsx("th", { scope: "col", style: { minWidth: "140px" }, children: "Date / Time" }), _jsx("th", { scope: "col", style: { minWidth: "140px" }, children: "Performed By" }), _jsx("th", { scope: "col", style: { minWidth: "220px" }, children: "Action Description" }), _jsx("th", { scope: "col", style: { minWidth: "220px" }, children: "Result" }), _jsx("th", { scope: "col", style: { minWidth: "140px" }, children: "Follow-up" }), _jsx("th", { scope: "col", style: { minWidth: "120px" }, children: "Attachment Notes" }), isStaffOrAdmin && _jsx("th", { scope: "col", style: { minWidth: "70px" }, children: "Actions" })] }) }), _jsx("tbody", { children: actions.map((action) => {
+                                        const isEditingThis = editingActionId === action.id;
+                                        if (isEditingThis) {
+                                            return (_jsx("tr", { className: "table-warning", id: `action-edit-row-${action.id}`, children: _jsx("td", { colSpan: isStaffOrAdmin ? 7 : 6, className: "p-3", children: _jsxs("form", { id: `action-taken-edit-form-${action.id}`, onSubmit: handleEditSubmit, noValidate: true, children: [_jsx("h6", { className: "fw-bold mb-2 text-dark", children: "Edit Action Taken" }), editError && (_jsx("div", { className: "alert alert-danger py-1 small mb-2", children: editError })), _jsxs("div", { className: "row g-2 mb-2", children: [_jsxs("div", { className: "col-12 col-md-6", children: [_jsx("label", { className: "form-label small mb-1 fw-semibold", children: "Action Date / Time" }), _jsx("input", { type: "datetime-local", className: "form-control form-control-sm", value: editActionDateTime, onChange: (e) => setEditActionDateTime(e.target.value) })] }), _jsxs("div", { className: "col-12 col-md-6", children: [_jsx("label", { className: "form-label small mb-1 fw-semibold", children: "Attachment Notes" }), _jsx("input", { type: "text", className: "form-control form-control-sm", value: editAttachmentNotes, onChange: (e) => setEditAttachmentNotes(e.target.value) })] }), _jsxs("div", { className: "col-12", children: [_jsx("label", { className: "form-label small mb-1 fw-semibold", children: "Description *" }), _jsx("textarea", { className: "form-control form-control-sm", rows: 2, required: true, value: editDescription, onChange: (e) => setEditDescription(e.target.value) })] }), _jsxs("div", { className: "col-12", children: [_jsx("label", { className: "form-label small mb-1 fw-semibold", children: "Result *" }), _jsx("textarea", { className: "form-control form-control-sm", rows: 2, required: true, value: editResult, onChange: (e) => setEditResult(e.target.value) })] }), _jsx("div", { className: "col-12", children: _jsxs("div", { className: "form-check", children: [_jsx("input", { className: "form-check-input", type: "checkbox", id: `edit-followup-${action.id}`, checked: editFollowUpRequired, onChange: (e) => setEditFollowUpRequired(e.target.checked) }), _jsx("label", { className: "form-check-label small", htmlFor: `edit-followup-${action.id}`, children: "Follow-Up Required?" })] }) }), editFollowUpRequired && (_jsxs("div", { className: "col-12", children: [_jsx("label", { className: "form-label small mb-1 fw-semibold text-warning-emphasis", children: "Follow-up Note *" }), _jsx("textarea", { className: "form-control form-control-sm", rows: 2, required: editFollowUpRequired, value: editFollowUpNote, onChange: (e) => setEditFollowUpNote(e.target.value) })] }))] }), _jsxs("div", { className: "d-flex justify-content-end gap-2", children: [_jsx("button", { type: "button", className: "btn btn-sm btn-outline-secondary", onClick: handleCancelEdit, disabled: editSubmitting, children: "Cancel" }), _jsx("button", { type: "submit", className: "btn btn-sm btn-success", disabled: editSubmitting, id: "btn-update-action-taken", children: editSubmitting ? "Updating..." : "Save Changes" })] })] }) }) }, action.id));
+                                        }
+                                        return (_jsxs("tr", { id: `action-row-${action.id}`, children: [_jsx("td", { className: "text-secondary small font-monospace", children: formatTimestamp(action.actionDateTime) }), _jsxs("td", { children: [_jsx("div", { className: "fw-semibold text-dark", children: action.performedBy?.displayName || `User #${action.performedById}` }), _jsx("span", { className: "badge", style: {
+                                                                backgroundColor: action.performedBy?.role === "ADMINISTRATOR" ? "#FEF3C7" : "#E0F2FE",
+                                                                color: action.performedBy?.role === "ADMINISTRATOR" ? "#92400E" : "#0369A1",
+                                                                fontSize: "0.7rem",
+                                                            }, children: action.performedBy?.role || "IT_STAFF" })] }), _jsx("td", { className: "text-wrap", style: { maxWidth: "300px" }, children: action.description }), _jsx("td", { className: "text-wrap", style: { maxWidth: "300px" }, children: action.result }), _jsx("td", { children: action.followUpRequired ? (_jsxs("div", { children: [_jsx("span", { className: "badge bg-warning text-dark mb-1", children: "Required" }), action.followUpNote && (_jsx("div", { className: "small text-muted p-1 rounded bg-light border", style: { fontSize: "0.75rem" }, children: action.followUpNote }))] })) : (_jsx("span", { className: "badge bg-light text-secondary border", children: "No" })) }), _jsx("td", { className: "small text-muted", children: action.attachmentNotes ? (_jsxs("span", { className: "text-truncate d-inline-block", style: { maxWidth: "150px" }, children: ["\uD83D\uDCCE ", action.attachmentNotes] })) : (_jsx("span", { className: "text-secondary opacity-50", children: "\u2014" })) }), isStaffOrAdmin && (_jsx("td", { children: canEditAction(action) ? (_jsx("button", { type: "button", className: "btn btn-outline-secondary btn-sm py-0 px-2", id: `btn-edit-action-${action.id}`, onClick: () => handleStartEdit(action), title: "Edit Action Taken", style: { fontSize: "0.75rem" }, children: "Edit" })) : (_jsx("span", { className: "text-muted", style: { fontSize: "0.75rem" }, children: "\u2014" })) }))] }, action.id));
+                                    }) })] }) }))] })] }));
+}

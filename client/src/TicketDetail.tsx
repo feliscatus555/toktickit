@@ -21,6 +21,7 @@ import {
   getAttachmentDownloadUrl,
   softRemoveAttachment,
 } from "./api.js";
+import ActionsTaken from "./ActionsTaken.js";
 
 interface TicketDetailProps {
   ticketId: string;
@@ -1042,6 +1043,14 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
           </div>
         </div>
       </div>
+
+      {/* Actions Taken Section (Feature-13) */}
+      <ActionsTaken
+        ticketId={ticket.id}
+        isStaffOrAdmin={isStaffOrAdmin}
+        currentUser={currentRequester}
+        initialActions={(ticket as any).actionsTaken || []}
+      />
 
       {/* Activity & Attachments Tabs Card */}
       <div className="card shadow-sm mb-4" style={{ borderRadius: "8px", border: "1px solid #E0E0E0", backgroundColor: "#FFFFFF" }}>

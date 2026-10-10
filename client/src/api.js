@@ -553,3 +553,52 @@ export async function resetUserPassword(id, newInitialPassword) {
     }
     return data;
 }
+export async function fetchActionsTaken(ticketId) {
+    const res = await fetch(`${API_URL}/api/tickets/${ticketId}/actions-taken`, {
+        headers: getAuthHeaders(),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        const err = new Error(data?.error?.message || data?.error || "Failed to fetch actions taken");
+        err.status = res.status;
+        err.data = data;
+        throw err;
+    }
+    return data;
+}
+export async function createActionTaken(ticketId, input) {
+    const res = await fetch(`${API_URL}/api/tickets/${ticketId}/actions-taken`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            ...getAuthHeaders(),
+        },
+        body: JSON.stringify(input),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        const err = new Error(data?.error?.message || data?.error || "Failed to create action taken");
+        err.status = res.status;
+        err.data = data;
+        throw err;
+    }
+    return data;
+}
+export async function updateActionTaken(ticketId, actionId, input) {
+    const res = await fetch(`${API_URL}/api/tickets/${ticketId}/actions-taken/${actionId}`, {
+        method: "PATCH",
+        headers: {
+            "Content-Type": "application/json",
+            ...getAuthHeaders(),
+        },
+        body: JSON.stringify(input),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        const err = new Error(data?.error?.message || data?.error || "Failed to update action taken");
+        err.status = res.status;
+        err.data = data;
+        throw err;
+    }
+    return data;
+}
