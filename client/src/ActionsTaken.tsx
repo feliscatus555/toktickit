@@ -239,8 +239,123 @@ export default function ActionsTaken({
         border: "1px solid #E2E8F0",
       }}
     >
+      <style>{`
+        /* Responsive Actions Taken Table <-> Card Transformation */
+        @media (max-width: 767px) {
+          #actions-taken-list-container {
+            overflow-x: visible !important;
+          }
+
+          #actions-taken-table,
+          #actions-taken-table thead,
+          #actions-taken-table tbody,
+          #actions-taken-table th,
+          #actions-taken-table td,
+          #actions-taken-table tr {
+            display: block !important;
+            width: 100% !important;
+            box-sizing: border-box !important;
+          }
+
+          #actions-taken-table {
+            border-collapse: separate !important;
+            table-layout: auto !important;
+          }
+
+          #actions-taken-table thead {
+            display: none !important;
+          }
+
+          #actions-taken-table tbody {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 1rem !important;
+          }
+
+          #actions-taken-table tbody tr {
+            margin-bottom: 0 !important;
+            background-color: #FFFFFF !important;
+            border: 1px solid #E2E8F0 !important;
+            border-radius: 8px !important;
+            padding: 1.1rem !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 0.75rem !important;
+            transition: box-shadow 0.2s ease, border-color 0.2s ease !important;
+          }
+
+          #actions-taken-table tbody tr:hover {
+            background-color: #FFFFFF !important;
+            border-color: #CBD5E1 !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08) !important;
+          }
+
+          #actions-taken-table tbody td {
+            padding: 0 !important;
+            border: none !important;
+            display: block !important;
+            text-align: left !important;
+            width: 100% !important;
+            background-color: transparent !important;
+            box-shadow: none !important;
+          }
+
+          #actions-taken-table tbody tr:hover td,
+          #actions-taken-table tbody tr td:hover {
+            background-color: transparent !important;
+          }
+
+          #actions-taken-table tbody td[data-label]::before {
+            content: attr(data-label);
+            display: block !important;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #64748B;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-bottom: 0.25rem;
+          }
+
+          .btn-mobile-edit {
+            width: 100% !important;
+            min-height: 44px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            font-size: 0.88rem !important;
+            font-weight: 600 !important;
+            margin-top: 0.25rem;
+          }
+
+          .btn-mobile-touch {
+            min-height: 44px !important;
+            min-width: 44px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+          }
+
+          .action-form-actions {
+            flex-direction: column-reverse !important;
+            width: 100% !important;
+          }
+
+          .action-form-actions button {
+            width: 100% !important;
+          }
+
+          #action-taken-create-form-container .form-control,
+          #action-taken-edit-form-container .form-control {
+            font-size: 16px !important;
+          }
+        }
+      `}</style>
+
       <div
-        className="card-header bg-transparent d-flex justify-content-between align-items-center py-3"
+        className="card-header bg-transparent d-flex justify-content-between align-items-center flex-wrap gap-2 py-3"
         style={{ borderBottom: "1px solid #E2E8F0" }}
       >
         <div className="d-flex align-items-center gap-2">
@@ -264,7 +379,7 @@ export default function ActionsTaken({
         {isStaffOrAdmin && !isCreating && !editingActionId && (
           <button
             type="button"
-            className="btn btn-sm text-white fw-semibold d-flex align-items-center gap-1"
+            className="btn btn-sm text-white fw-semibold d-flex align-items-center gap-1 btn-mobile-touch"
             id="btn-add-action-taken"
             onClick={handleStartCreate}
             style={{
@@ -396,10 +511,10 @@ export default function ActionsTaken({
                 )}
               </div>
 
-              <div className="d-flex justify-content-end gap-2 mt-3">
+              <div className="d-flex justify-content-end gap-2 mt-3 action-form-actions">
                 <button
                   type="button"
-                  className="btn btn-sm btn-outline-secondary"
+                  className="btn btn-sm btn-outline-secondary btn-mobile-touch"
                   id="btn-cancel-action-taken"
                   onClick={resetCreateForm}
                   disabled={submitting}
@@ -408,7 +523,7 @@ export default function ActionsTaken({
                 </button>
                 <button
                   type="submit"
-                  className="btn btn-sm text-white fw-semibold"
+                  className="btn btn-sm text-white fw-semibold btn-mobile-touch"
                   id="btn-save-action-taken"
                   disabled={submitting}
                   style={{ backgroundColor: "#1B4332", borderColor: "#1B4332" }}
@@ -580,10 +695,10 @@ export default function ActionsTaken({
                 )}
               </div>
 
-              <div className="d-flex justify-content-end gap-2 mt-3">
+              <div className="d-flex justify-content-end gap-2 mt-3 action-form-actions">
                 <button
                   type="button"
-                  className="btn btn-sm btn-outline-secondary"
+                  className="btn btn-sm btn-outline-secondary btn-mobile-touch"
                   id="btn-cancel-edit-action-taken"
                   onClick={handleCancelEdit}
                   disabled={editSubmitting}
@@ -592,7 +707,7 @@ export default function ActionsTaken({
                 </button>
                 <button
                   type="submit"
-                  className="btn btn-sm text-white fw-semibold"
+                  className="btn btn-sm text-white fw-semibold btn-mobile-touch"
                   id="btn-update-action-taken"
                   disabled={editSubmitting}
                   style={{ backgroundColor: "#1B4332", borderColor: "#1B4332" }}
@@ -630,71 +745,77 @@ export default function ActionsTaken({
               <tbody>
                 {actions.map((action) => (
                   <tr key={action.id} id={`action-row-${action.id}`}>
-                    <td className="text-secondary small font-monospace" style={{ wordBreak: "break-word" }}>
-                      {formatTimestamp(action.actionDateTime)}
+                    <td data-label="Date / Time" className="text-secondary small font-monospace" style={{ wordBreak: "break-word" }}>
+                      <div>{formatTimestamp(action.actionDateTime)}</div>
                     </td>
-                    <td style={{ wordBreak: "break-word" }}>
-                      <div className="fw-semibold text-dark">
-                        {action.performedBy?.displayName || `User #${action.performedById}`}
+                    <td data-label="Performed By" style={{ wordBreak: "break-word" }}>
+                      <div className="d-flex align-items-center justify-content-between justify-content-md-start flex-wrap gap-2">
+                        <span className="fw-semibold text-dark">
+                          {action.performedBy?.displayName || `User #${action.performedById}`}
+                        </span>
+                        <span
+                          className="badge"
+                          style={{
+                            backgroundColor:
+                              action.performedBy?.role === "ADMINISTRATOR" ? "#FEF3C7" : "#E0F2FE",
+                            color:
+                              action.performedBy?.role === "ADMINISTRATOR" ? "#92400E" : "#0369A1",
+                            fontSize: "0.7rem",
+                          }}
+                        >
+                          {action.performedBy?.role || "IT_STAFF"}
+                        </span>
                       </div>
-                      <span
-                        className="badge"
-                        style={{
-                          backgroundColor:
-                            action.performedBy?.role === "ADMINISTRATOR" ? "#FEF3C7" : "#E0F2FE",
-                          color:
-                            action.performedBy?.role === "ADMINISTRATOR" ? "#92400E" : "#0369A1",
-                          fontSize: "0.7rem",
-                        }}
-                      >
-                        {action.performedBy?.role || "IT_STAFF"}
-                      </span>
                     </td>
-                    <td className="text-wrap" style={{ wordBreak: "break-word", overflowWrap: "anywhere" }}>
-                      {action.description}
+                    <td data-label="Action Description" className="text-wrap" style={{ wordBreak: "break-word", overflowWrap: "anywhere" }}>
+                      <div>{action.description}</div>
                     </td>
-                    <td className="text-wrap" style={{ wordBreak: "break-word", overflowWrap: "anywhere" }}>
-                      {action.result}
+                    <td data-label="Result" className="text-wrap" style={{ wordBreak: "break-word", overflowWrap: "anywhere" }}>
+                      <div>{action.result}</div>
                     </td>
-                    <td style={{ wordBreak: "break-word" }}>
-                      {action.followUpRequired ? (
-                        <div>
-                          <span className="badge bg-warning text-dark mb-1">Required</span>
-                          {action.followUpNote && (
-                            <div
-                              className="small text-muted p-1 rounded bg-light border"
-                              style={{ fontSize: "0.75rem", wordBreak: "break-word" }}
-                            >
-                              {action.followUpNote}
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="badge bg-light text-secondary border">No</span>
-                      )}
+                    <td data-label="Follow-up" style={{ wordBreak: "break-word" }}>
+                      <div>
+                        {action.followUpRequired ? (
+                          <div>
+                            <span className="badge bg-warning text-dark mb-1">Required</span>
+                            {action.followUpNote && (
+                              <div
+                                className="small text-muted p-2 rounded bg-light border mt-1"
+                                style={{ fontSize: "0.75rem", wordBreak: "break-word" }}
+                              >
+                                {action.followUpNote}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="badge bg-light text-secondary border">No</span>
+                        )}
+                      </div>
                     </td>
-                    <td className="small text-muted" style={{ wordBreak: "break-word", overflowWrap: "anywhere" }}>
-                      {action.attachmentNotes ? (
-                        <span>📎 {action.attachmentNotes}</span>
-                      ) : (
-                        <span className="text-secondary opacity-50">—</span>
-                      )}
+                    <td data-label="Attachment Notes" className="small text-muted" style={{ wordBreak: "break-word", overflowWrap: "anywhere" }}>
+                      <div>
+                        {action.attachmentNotes ? (
+                          <span>📎 {action.attachmentNotes}</span>
+                        ) : (
+                          <span className="text-secondary opacity-50">—</span>
+                        )}
+                      </div>
                     </td>
                     {isStaffOrAdmin && (
                       <td style={{ textAlign: "center" }}>
                         {canEditAction(action) ? (
                           <button
                             type="button"
-                            className="btn btn-outline-secondary btn-sm py-0 px-2"
+                            className="btn btn-outline-secondary btn-sm py-1 px-3 btn-mobile-edit"
                             id={`btn-edit-action-${action.id}`}
                             onClick={() => handleStartEdit(action)}
                             title="Edit Action Taken"
-                            style={{ fontSize: "0.75rem" }}
+                            style={{ fontSize: "0.78rem" }}
                           >
                             Edit
                           </button>
                         ) : (
-                          <span className="text-muted" style={{ fontSize: "0.75rem" }}>—</span>
+                          <span className="text-muted d-none d-md-inline" style={{ fontSize: "0.75rem" }}>—</span>
                         )}
                       </td>
                     )}
