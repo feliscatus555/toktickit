@@ -560,6 +560,91 @@ app.get(
   }
 );
 
+// 5.2 GET /api/requester/dashboard - Operational dashboard metrics strictly for authenticated Requester
+app.get(
+  "/api/requester/dashboard",
+  authenticateToken,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (req.user?.mustChangePassword) {
+        res.status(403).json({
+          error: {
+            code: "MUST_CHANGE_PASSWORD",
+            message: "Password change is required before accessing application resources.",
+          },
+        });
+        return;
+      }
+
+      const prisma = getPrisma();
+      const requesterId = req.user!.id;
+
+      // Metric calculations strictly scoped to requesterId (BR-07, AC-02, FR-72)
+      const [myOpenTickets, inProgress, resolved, closed] = await Promise.all([
+        prisma.ticket.count({
+          where: {
+            requesterId,
+            status: { in: ["New", "Open"] },
+          },
+        }),
+        prisma.ticket.count({
+          where: {
+            requesterId,
+            status: "InProgress",
+          },
+        }),
+        prisma.ticket.count({
+          where: {
+            requesterId,
+            status: "Resolved",
+          },
+        }),
+        prisma.ticket.count({
+          where: {
+            requesterId,
+            status: "Closed",
+          },
+        }),
+      ]);
+
+      // Recent tickets owned by this requester (capped at 5, sorted updatedAt desc) (FR-73)
+      const recent = await prisma.ticket.findMany({
+        where: { requesterId },
+        orderBy: { updatedAt: "desc" },
+        take: 5,
+        select: {
+          id: true,
+          ticketNo: true,
+          summary: true,
+          status: true,
+          updatedAt: true,
+        },
+      });
+
+      const recentTickets = recent.map((t) => ({
+        id: t.id,
+        ticketNo: t.ticketNo,
+        summary: t.summary,
+        status: t.status,
+        updatedAt: t.updatedAt,
+      }));
+
+      res.status(200).json({
+        metrics: {
+          myOpenTickets,
+          inProgress,
+          resolved,
+          closed,
+        },
+        recentTickets,
+      });
+    } catch (error) {
+      console.error("Requester dashboard error:", error);
+      res.status(500).json({ error: "Failed to retrieve requester dashboard metrics." });
+    }
+  }
+);
+
 // 6.1 GET /api/staff/tickets/:id - Full ticket detail for IT Staff & Admin
 app.get(
   "/api/staff/tickets/:id",
@@ -2065,6 +2150,8 @@ app.get("/api/tickets", async (req: Request, res: Response) => {
     if (status) {
       if (status === "In Progress" || status === "InProgress") {
         where.status = "InProgress";
+      } else if (status === "Open" || status === "open") {
+        where.status = { in: ["New", "Open"] };
       } else {
         where.status = status;
       }

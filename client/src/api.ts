@@ -1013,3 +1013,37 @@ export async function fetchStaffDashboard(): Promise<StaffDashboardResponse> {
   return data;
 }
 
+export interface RequesterDashboardMetrics {
+  myOpenTickets: number;
+  inProgress: number;
+  resolved: number;
+  closed: number;
+}
+
+export interface RequesterDashboardRecentTicket {
+  id: string;
+  ticketNo: string;
+  summary: string;
+  status: string;
+  updatedAt: string;
+}
+
+export interface RequesterDashboardResponse {
+  metrics: RequesterDashboardMetrics;
+  recentTickets: RequesterDashboardRecentTicket[];
+}
+
+export async function fetchRequesterDashboard(): Promise<RequesterDashboardResponse> {
+  const res = await fetch(`${API_URL}/api/requester/dashboard`, {
+    headers: getAuthHeaders(),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    const err = new Error(data?.error?.message || data?.error || "Failed to fetch requester dashboard metrics") as any;
+    err.status = res.status;
+    err.data = data;
+    throw err;
+  }
+  return data;
+}
+

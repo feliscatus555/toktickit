@@ -1,7 +1,7 @@
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { useState, useEffect } from "react";
 import { fetchCategories, fetchMyTickets, } from "./api.js";
-export default function MyTickets({ activeRequester, onCreateTicketClick, onSelectTicket, }) {
+export default function MyTickets({ activeRequester, onCreateTicketClick, onSelectTicket, initialStatusFilter, }) {
     const [tickets, setTickets] = useState([]);
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -9,12 +9,18 @@ export default function MyTickets({ activeRequester, onCreateTicketClick, onSele
     // Filter & Pagination States
     const [search, setSearch] = useState("");
     const [categoryId, setCategoryId] = useState("");
-    const [status, setStatus] = useState("");
+    const [status, setStatus] = useState(initialStatusFilter || "");
     const [priority, setPriority] = useState("");
     const [itPriority, setItPriority] = useState("");
     const [sortOption, setSortOption] = useState("createdAt:desc");
     const [page, setPage] = useState(1);
     const limit = 10;
+    useEffect(() => {
+        if (initialStatusFilter !== undefined) {
+            setStatus(initialStatusFilter);
+            setPage(1);
+        }
+    }, [initialStatusFilter]);
     // Metadata
     const [totalItems, setTotalItems] = useState(0);
     const [totalPages, setTotalPages] = useState(1);
@@ -357,7 +363,7 @@ export default function MyTickets({ activeRequester, onCreateTicketClick, onSele
                                             border: "1px solid #D1D5DB",
                                             fontSize: "0.9rem",
                                             backgroundColor: "#FFFFFF",
-                                        }, children: [_jsx("option", { value: "", children: "All Categories" }), categories.map((c) => (_jsx("option", { value: c.id, children: c.name }, c.id)))] })] }), _jsxs("div", { style: { flex: "0 0 140px", minWidth: "120px" }, children: [_jsx("label", { style: { display: "block", fontSize: "0.75rem", fontWeight: 700, color: "#5B6573", marginBottom: "0.25rem" }, children: "Status" }), _jsxs("select", { value: status, onChange: (e) => {
+                                        }, children: [_jsx("option", { value: "", children: "All Categories" }), categories.map((c) => (_jsx("option", { value: c.id, children: c.name }, c.id)))] })] }), _jsxs("div", { style: { flex: "0 0 140px", minWidth: "120px" }, children: [_jsx("label", { style: { display: "block", fontSize: "0.75rem", fontWeight: 700, color: "#5B6573", marginBottom: "0.25rem" }, children: "Status" }), _jsxs("select", { id: "my-tickets-status-filter", "aria-label": "Filter by status", value: status, onChange: (e) => {
                                             setStatus(e.target.value);
                                             setPage(1);
                                         }, style: {
@@ -367,7 +373,7 @@ export default function MyTickets({ activeRequester, onCreateTicketClick, onSele
                                             border: "1px solid #D1D5DB",
                                             fontSize: "0.9rem",
                                             backgroundColor: "#FFFFFF",
-                                        }, children: [_jsx("option", { value: "", children: "All Statuses" }), _jsx("option", { value: "New", children: "New" }), _jsx("option", { value: "Assigned", children: "Assigned" }), _jsx("option", { value: "InProgress", children: "In Progress" }), _jsx("option", { value: "Pending", children: "Pending" }), _jsx("option", { value: "Resolved", children: "Resolved" }), _jsx("option", { value: "Closed", children: "Closed" }), _jsx("option", { value: "Cancelled", children: "Cancelled" })] })] }), _jsxs("div", { style: { flex: "0 0 145px", minWidth: "120px" }, children: [_jsx("label", { style: { display: "block", fontSize: "0.75rem", fontWeight: 700, color: "#5B6573", marginBottom: "0.25rem" }, children: "Requested Priority" }), _jsxs("select", { value: priority, onChange: (e) => {
+                                        }, children: [_jsx("option", { value: "", children: "All Statuses" }), _jsx("option", { value: "New", children: "New" }), _jsx("option", { value: "Open", children: "Open" }), _jsx("option", { value: "InProgress", children: "In Progress" }), _jsx("option", { value: "WaitingForRequester", children: "Waiting for Requester" }), _jsx("option", { value: "Assigned", children: "Assigned" }), _jsx("option", { value: "Pending", children: "Pending" }), _jsx("option", { value: "Resolved", children: "Resolved" }), _jsx("option", { value: "Closed", children: "Closed" }), _jsx("option", { value: "Cancelled", children: "Cancelled" })] })] }), _jsxs("div", { style: { flex: "0 0 145px", minWidth: "120px" }, children: [_jsx("label", { style: { display: "block", fontSize: "0.75rem", fontWeight: 700, color: "#5B6573", marginBottom: "0.25rem" }, children: "Requested Priority" }), _jsxs("select", { value: priority, onChange: (e) => {
                                             setPriority(e.target.value);
                                             setPage(1);
                                         }, style: {
