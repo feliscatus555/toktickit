@@ -14,8 +14,9 @@ import MyTickets from "./MyTickets.js";
 import TicketDetail from "./TicketDetail.js";
 import StaffTicketQueue from "./StaffTicketQueue.js";
 import UserManagement from "./UserManagement.js";
+import StaffDashboard, { QueueFilterOptions } from "./StaffDashboard.js";
 
-type ActiveTab = "my-tickets" | "queue" | "create-ticket" | "ticket-detail" | "user-management";
+type ActiveTab = "dashboard" | "my-tickets" | "queue" | "create-ticket" | "ticket-detail" | "user-management";
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
@@ -42,9 +43,19 @@ export default function App() {
     return "my-tickets";
   });
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+  const [queueFilterOptions, setQueueFilterOptions] = useState<QueueFilterOptions | null>(null);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState<boolean>(false);
   const [showProfileMenu, setShowProfileMenu] = useState<boolean>(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  function handleDashboardNavigateQueue(options?: QueueFilterOptions) {
+    if (options?.assignedToMe && !options.owner) {
+      setQueueFilterOptions({ ...options, owner: "me" });
+    } else {
+      setQueueFilterOptions(options || null);
+    }
+    setActiveTab("queue");
+  }
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -237,32 +248,56 @@ export default function App() {
               {/* Desktop Nav Buttons */}
               <div className="d-none d-md-flex gap-2 ms-2">
                 {(currentUser.role === "IT_STAFF" || currentUser.role === "ADMINISTRATOR") && (
-                  <button
-                    id="nav-ticket-queue"
-                    type="button"
-                    onClick={() => setActiveTab("queue")}
-                    className="btn btn-sm text-white fw-semibold"
-                    style={{
-                      backgroundColor:
-                        activeTab === "queue" ||
-                        (activeTab === "ticket-detail" &&
-                          (currentUser.role === "IT_STAFF" || currentUser.role === "ADMINISTRATOR"))
-                          ? "#0B7A46"
-                          : "transparent",
-                      border:
-                        activeTab === "queue" ||
-                        (activeTab === "ticket-detail" &&
-                          (currentUser.role === "IT_STAFF" || currentUser.role === "ADMINISTRATOR"))
-                          ? "1px solid #EAF6EF"
-                          : "1px solid transparent",
-                      borderRadius: "6px",
-                      padding: "0.4rem 0.85rem",
-                      whiteSpace: "nowrap",
-                      fontSize: "0.88rem",
-                    }}
-                  >
-                    📋 Ticket Queue
-                  </button>
+                  <>
+                    <button
+                      id="nav-dashboard"
+                      type="button"
+                      onClick={() => setActiveTab("dashboard")}
+                      className="btn btn-sm text-white fw-semibold"
+                      style={{
+                        backgroundColor: activeTab === "dashboard" ? "#0B7A46" : "transparent",
+                        border:
+                          activeTab === "dashboard"
+                            ? "1px solid #EAF6EF"
+                            : "1px solid transparent",
+                        borderRadius: "6px",
+                        padding: "0.4rem 0.85rem",
+                        whiteSpace: "nowrap",
+                        fontSize: "0.88rem",
+                      }}
+                    >
+                      📊 Dashboard
+                    </button>
+                    <button
+                      id="nav-ticket-queue"
+                      type="button"
+                      onClick={() => {
+                        setQueueFilterOptions(null);
+                        setActiveTab("queue");
+                      }}
+                      className="btn btn-sm text-white fw-semibold"
+                      style={{
+                        backgroundColor:
+                          activeTab === "queue" ||
+                          (activeTab === "ticket-detail" &&
+                            (currentUser.role === "IT_STAFF" || currentUser.role === "ADMINISTRATOR"))
+                            ? "#0B7A46"
+                            : "transparent",
+                        border:
+                          activeTab === "queue" ||
+                          (activeTab === "ticket-detail" &&
+                            (currentUser.role === "IT_STAFF" || currentUser.role === "ADMINISTRATOR"))
+                            ? "1px solid #EAF6EF"
+                            : "1px solid transparent",
+                        borderRadius: "6px",
+                        padding: "0.4rem 0.85rem",
+                        whiteSpace: "nowrap",
+                        fontSize: "0.88rem",
+                      }}
+                    >
+                      📋 Ticket Queue
+                    </button>
+                  </>
                 )}
                 {currentUser.role !== "IT_STAFF" && (
                   <button
@@ -460,32 +495,57 @@ export default function App() {
             }}
           >
             {(currentUser.role === "IT_STAFF" || currentUser.role === "ADMINISTRATOR") && (
-              <button
-                id="mobile-nav-ticket-queue"
-                type="button"
-                onClick={() => setActiveTab("queue")}
-                className="btn btn-sm text-white fw-semibold flex-fill text-center"
-                style={{
-                  backgroundColor:
-                    activeTab === "queue" ||
-                    (activeTab === "ticket-detail" &&
-                      (currentUser.role === "IT_STAFF" || currentUser.role === "ADMINISTRATOR"))
-                      ? "#0B7A46"
-                      : "transparent",
-                  border:
-                    activeTab === "queue" ||
-                    (activeTab === "ticket-detail" &&
-                      (currentUser.role === "IT_STAFF" || currentUser.role === "ADMINISTRATOR"))
-                      ? "1px solid #EAF6EF"
-                      : "1px solid transparent",
-                  borderRadius: "6px",
-                  padding: "0.4rem 0.6rem",
-                  fontSize: "0.85rem",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                📋 Ticket Queue
-              </button>
+              <>
+                <button
+                  id="mobile-nav-dashboard"
+                  type="button"
+                  onClick={() => setActiveTab("dashboard")}
+                  className="btn btn-sm text-white fw-semibold flex-fill text-center"
+                  style={{
+                    backgroundColor:
+                      activeTab === "dashboard" ? "#0B7A46" : "transparent",
+                    border:
+                      activeTab === "dashboard"
+                        ? "1px solid #EAF6EF"
+                        : "1px solid transparent",
+                    borderRadius: "6px",
+                    padding: "0.4rem 0.6rem",
+                    fontSize: "0.85rem",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  📊 Dashboard
+                </button>
+                <button
+                  id="mobile-nav-ticket-queue"
+                  type="button"
+                  onClick={() => {
+                    setQueueFilterOptions(null);
+                    setActiveTab("queue");
+                  }}
+                  className="btn btn-sm text-white fw-semibold flex-fill text-center"
+                  style={{
+                    backgroundColor:
+                      activeTab === "queue" ||
+                      (activeTab === "ticket-detail" &&
+                        (currentUser.role === "IT_STAFF" || currentUser.role === "ADMINISTRATOR"))
+                        ? "#0B7A46"
+                        : "transparent",
+                    border:
+                      activeTab === "queue" ||
+                      (activeTab === "ticket-detail" &&
+                        (currentUser.role === "IT_STAFF" || currentUser.role === "ADMINISTRATOR"))
+                        ? "1px solid #EAF6EF"
+                        : "1px solid transparent",
+                    borderRadius: "6px",
+                    padding: "0.4rem 0.6rem",
+                    fontSize: "0.85rem",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  📋 Ticket Queue
+                </button>
+              </>
             )}
             {currentUser.role !== "IT_STAFF" && (
               <button
@@ -559,12 +619,23 @@ export default function App() {
 
       {/* Main Content Body */}
       <main className="container-fluid px-3 px-md-5 py-4">
-        {activeTab === "user-management" && currentUser.role === "ADMINISTRATOR" ? (
+        {activeTab === "dashboard" &&
+        (currentUser.role === "IT_STAFF" || currentUser.role === "ADMINISTRATOR") ? (
+          <StaffDashboard
+            currentUser={currentUser}
+            onNavigateQueue={handleDashboardNavigateQueue}
+            onSelectTicket={handleSelectTicket}
+            onCreateTicketClick={() => setActiveTab("create-ticket")}
+          />
+        ) : activeTab === "user-management" && currentUser.role === "ADMINISTRATOR" ? (
           <UserManagement currentUser={currentUser} />
         ) : activeTab === "queue" ? (
           <StaffTicketQueue
             currentUser={currentUser}
             onSelectTicket={handleSelectTicket}
+            initialStatusFilter={queueFilterOptions?.status}
+            initialOwnerFilter={queueFilterOptions?.owner}
+            initialSearchFilter={queueFilterOptions?.search}
           />
         ) : activeTab === "my-tickets" ? (
           <MyTickets

@@ -966,3 +966,50 @@ export async function updateActionTaken(
   return data;
 }
 
+export interface DashboardMetricItem {
+  count: number;
+  deltaFromYesterday: number;
+}
+
+export interface StaffDashboardMetrics {
+  new: DashboardMetricItem;
+  open: DashboardMetricItem;
+  inProgress: DashboardMetricItem;
+  waitingForRequester: DashboardMetricItem;
+  myAssigned: DashboardMetricItem;
+}
+
+export interface DashboardRecentTicket {
+  id: string;
+  ticketNo: string;
+  summary: string;
+  status: string;
+  itPriority?: string | null;
+  updatedAt: string;
+}
+
+export interface AdminCounts {
+  totalUsers: number;
+  activeUsers: number;
+}
+
+export interface StaffDashboardResponse {
+  metrics: StaffDashboardMetrics;
+  recentTickets: DashboardRecentTicket[];
+  adminCounts?: AdminCounts;
+}
+
+export async function fetchStaffDashboard(): Promise<StaffDashboardResponse> {
+  const res = await fetch(`${API_URL}/api/staff/dashboard`, {
+    headers: getAuthHeaders(),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    const err = new Error(data?.error?.message || data?.error || "Failed to fetch staff dashboard metrics") as any;
+    err.status = res.status;
+    err.data = data;
+    throw err;
+  }
+  return data;
+}
+
