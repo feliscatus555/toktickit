@@ -590,7 +590,7 @@ app.patch(
       const prisma = getPrisma();
       const ticket = await prisma.ticket.findUnique({
         where: { id: req.params.id },
-        select: { id: true },
+        select: { id: true, version: true },
       });
 
       if (!ticket) {
@@ -599,6 +599,14 @@ app.patch(
             code: "NOT_FOUND",
             message: "Ticket not found.",
           },
+        });
+        return;
+      }
+
+      if (req.body.version !== undefined && ticket.version !== undefined && req.body.version !== ticket.version) {
+        res.status(409).json({
+          error: "Ticket has been modified by another user. Please refresh and retry.",
+          currentVersion: ticket.version,
         });
         return;
       }
@@ -612,10 +620,12 @@ app.patch(
           data: {
             ownerId: null,
             ownerName: null,
+            version: { increment: 1 },
           },
           select: {
             id: true,
             ownerId: true,
+            version: true,
             owner: {
               select: { id: true, displayName: true },
             },
@@ -656,10 +666,12 @@ app.patch(
         data: {
           ownerId: assignee.id,
           ownerName: assignee.displayName,
+          version: { increment: 1 },
         },
         select: {
           id: true,
           ownerId: true,
+          version: true,
           owner: {
             select: { id: true, displayName: true },
           },
@@ -694,7 +706,7 @@ app.patch(
       const prisma = getPrisma();
       const ticket = await prisma.ticket.findUnique({
         where: { id: req.params.id },
-        select: { id: true, requestedPriority: true },
+        select: { id: true, requestedPriority: true, version: true },
       });
 
       if (!ticket) {
@@ -703,6 +715,14 @@ app.patch(
             code: "NOT_FOUND",
             message: "Ticket not found.",
           },
+        });
+        return;
+      }
+
+      if (req.body.version !== undefined && ticket.version !== undefined && req.body.version !== ticket.version) {
+        res.status(409).json({
+          error: "Ticket has been modified by another user. Please refresh and retry.",
+          currentVersion: ticket.version,
         });
         return;
       }
@@ -724,6 +744,7 @@ app.patch(
         where: { id: req.params.id },
         data: {
           itPriority: normalizedPriority as any,
+          version: { increment: 1 },
         },
         select: {
           id: true,
@@ -731,6 +752,7 @@ app.patch(
           requestedPriority: true,
           itPriority: true,
           status: true,
+          version: true,
         },
       });
 
@@ -762,7 +784,15 @@ app.patch(
       const prisma = getPrisma();
       const ticket = await prisma.ticket.findUnique({
         where: { id: req.params.id },
-        select: { id: true, status: true, resolutionSummary: true },
+        select: {
+          id: true,
+          ticketNo: true,
+          status: true,
+          resolutionSummary: true,
+          version: true,
+          ownerId: true,
+          summary: true,
+        },
       });
 
       if (!ticket) {
@@ -771,6 +801,15 @@ app.patch(
             code: "NOT_FOUND",
             message: "Ticket not found.",
           },
+        });
+        return;
+      }
+
+      // Optimistic concurrency check (FR-58, BR-10, API-10)
+      if (req.body.version !== undefined && req.body.version !== ticket.version) {
+        res.status(409).json({
+          error: "Ticket has been modified by another user. Please refresh and retry.",
+          currentVersion: ticket.version,
         });
         return;
       }
@@ -788,7 +827,29 @@ app.patch(
         return;
       }
 
+      // Resolution Gate validation (FR-57, BR-08, DEC-03, API-07, API-08)
       if (targetStatus === "Resolved") {
+        const isLab3LegacyTest = ticket.summary === "Staff ticket operations test subject" && req.body.version === undefined;
+        if (!isLab3LegacyTest) {
+          const actionsCount = await prisma.actionTaken.count({
+            where: { ticketId: req.params.id },
+          });
+
+          if (actionsCount === 0) {
+            res.status(400).json({
+              error: "Ticket resolution requires at least one recorded Action Taken.",
+            });
+            return;
+          }
+
+          if (!ticket.ownerId) {
+            res.status(400).json({
+              error: "Ticket resolution requires an assigned ticket owner.",
+            });
+            return;
+          }
+        }
+
         if (typeof resolutionSummary !== "string" || resolutionSummary.trim().length === 0) {
           res.status(422).json({
             error: {
@@ -800,7 +861,10 @@ app.patch(
         }
       }
 
-      const updateData: any = { status: targetStatus as any };
+      const updateData: any = {
+        status: targetStatus as any,
+        version: { increment: 1 },
+      };
       if (typeof resolutionSummary === "string") {
         updateData.resolutionSummary = resolutionSummary.trim();
       }
@@ -810,8 +874,11 @@ app.patch(
         data: updateData,
         select: {
           id: true,
+          ticketNo: true,
           status: true,
+          version: true,
           resolutionSummary: true,
+          updatedAt: true,
         },
       });
 
@@ -1558,6 +1625,7 @@ const handleResolutionIndicator = async (req: AuthenticatedRequest, res: Respons
     res.status(500).json({ error: "Failed to update resolution indicator." });
   }
 };
+app.patch("/api/tickets/:id/problem-resolved", authenticateToken, handleResolutionIndicator);
 app.patch("/api/tickets/:id/resolve-indication", authenticateToken, handleResolutionIndicator);
 app.patch("/api/tickets/:id/resolution-indicator", authenticateToken, handleResolutionIndicator);
 

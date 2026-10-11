@@ -50,6 +50,9 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
     const [resolutionSummaryInput, setResolutionSummaryInput] = useState("");
     const [updatingStatus, setUpdatingStatus] = useState(false);
     const [statusError, setStatusError] = useState(null);
+    // Feature-14: Concurrency Conflict and Actions Count State
+    const [concurrencyConflict, setConcurrencyConflict] = useState(false);
+    const [actionsTakenCount, setActionsTakenCount] = useState(0);
     // Requester Problem Resolved State
     const [resolvingIndicator, setResolvingIndicator] = useState(false);
     const [resolveIndicatorSuccess, setResolveIndicatorSuccess] = useState(false);
@@ -111,6 +114,9 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
                 if (isMounted) {
                     setTicket(data);
                     setComments(data.comments || []);
+                    if (Array.isArray(data.actionsTaken)) {
+                        setActionsTakenCount(data.actionsTaken.length);
+                    }
                     if (isStaffOrAdmin && data.internalNotes) {
                         setNotes(data.internalNotes);
                     }
@@ -214,27 +220,36 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
     };
     // Status Change Handler (auto-updates on select)
     const handleStatusChange = async (newStatus) => {
+        if (updatingStatus)
+            return;
         if (!ticket || !newStatus || newStatus === ticket.status)
             return;
         if (newStatus === "Resolved") {
             setSelectedNextStatus("Resolved");
             setStatusError(null);
+            setConcurrencyConflict(false);
             return;
         }
         try {
             setUpdatingStatus(true);
             setStatusError(null);
+            setConcurrencyConflict(false);
             const res = await updateTicketStatus(ticket.id, newStatus);
             setTicket((prev) => prev
                 ? {
                     ...prev,
                     status: res.status,
+                    version: res.version !== undefined ? res.version : prev.version,
+                    updatedAt: res.updatedAt || prev.updatedAt,
                     resolutionSummary: res.resolutionSummary !== undefined ? res.resolutionSummary : prev.resolutionSummary,
                 }
                 : prev);
             setSelectedNextStatus("");
         }
         catch (err) {
+            if (err.status === 409) {
+                setConcurrencyConflict(true);
+            }
             setStatusError(err.message || "Failed to update status.");
             setSelectedNextStatus("");
         }
@@ -244,20 +259,34 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
     };
     // Confirm Resolve Handler (when status is Resolved and summary is entered)
     const handleConfirmResolve = async () => {
+        if (updatingStatus)
+            return; // Debounce safeguard
         if (!ticket)
             return;
         if (!resolutionSummaryInput.trim()) {
-            setStatusError("Resolution summary is mandatory when resolving a ticket.");
+            setStatusError("Resolution summary is mandatory when resolving a ticket to record how the issue was fixed.");
+            return;
+        }
+        const hasActionsDefined = ticket.actionsTaken !== undefined;
+        if (hasActionsDefined && actionsTakenCount === 0) {
+            setStatusError("Ticket resolution requires at least one recorded Action Taken.");
+            return;
+        }
+        if (!ticket.ownerId) {
+            setStatusError("Ticket resolution requires an assigned ticket owner.");
             return;
         }
         try {
             setUpdatingStatus(true);
             setStatusError(null);
-            const res = await updateTicketStatus(ticket.id, "Resolved", resolutionSummaryInput.trim());
+            setConcurrencyConflict(false);
+            const res = await updateTicketStatus(ticket.id, "Resolved", resolutionSummaryInput.trim(), ticket.version);
             setTicket((prev) => prev
                 ? {
                     ...prev,
                     status: res.status,
+                    version: res.version !== undefined ? res.version : prev.version,
+                    updatedAt: res.updatedAt || prev.updatedAt,
                     resolutionSummary: res.resolutionSummary !== undefined ? res.resolutionSummary : prev.resolutionSummary,
                 }
                 : prev);
@@ -265,10 +294,30 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
             setResolutionSummaryInput("");
         }
         catch (err) {
+            if (err.status === 409) {
+                setConcurrencyConflict(true);
+            }
             setStatusError(err.message || "Failed to resolve ticket.");
         }
         finally {
             setUpdatingStatus(false);
+        }
+    };
+    // Concurrency Conflict Reload Handler
+    const handleReloadTicketConcurrency = async () => {
+        if (!ticketId)
+            return;
+        try {
+            setConcurrencyConflict(false);
+            setStatusError(null);
+            const freshTicket = await fetchStaffTicketDetail(ticketId);
+            setTicket(freshTicket);
+            if (freshTicket && Array.isArray(freshTicket.actionsTaken)) {
+                setActionsTakenCount(freshTicket.actionsTaken.length);
+            }
+        }
+        catch (err) {
+            console.error("Failed to reload ticket after conflict:", err);
         }
     };
     // Problem Appears Resolved Handler (Requester)
@@ -537,7 +586,7 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
                                                     fontSize: "0.92rem",
                                                     fontWeight: 600,
                                                     color: ticket.owner || ticket.ownerName ? "#1F2937" : "#6B7280",
-                                                }, children: ticket.owner?.displayName || ticket.ownerName || "Unassigned" })] })), isStaffOrAdmin ? (_jsxs("div", { className: "col-12 col-sm-6 col-md-4", children: [_jsx("label", { htmlFor: "it-priority-select", style: { fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block", marginBottom: "0.3rem" }, children: "IT Priority:" }), _jsxs("select", { id: "it-priority-select", className: "form-select form-select-sm", value: ticket.itPriority || ticket.requestedPriority, onChange: (e) => handlePriorityChange(e.target.value), disabled: updatingPriority, style: { fontSize: "0.85rem" }, children: [_jsx("option", { value: "LOW", children: "Low" }), _jsx("option", { value: "MEDIUM", children: "Medium" }), _jsx("option", { value: "HIGH", children: "High" }), _jsx("option", { value: "URGENT", children: "Urgent" })] }), priorityError && (_jsx("div", { className: "text-danger mt-1", style: { fontSize: "0.78rem" }, children: priorityError }))] })) : (_jsxs("div", { className: "col-12 col-sm-6 col-md-3", children: [_jsx("label", { style: { fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block" }, children: "IT Priority" }), _jsx("div", { style: { marginTop: "0.2rem" }, children: renderPriorityBadge(ticket.itPriority || ticket.requestedPriority) })] })), isStaffOrAdmin && (_jsxs("div", { className: "col-12 col-sm-6 col-md-4", children: [_jsx("label", { htmlFor: "next-status-select", style: { fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block", marginBottom: "0.3rem" }, children: "Current Status:" }), _jsx("select", { id: "next-status-select", className: "form-select form-select-sm", value: selectedNextStatus || "", onChange: (e) => handleStatusChange(e.target.value), disabled: updatingStatus || permittedNext.length === 0, style: { fontSize: "0.85rem" }, children: permittedNext.length === 0 ? (_jsxs("option", { value: "", children: [formatStatusDisplay(ticket.status), " (Terminal State)"] })) : (_jsxs(_Fragment, { children: [_jsx("option", { value: "", disabled: true, children: formatStatusDisplay(ticket.status) }), permittedNext.map((st) => (_jsx("option", { value: st, children: formatStatusDisplay(st) }, st)))] })) }), statusError && selectedNextStatus !== "Resolved" && (_jsx("div", { className: "alert alert-danger py-1 px-2 mt-2 mb-0", style: { fontSize: "0.82rem" }, children: statusError }))] })), isStaffOrAdmin && selectedNextStatus === "Resolved" && (_jsxs("div", { id: "resolution-summary-container", className: "col-12 mt-2 p-3 border rounded", style: { backgroundColor: "#F0FDF4", borderColor: statusError ? "#B3261E" : "#86EFAC" }, children: [_jsxs("label", { className: "fw-bold mb-1 text-success d-block", style: { fontSize: "0.85rem" }, children: ["Resolution Summary ", _jsx("span", { style: { color: "#B3261E" }, children: "*" }), " (Required for Resolved state)"] }), _jsx("textarea", { id: "resolution-summary-input", className: "form-control form-control-sm mb-2", rows: 2, placeholder: "Describe resolution steps taken...", value: resolutionSummaryInput, onChange: (e) => {
+                                                }, children: ticket.owner?.displayName || ticket.ownerName || "Unassigned" })] })), isStaffOrAdmin ? (_jsxs("div", { className: "col-12 col-sm-6 col-md-4", children: [_jsx("label", { htmlFor: "it-priority-select", style: { fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block", marginBottom: "0.3rem" }, children: "IT Priority:" }), _jsxs("select", { id: "it-priority-select", className: "form-select form-select-sm", value: ticket.itPriority || ticket.requestedPriority, onChange: (e) => handlePriorityChange(e.target.value), disabled: updatingPriority, style: { fontSize: "0.85rem" }, children: [_jsx("option", { value: "LOW", children: "Low" }), _jsx("option", { value: "MEDIUM", children: "Medium" }), _jsx("option", { value: "HIGH", children: "High" }), _jsx("option", { value: "URGENT", children: "Urgent" })] }), priorityError && (_jsx("div", { className: "text-danger mt-1", style: { fontSize: "0.78rem" }, children: priorityError }))] })) : (_jsxs("div", { className: "col-12 col-sm-6 col-md-3", children: [_jsx("label", { style: { fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block" }, children: "IT Priority" }), _jsx("div", { style: { marginTop: "0.2rem" }, children: renderPriorityBadge(ticket.itPriority || ticket.requestedPriority) })] })), isStaffOrAdmin && (_jsxs("div", { className: "col-12 col-sm-6 col-md-4", children: [_jsx("label", { htmlFor: "next-status-select", style: { fontSize: "0.78rem", fontWeight: 700, color: "#5B6573", display: "block", marginBottom: "0.3rem" }, children: "Current Status:" }), _jsx("select", { id: "next-status-select", className: "form-select form-select-sm", value: selectedNextStatus || "", onChange: (e) => handleStatusChange(e.target.value), disabled: updatingStatus || permittedNext.length === 0, style: { fontSize: "0.85rem" }, children: permittedNext.length === 0 ? (_jsxs("option", { value: "", children: [formatStatusDisplay(ticket.status), " (Terminal State)"] })) : (_jsxs(_Fragment, { children: [_jsx("option", { value: "", disabled: true, children: formatStatusDisplay(ticket.status) }), permittedNext.map((st) => (_jsx("option", { value: st, children: formatStatusDisplay(st) }, st)))] })) }), statusError && selectedNextStatus !== "Resolved" && (_jsx("div", { className: "alert alert-danger py-1 px-2 mt-2 mb-0", style: { fontSize: "0.82rem" }, children: statusError }))] })), concurrencyConflict && (_jsxs("div", { id: "concurrency-conflict-banner", className: "col-12 mt-2 p-3 border rounded alert alert-warning d-flex align-items-center justify-content-between flex-wrap gap-2 shadow-sm", role: "alert", style: { backgroundColor: "#FFFBEB", borderColor: "#F59E0B", color: "#92400E" }, children: [_jsxs("div", { className: "d-flex align-items-center gap-2", children: [_jsx("span", { style: { fontSize: "1.2rem" }, children: "\u26A0\uFE0F" }), _jsxs("div", { children: [_jsx("strong", { children: "Concurrency Conflict:" }), " Another user modified this ticket. Click here to reload current changes without losing your input."] })] }), _jsx("button", { type: "button", id: "btn-reload-ticket-concurrency", className: "btn btn-sm btn-outline-warning fw-semibold text-dark", onClick: handleReloadTicketConcurrency, children: "Reload Ticket Data" })] })), isStaffOrAdmin && selectedNextStatus === "Resolved" && (_jsxs("div", { id: "resolution-summary-container", className: "col-12 mt-2 p-3 border rounded", style: { backgroundColor: "#F0FDF4", borderColor: statusError ? "#B3261E" : "#86EFAC" }, children: [ticket.actionsTaken !== undefined && actionsTakenCount === 0 && (_jsxs("div", { id: "resolution-gate-warning", className: "alert alert-warning py-2 px-3 mb-2", role: "alert", style: { fontSize: "0.85rem", backgroundColor: "#FEF3C7", borderColor: "#F59E0B", color: "#92400E" }, children: [_jsx("strong", { children: "Resolution Gate:" }), " Resolution requires at least one recorded Action Taken."] })), !ticket.ownerId && (_jsxs("div", { id: "resolution-owner-warning", className: "alert alert-warning py-2 px-3 mb-2", role: "alert", style: { fontSize: "0.85rem", backgroundColor: "#FEF3C7", borderColor: "#F59E0B", color: "#92400E" }, children: [_jsx("strong", { children: "Resolution Gate:" }), " Ticket resolution requires an assigned ticket owner."] })), _jsxs("label", { className: "fw-bold mb-1 text-success d-block", style: { fontSize: "0.85rem" }, children: ["Resolution Summary ", _jsx("span", { style: { color: "#B3261E" }, children: "*" }), " (Required for Resolved state)"] }), _jsx("textarea", { id: "resolution-summary-input", className: "form-control form-control-sm mb-2", rows: 2, placeholder: "Describe resolution steps taken...", value: resolutionSummaryInput, onChange: (e) => {
                                                     setResolutionSummaryInput(e.target.value);
                                                     if (statusError)
                                                         setStatusError(null);
@@ -554,7 +603,13 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
                                                             setSelectedNextStatus("");
                                                             setResolutionSummaryInput("");
                                                             setStatusError(null);
-                                                        }, disabled: updatingStatus, children: "Cancel" }), _jsx("button", { type: "button", id: "confirm-resolve-btn", className: "btn btn-sm text-white fw-bold", style: { backgroundColor: "#006B3C" }, disabled: updatingStatus, onClick: handleConfirmResolve, children: updatingStatus ? "Resolving..." : "Confirm Resolve" })] })] }))] }), _jsx("hr", { style: { borderColor: "#E5E7EB" } }), _jsxs("div", { className: "mb-4", children: [_jsx("label", { style: { fontSize: "0.8rem", fontWeight: 700, color: "#5B6573", display: "block", marginBottom: "0.3rem" }, children: "Summary" }), _jsx("div", { style: {
+                                                        }, disabled: updatingStatus, children: "Cancel" }), _jsx("button", { type: "button", id: "confirm-resolve-btn", className: "btn btn-sm text-white fw-bold", style: {
+                                                            backgroundColor: updatingStatus ||
+                                                                (ticket.actionsTaken !== undefined && actionsTakenCount === 0)
+                                                                ? "#9CA3AF"
+                                                                : "#006B3C",
+                                                        }, disabled: updatingStatus ||
+                                                            (ticket.actionsTaken !== undefined && actionsTakenCount === 0), onClick: handleConfirmResolve, children: updatingStatus ? "Resolving..." : "Confirm Resolve" })] })] }))] }), _jsx("hr", { style: { borderColor: "#E5E7EB" } }), _jsxs("div", { className: "mb-4", children: [_jsx("label", { style: { fontSize: "0.8rem", fontWeight: 700, color: "#5B6573", display: "block", marginBottom: "0.3rem" }, children: "Summary" }), _jsx("div", { style: {
                                             backgroundColor: "#F9FAFB",
                                             border: "1px solid #E5E7EB",
                                             borderRadius: "6px",
@@ -582,7 +637,20 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
                                             whiteSpace: "pre-wrap",
                                             lineHeight: 1.5,
                                             minHeight: "65px",
-                                        }, children: ticket.resolutionSummary ? (_jsxs("div", { style: { display: "flex", gap: "0.5rem", alignItems: "flex-start" }, children: [_jsx("span", { style: { fontWeight: "bold", fontSize: "1.1rem" }, children: "\u2713" }), _jsx("div", { children: ticket.resolutionSummary })] })) : (_jsx("em", { style: { color: "#9CA3AF" }, children: "No resolution summary provided yet. (Pending IT Staff resolution)" })) })] })] })] }), _jsx(ActionsTaken, { ticketId: ticket.id, isStaffOrAdmin: isStaffOrAdmin, currentUser: currentRequester, initialActions: ticket.actionsTaken || [] }), _jsxs("div", { className: "card shadow-sm mb-4", style: { borderRadius: "8px", border: "1px solid #E0E0E0", backgroundColor: "#FFFFFF" }, children: [_jsx("div", { className: "card-header bg-white p-0 border-bottom", children: _jsxs("ul", { className: "nav nav-tabs card-header-tabs m-0 border-0", role: "tablist", style: { paddingLeft: "1rem", paddingTop: "0.5rem" }, children: [_jsx("li", { className: "nav-item", role: "presentation", children: _jsxs("button", { type: "button", id: "tab-btn-attachments", role: "tab", "aria-selected": activeDetailTab === "attachments", className: `nav-link fw-semibold ${activeDetailTab === "attachments" ? "active" : ""}`, onClick: () => setActiveDetailTab("attachments"), style: {
+                                        }, children: ticket.resolutionSummary ? (_jsxs("div", { style: { display: "flex", gap: "0.5rem", alignItems: "flex-start" }, children: [_jsx("span", { style: { fontWeight: "bold", fontSize: "1.1rem" }, children: "\u2713" }), _jsx("div", { children: ticket.resolutionSummary })] })) : (_jsx("em", { style: { color: "#9CA3AF" }, children: "No resolution summary provided yet. (Pending IT Staff resolution)" })) })] })] })] }), _jsx(ActionsTaken, { ticketId: ticket.id, isStaffOrAdmin: isStaffOrAdmin, currentUser: currentRequester, initialActions: ticket.actionsTaken || [], onActionAdded: (action) => {
+                    setActionsTakenCount((prev) => prev + 1);
+                    setTicket((prev) => {
+                        if (!prev)
+                            return prev;
+                        const existing = prev.actionsTaken || [];
+                        return {
+                            ...prev,
+                            actionsTaken: [...existing, action],
+                        };
+                    });
+                }, onActionsLoaded: (loadedActions) => {
+                    setActionsTakenCount(loadedActions.length);
+                } }), _jsxs("div", { className: "card shadow-sm mb-4", style: { borderRadius: "8px", border: "1px solid #E0E0E0", backgroundColor: "#FFFFFF" }, children: [_jsx("div", { className: "card-header bg-white p-0 border-bottom", children: _jsxs("ul", { className: "nav nav-tabs card-header-tabs m-0 border-0", role: "tablist", style: { paddingLeft: "1rem", paddingTop: "0.5rem" }, children: [_jsx("li", { className: "nav-item", role: "presentation", children: _jsxs("button", { type: "button", id: "tab-btn-attachments", role: "tab", "aria-selected": activeDetailTab === "attachments", className: `nav-link fw-semibold ${activeDetailTab === "attachments" ? "active" : ""}`, onClick: () => setActiveDetailTab("attachments"), style: {
                                             color: activeDetailTab === "attachments" ? "#006B3C" : "#5B6573",
                                             borderBottom: activeDetailTab === "attachments" ? "3px solid #006B3C" : "3px solid transparent",
                                             backgroundColor: activeDetailTab === "attachments" ? "#FFFFFF" : "transparent",
