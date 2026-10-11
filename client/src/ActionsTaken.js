@@ -1,7 +1,7 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
 import { useState, useEffect } from "react";
 import { fetchActionsTaken, createActionTaken, updateActionTaken, } from "./api.js";
-export default function ActionsTaken({ ticketId, isStaffOrAdmin, currentUser, initialActions, onActionAdded, }) {
+export default function ActionsTaken({ ticketId, isStaffOrAdmin, currentUser, initialActions, onActionAdded, onActionsLoaded, }) {
     const [actions, setActions] = useState(initialActions || []);
     const [loading, setLoading] = useState(!initialActions);
     const [fetchError, setFetchError] = useState(null);
@@ -31,6 +31,9 @@ export default function ActionsTaken({ ticketId, isStaffOrAdmin, currentUser, in
             setFetchError(null);
             const data = await fetchActionsTaken(ticketId);
             setActions(data);
+            if (onActionsLoaded) {
+                onActionsLoaded(data);
+            }
         }
         catch (err) {
             console.error("Failed to load actions taken:", err);
@@ -44,6 +47,9 @@ export default function ActionsTaken({ ticketId, isStaffOrAdmin, currentUser, in
         if (Array.isArray(initialActions)) {
             setActions(initialActions);
             setLoading(false);
+            if (onActionsLoaded) {
+                onActionsLoaded(initialActions);
+            }
         }
         else {
             loadActions();

@@ -16,6 +16,7 @@ interface ActionsTakenProps {
   };
   initialActions?: ActionTakenItem[];
   onActionAdded?: (action: ActionTakenItem) => void;
+  onActionsLoaded?: (actions: ActionTakenItem[]) => void;
 }
 
 export default function ActionsTaken({
@@ -24,6 +25,7 @@ export default function ActionsTaken({
   currentUser,
   initialActions,
   onActionAdded,
+  onActionsLoaded,
 }: ActionsTakenProps) {
   const [actions, setActions] = useState<ActionTakenItem[]>(initialActions || []);
   const [loading, setLoading] = useState<boolean>(!initialActions);
@@ -57,6 +59,9 @@ export default function ActionsTaken({
       setFetchError(null);
       const data = await fetchActionsTaken(ticketId);
       setActions(data);
+      if (onActionsLoaded) {
+        onActionsLoaded(data);
+      }
     } catch (err: any) {
       console.error("Failed to load actions taken:", err);
       setFetchError(err?.message || "Failed to load actions taken.");
@@ -69,6 +74,9 @@ export default function ActionsTaken({
     if (Array.isArray(initialActions)) {
       setActions(initialActions);
       setLoading(false);
+      if (onActionsLoaded) {
+        onActionsLoaded(initialActions);
+      }
     } else {
       loadActions();
     }

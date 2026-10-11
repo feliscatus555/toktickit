@@ -33,6 +33,19 @@ export function normalizeStatus(status: string): string {
   return map[s.toLowerCase()] || s;
 }
 
+export const CANONICAL_STATUSES: TicketStatusType[] = [
+  "New",
+  "Open",
+  "InProgress",
+  "WaitingForRequester",
+  "Resolved",
+  "Closed",
+  "Reopened",
+  "Cancelled",
+];
+
+export const DEPRECATED_STATUSES = ["Assigned", "Pending"];
+
 export const PERMITTED_TRANSITIONS: Record<string, string[]> = {
   New: ["Open", "Cancelled"],
   Open: ["InProgress", "WaitingForRequester", "Resolved", "Cancelled"],
@@ -40,6 +53,7 @@ export const PERMITTED_TRANSITIONS: Record<string, string[]> = {
   WaitingForRequester: ["InProgress", "Resolved", "Cancelled"],
   Resolved: ["Closed", "Reopened"],
   Closed: ["Reopened"],
+  Reopened: ["InProgress", "WaitingForRequester", "Resolved", "Cancelled"],
   Cancelled: [],
   Assigned: ["InProgress", "WaitingForRequester", "Resolved", "Cancelled"],
   Pending: ["InProgress", "WaitingForRequester", "Resolved", "Cancelled"],

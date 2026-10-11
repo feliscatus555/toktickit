@@ -76,6 +76,10 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
   const [updatingStatus, setUpdatingStatus] = useState<boolean>(false);
   const [statusError, setStatusError] = useState<string | null>(null);
 
+  // Feature-14: Concurrency Conflict and Actions Count State
+  const [concurrencyConflict, setConcurrencyConflict] = useState<boolean>(false);
+  const [actionsTakenCount, setActionsTakenCount] = useState<number>(0);
+
   // Requester Problem Resolved State
   const [resolvingIndicator, setResolvingIndicator] = useState<boolean>(false);
   const [resolveIndicatorSuccess, setResolveIndicatorSuccess] = useState<boolean>(false);
@@ -143,6 +147,9 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
         if (isMounted) {
           setTicket(data);
           setComments(data.comments || []);
+          if (Array.isArray((data as any).actionsTaken)) {
+            setActionsTakenCount((data as any).actionsTaken.length);
+          }
           if (isStaffOrAdmin && data.internalNotes) {
             setNotes(data.internalNotes);
           }
@@ -244,17 +251,20 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
 
   // Status Change Handler (auto-updates on select)
   const handleStatusChange = async (newStatus: string) => {
+    if (updatingStatus) return;
     if (!ticket || !newStatus || newStatus === ticket.status) return;
 
     if (newStatus === "Resolved") {
       setSelectedNextStatus("Resolved");
       setStatusError(null);
+      setConcurrencyConflict(false);
       return;
     }
 
     try {
       setUpdatingStatus(true);
       setStatusError(null);
+      setConcurrencyConflict(false);
       const res = await updateTicketStatus(ticket.id, newStatus);
 
       setTicket((prev) =>
@@ -262,12 +272,17 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
           ? {
               ...prev,
               status: res.status,
+              version: res.version !== undefined ? res.version : prev.version,
+              updatedAt: res.updatedAt || prev.updatedAt,
               resolutionSummary: res.resolutionSummary !== undefined ? res.resolutionSummary : prev.resolutionSummary,
             }
           : prev
       );
       setSelectedNextStatus("");
     } catch (err: any) {
+      if (err.status === 409) {
+        setConcurrencyConflict(true);
+      }
       setStatusError(err.message || "Failed to update status.");
       setSelectedNextStatus("");
     } finally {
@@ -277,22 +292,42 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
 
   // Confirm Resolve Handler (when status is Resolved and summary is entered)
   const handleConfirmResolve = async () => {
+    if (updatingStatus) return; // Debounce safeguard
     if (!ticket) return;
+
     if (!resolutionSummaryInput.trim()) {
-      setStatusError("Resolution summary is mandatory when resolving a ticket.");
+      setStatusError("Resolution summary is mandatory when resolving a ticket to record how the issue was fixed.");
+      return;
+    }
+
+    const hasActionsDefined = (ticket as any).actionsTaken !== undefined;
+    if (hasActionsDefined && actionsTakenCount === 0) {
+      setStatusError("Ticket resolution requires at least one recorded Action Taken.");
+      return;
+    }
+    if (!ticket.ownerId) {
+      setStatusError("Ticket resolution requires an assigned ticket owner.");
       return;
     }
 
     try {
       setUpdatingStatus(true);
       setStatusError(null);
-      const res = await updateTicketStatus(ticket.id, "Resolved", resolutionSummaryInput.trim());
+      setConcurrencyConflict(false);
+      const res = await updateTicketStatus(
+        ticket.id,
+        "Resolved",
+        resolutionSummaryInput.trim(),
+        ticket.version
+      );
 
       setTicket((prev) =>
         prev
           ? {
               ...prev,
               status: res.status,
+              version: res.version !== undefined ? res.version : prev.version,
+              updatedAt: res.updatedAt || prev.updatedAt,
               resolutionSummary: res.resolutionSummary !== undefined ? res.resolutionSummary : prev.resolutionSummary,
             }
           : prev
@@ -300,9 +335,28 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
       setSelectedNextStatus("");
       setResolutionSummaryInput("");
     } catch (err: any) {
+      if (err.status === 409) {
+        setConcurrencyConflict(true);
+      }
       setStatusError(err.message || "Failed to resolve ticket.");
     } finally {
       setUpdatingStatus(false);
+    }
+  };
+
+  // Concurrency Conflict Reload Handler
+  const handleReloadTicketConcurrency = async () => {
+    if (!ticketId) return;
+    try {
+      setConcurrencyConflict(false);
+      setStatusError(null);
+      const freshTicket = await fetchStaffTicketDetail(ticketId);
+      setTicket(freshTicket);
+      if (freshTicket && Array.isArray((freshTicket as any).actionsTaken)) {
+        setActionsTakenCount((freshTicket as any).actionsTaken.length);
+      }
+    } catch (err: any) {
+      console.error("Failed to reload ticket after conflict:", err);
     }
   };
 
@@ -900,6 +954,31 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
               </div>
             )}
 
+            {/* Concurrency Conflict Banner (409) */}
+            {concurrencyConflict && (
+              <div
+                id="concurrency-conflict-banner"
+                className="col-12 mt-2 p-3 border rounded alert alert-warning d-flex align-items-center justify-content-between flex-wrap gap-2 shadow-sm"
+                role="alert"
+                style={{ backgroundColor: "#FFFBEB", borderColor: "#F59E0B", color: "#92400E" }}
+              >
+                <div className="d-flex align-items-center gap-2">
+                  <span style={{ fontSize: "1.2rem" }}>⚠️</span>
+                  <div>
+                    <strong>Concurrency Conflict:</strong> Another user modified this ticket. Click here to reload current changes without losing your input.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  id="btn-reload-ticket-concurrency"
+                  className="btn btn-sm btn-outline-warning fw-semibold text-dark"
+                  onClick={handleReloadTicketConcurrency}
+                >
+                  Reload Ticket Data
+                </button>
+              </div>
+            )}
+
             {/* Resolution Summary input (visible when transitioning to Resolved) */}
             {isStaffOrAdmin && selectedNextStatus === "Resolved" && (
               <div
@@ -907,6 +986,28 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
                 className="col-12 mt-2 p-3 border rounded"
                 style={{ backgroundColor: "#F0FDF4", borderColor: statusError ? "#B3261E" : "#86EFAC" }}
               >
+                {/* Resolution Gate Warnings */}
+                {(ticket as any).actionsTaken !== undefined && actionsTakenCount === 0 && (
+                  <div
+                    id="resolution-gate-warning"
+                    className="alert alert-warning py-2 px-3 mb-2"
+                    role="alert"
+                    style={{ fontSize: "0.85rem", backgroundColor: "#FEF3C7", borderColor: "#F59E0B", color: "#92400E" }}
+                  >
+                    <strong>Resolution Gate:</strong> Resolution requires at least one recorded Action Taken.
+                  </div>
+                )}
+                {!ticket.ownerId && (
+                  <div
+                    id="resolution-owner-warning"
+                    className="alert alert-warning py-2 px-3 mb-2"
+                    role="alert"
+                    style={{ fontSize: "0.85rem", backgroundColor: "#FEF3C7", borderColor: "#F59E0B", color: "#92400E" }}
+                  >
+                    <strong>Resolution Gate:</strong> Ticket resolution requires an assigned ticket owner.
+                  </div>
+                )}
+
                 <label className="fw-bold mb-1 text-success d-block" style={{ fontSize: "0.85rem" }}>
                   Resolution Summary <span style={{ color: "#B3261E" }}>*</span> (Required for Resolved state)
                 </label>
@@ -958,8 +1059,17 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
                     type="button"
                     id="confirm-resolve-btn"
                     className="btn btn-sm text-white fw-bold"
-                    style={{ backgroundColor: "#006B3C" }}
-                    disabled={updatingStatus}
+                    style={{
+                      backgroundColor:
+                        updatingStatus ||
+                        ((ticket as any).actionsTaken !== undefined && actionsTakenCount === 0)
+                          ? "#9CA3AF"
+                          : "#006B3C",
+                    }}
+                    disabled={
+                      updatingStatus ||
+                      ((ticket as any).actionsTaken !== undefined && actionsTakenCount === 0)
+                    }
                     onClick={handleConfirmResolve}
                   >
                     {updatingStatus ? "Resolving..." : "Confirm Resolve"}
@@ -1050,6 +1160,20 @@ export default function TicketDetail({ ticketId, currentRequester, onBack, backL
         isStaffOrAdmin={isStaffOrAdmin}
         currentUser={currentRequester}
         initialActions={(ticket as any).actionsTaken || []}
+        onActionAdded={(action) => {
+          setActionsTakenCount((prev) => prev + 1);
+          setTicket((prev) => {
+            if (!prev) return prev;
+            const existing = (prev as any).actionsTaken || [];
+            return {
+              ...prev,
+              actionsTaken: [...existing, action],
+            };
+          });
+        }}
+        onActionsLoaded={(loadedActions) => {
+          setActionsTakenCount(loadedActions.length);
+        }}
       />
 
       {/* Activity & Attachments Tabs Card */}

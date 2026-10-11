@@ -375,6 +375,7 @@ export interface TicketDetail {
   attachments: AttachmentItem[];
   comments?: CommentItem[];
   internalNotes?: InternalNoteItem[];
+  actionsTaken?: ActionTakenItem[];
   createdAt: string;
   updatedAt: string;
 }
@@ -625,20 +626,33 @@ export async function updateTicketPriority(ticketId: string, itPriority: string)
 export async function updateTicketStatus(
   ticketId: string,
   status: string,
-  resolutionSummary?: string
+  resolutionSummary?: string,
+  version?: number
 ): Promise<any> {
+  const payload: any = { status };
+  if (resolutionSummary !== undefined) {
+    payload.resolutionSummary = resolutionSummary;
+  }
+  if (version !== undefined) {
+    payload.version = version;
+  }
   const res = await fetch(`${API_URL}/api/staff/tickets/${ticketId}/status`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
       ...getAuthHeaders(),
     },
-    body: JSON.stringify({ status, resolutionSummary }),
+    body: JSON.stringify(payload),
   });
   const data = await res.json();
   if (!res.ok) {
-    const err = new Error(data?.error?.message || "Failed to update status") as any;
+    const errorMessage =
+      data?.error?.message ||
+      (typeof data?.error === "string" ? data.error : null) ||
+      "Failed to update status";
+    const err = new Error(errorMessage) as any;
     err.status = res.status;
+    err.data = data;
     throw err;
   }
   return data;
@@ -711,7 +725,7 @@ export async function createTicketNote(ticketId: string, content: string): Promi
 }
 
 export async function indicateProblemResolved(ticketId: string): Promise<any> {
-  const res = await fetch(`${API_URL}/api/tickets/${ticketId}/resolve-indication`, {
+  const res = await fetch(`${API_URL}/api/tickets/${ticketId}/problem-resolved`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
