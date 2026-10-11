@@ -10,11 +10,17 @@ import {
 export interface StaffTicketQueueProps {
   onSelectTicket?: (ticketId: string) => void;
   currentUser?: AuthUser | null;
+  initialStatusFilter?: string;
+  initialOwnerFilter?: string;
+  initialSearchFilter?: string;
 }
 
 export default function StaffTicketQueue({
   onSelectTicket,
   currentUser,
+  initialStatusFilter,
+  initialOwnerFilter,
+  initialSearchFilter,
 }: StaffTicketQueueProps) {
   const searchInputId = useId();
   const categorySelectId = useId();
@@ -28,12 +34,12 @@ export default function StaffTicketQueue({
   const [error, setError] = useState<string | null>(null);
 
   // Filter and Query state
-  const [search, setSearch] = useState<string>("");
+  const [search, setSearch] = useState<string>(initialSearchFilter || "");
   const [searchValidation, setSearchValidation] = useState<string | null>(null);
   const [category, setCategory] = useState<string>("");
-  const [status, setStatus] = useState<string>("");
+  const [status, setStatus] = useState<string>(initialStatusFilter || "");
   const [priority, setPriority] = useState<string>("");
-  const [owner, setOwner] = useState<string>("");
+  const [owner, setOwner] = useState<string>(initialOwnerFilter || "");
 
   // Sort state
   const [sortBy, setSortBy] = useState<string>("createdAt");
@@ -44,6 +50,19 @@ export default function StaffTicketQueue({
   const [totalPages, setTotalPages] = useState<number>(1);
   const [totalItems, setTotalItems] = useState<number>(0);
   const limit = 10;
+
+  // Sync initial filter props to state
+  useEffect(() => {
+    if (initialStatusFilter !== undefined) setStatus(initialStatusFilter);
+  }, [initialStatusFilter]);
+
+  useEffect(() => {
+    if (initialOwnerFilter !== undefined) setOwner(initialOwnerFilter);
+  }, [initialOwnerFilter]);
+
+  useEffect(() => {
+    if (initialSearchFilter !== undefined) setSearch(initialSearchFilter);
+  }, [initialSearchFilter]);
 
   // Load categories once
   useEffect(() => {
@@ -596,7 +615,9 @@ export default function StaffTicketQueue({
             >
               <option value="">All Statuses</option>
               <option value="New">New</option>
+              <option value="Open">Open</option>
               <option value="InProgress">In Progress</option>
+              <option value="WaitingForRequester">Waiting for Requester</option>
               <option value="Assigned">Assigned</option>
               <option value="Pending">Pending</option>
               <option value="Resolved">Resolved</option>

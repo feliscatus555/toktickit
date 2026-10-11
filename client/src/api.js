@@ -613,3 +613,16 @@ export async function updateActionTaken(ticketId, actionId, input) {
     }
     return data;
 }
+export async function fetchStaffDashboard() {
+    const res = await fetch(`${API_URL}/api/staff/dashboard`, {
+        headers: getAuthHeaders(),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        const err = new Error(data?.error?.message || data?.error || "Failed to fetch staff dashboard metrics");
+        err.status = res.status;
+        err.data = data;
+        throw err;
+    }
+    return data;
+}

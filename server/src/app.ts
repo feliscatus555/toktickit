@@ -437,6 +437,129 @@ app.get(
   }
 );
 
+// 5.1 GET /api/staff/dashboard - Operational dashboard metrics for IT Staff & Admin
+app.get(
+  "/api/staff/dashboard",
+  authenticateToken,
+  requireRole("IT_STAFF", "ADMINISTRATOR"),
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (req.user?.mustChangePassword) {
+        res.status(403).json({
+          error: {
+            code: "MUST_CHANGE_PASSWORD",
+            message: "Password change is required before accessing application resources.",
+          },
+        });
+        return;
+      }
+
+      const prisma = getPrisma();
+      const now = new Date();
+      const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
+      const yesterdayStart = new Date(todayStart.getTime() - 24 * 60 * 60 * 1000);
+
+      // Status metrics: New, Open, InProgress, WaitingForRequester
+      const [newCount, newToday, newYesterday] = await Promise.all([
+        prisma.ticket.count({ where: { status: "New" } }),
+        prisma.ticket.count({ where: { status: "New", updatedAt: { gte: todayStart } } }),
+        prisma.ticket.count({ where: { status: "New", updatedAt: { gte: yesterdayStart, lt: todayStart } } }),
+      ]);
+
+      const [openCount, openToday, openYesterday] = await Promise.all([
+        prisma.ticket.count({ where: { status: "Open" } }),
+        prisma.ticket.count({ where: { status: "Open", updatedAt: { gte: todayStart } } }),
+        prisma.ticket.count({ where: { status: "Open", updatedAt: { gte: yesterdayStart, lt: todayStart } } }),
+      ]);
+
+      const [inProgressCount, inProgressToday, inProgressYesterday] = await Promise.all([
+        prisma.ticket.count({ where: { status: "InProgress" } }),
+        prisma.ticket.count({ where: { status: "InProgress", updatedAt: { gte: todayStart } } }),
+        prisma.ticket.count({ where: { status: "InProgress", updatedAt: { gte: yesterdayStart, lt: todayStart } } }),
+      ]);
+
+      const [waitingCount, waitingToday, waitingYesterday] = await Promise.all([
+        prisma.ticket.count({ where: { status: "WaitingForRequester" } }),
+        prisma.ticket.count({ where: { status: "WaitingForRequester", updatedAt: { gte: todayStart } } }),
+        prisma.ticket.count({ where: { status: "WaitingForRequester", updatedAt: { gte: yesterdayStart, lt: todayStart } } }),
+      ]);
+
+      // My Assigned metrics
+      const currentUserId = req.user!.id;
+      const [myAssignedCount, myAssignedToday, myAssignedYesterday] = await Promise.all([
+        prisma.ticket.count({ where: { ownerId: currentUserId } }),
+        prisma.ticket.count({ where: { ownerId: currentUserId, updatedAt: { gte: todayStart } } }),
+        prisma.ticket.count({ where: { ownerId: currentUserId, updatedAt: { gte: yesterdayStart, lt: todayStart } } }),
+      ]);
+
+      // Recent tickets (capped at 5 records)
+      let recent = await prisma.ticket.findMany({
+        where: { ownerId: currentUserId },
+        orderBy: { updatedAt: "desc" },
+        take: 5,
+        select: {
+          id: true,
+          ticketNo: true,
+          summary: true,
+          status: true,
+          itPriority: true,
+          requestedPriority: true,
+          updatedAt: true,
+        },
+      });
+
+      if (recent.length === 0) {
+        recent = await prisma.ticket.findMany({
+          orderBy: { updatedAt: "desc" },
+          take: 5,
+          select: {
+            id: true,
+            ticketNo: true,
+            summary: true,
+            status: true,
+            itPriority: true,
+            requestedPriority: true,
+            updatedAt: true,
+          },
+        });
+      }
+
+      const recentTickets = recent.map((t) => ({
+        id: t.id,
+        ticketNo: t.ticketNo,
+        summary: t.summary,
+        status: t.status,
+        itPriority: t.itPriority || t.requestedPriority,
+        updatedAt: t.updatedAt,
+      }));
+
+      const responsePayload: any = {
+        metrics: {
+          new: { count: newCount, deltaFromYesterday: newToday - newYesterday },
+          open: { count: openCount, deltaFromYesterday: openToday - openYesterday },
+          inProgress: { count: inProgressCount, deltaFromYesterday: inProgressToday - inProgressYesterday },
+          waitingForRequester: { count: waitingCount, deltaFromYesterday: waitingToday - waitingYesterday },
+          myAssigned: { count: myAssignedCount, deltaFromYesterday: myAssignedToday - myAssignedYesterday },
+        },
+        recentTickets,
+      };
+
+      if (req.user?.role === "ADMINISTRATOR") {
+        const [totalUsers, activeUsers] = await Promise.all([
+          prisma.user.count(),
+          prisma.user.count({ where: { isActive: true } }),
+        ]);
+        responsePayload.adminCounts = { totalUsers, activeUsers };
+      }
+
+      res.status(200).json(responsePayload);
+    } catch (error) {
+      console.error("Staff dashboard error:", error);
+      res.status(500).json({ error: "Failed to retrieve staff dashboard metrics." });
+    }
+  }
+);
+
 // 6.1 GET /api/staff/tickets/:id - Full ticket detail for IT Staff & Admin
 app.get(
   "/api/staff/tickets/:id",
