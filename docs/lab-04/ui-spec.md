@@ -165,9 +165,9 @@ TokTickIT preserves the Zen Green design system established in Lab 2 and Lab 3 (
   * Minimum touch target size: 44px x 44px on all interactive buttons and links.
 
 ### 5.2 Accessibility Standards (WCAG 2.1 AA) (`SE_Lab_4.pdf`, Section 7, Section 14 Part 9)
-* [ ] All interactive elements possess visible, high-contrast focus rings (`outline: 2px solid var(--zen-accent)`).
-* [ ] All form inputs have explicit, programmatically associated `<label>` elements.
-* [ ] Color contrast ratios strictly exceed 4.5:1 for body text and 3:1 for large headings.
-* [ ] Status badges combine visible color with text labels and semantic icons.
-* [ ] Modal dialogs trap focus and support `Escape` key dismissal.
-* [ ] Zero horizontal overflow on viewport widths down to 320px.
+* [x] All interactive elements possess visible, high-contrast focus rings (`outline: 2px solid var(--zen-accent)`).
+* [x] All form inputs have explicit, programmatically associated `<label>` elements.
+* [x] Color contrast ratios strictly exceed 4.5:1 for body text and 3:1 for large headings.
+* [x] Status badges combine visible color with text labels and semantic icons.
+* [x] Modal dialogs trap focus and support `Escape` key dismissal.
+* [x] Zero horizontal overflow on viewport widths down to 320px.

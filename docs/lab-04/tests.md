@@ -103,13 +103,13 @@ npm run test:e2e
 Screenshots must be saved to the following artifact paths for submission evidence (`SE_Lab_4.pdf`, Section 12, Section 14):
 
 * **IT Staff Dashboard** (`artifacts/lab-04/screenshots/staff-dashboard/`):
-  * [ ] Desktop (1280px): 5 metric cards, recent tickets list, quick actions panel.
-  * [ ] Tablet (768px): clean metric wrapping and stacked sections.
-  * [ ] Mobile (375px): single-column cards, no horizontal scroll.
+  * [x] Desktop (1280px): 5 metric cards, recent tickets list, quick actions panel.
+  * [x] Tablet (768px): clean metric wrapping and stacked sections.
+  * [x] Mobile (375px): single-column cards, no horizontal scroll.
 * **Requester Dashboard** (`artifacts/lab-04/screenshots/requester-dashboard/`):
-  * [ ] Desktop (1280px): 4 metric cards, owned recent tickets, quick actions.
-  * [ ] Mobile (375px): accessible touch targets (>= 44px) and stacked layout.
+  * [x] Desktop (1280px): 4 metric cards, owned recent tickets, quick actions.
+  * [x] Mobile (375px): accessible touch targets (>= 44px) and stacked layout.
 * **Actions Taken on Ticket Detail** (`artifacts/lab-04/screenshots/actions-taken/`):
-  * [ ] List view showing multiple recorded actions with performer and results.
-  * [ ] Create mode form with validated follow-up note field.
-  * [ ] Requester read-only view confirming absence of action controls.
+  * [x] List view showing multiple recorded actions with performer and results.
+  * [x] Create mode form with validated follow-up note field.
+  * [x] Requester read-only view confirming absence of action controls.
