@@ -12,11 +12,11 @@
 | https://github.com/feliscatus555/toktickit/pull/36 | feature/16-requester-dashboard | Approved |
 | https://github.com/feliscatus555/toktickit/pull/37 | lab4-staging | Approved |
 
-Reviewer comment: Approved
+Reviewer comment: All good
 
-How I responded: Thank you, I appreciate it.
+How I responded: Appreciate it.
 
 
 ## Pull Requests I reviewed for my partner
-My comment: < Keep up the good work. >
-Partner's response: < Thank you >
+My comment: < In your requester dashboard, the view all button of the four summary cards on top does not correctly link to the proper results, and instead just shows you all the tickets. >
+Partner's response: < Thank you for pointing that out. I fixed it now. >
