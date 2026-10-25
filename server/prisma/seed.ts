@@ -162,6 +162,19 @@ async function main() {
           resolutionSummary: "Renewed client SSL certificate and configured split-tunnel routing.",
         },
       });
+    } else {
+      await prisma.ticket.update({
+        where: { id: tkt3.id },
+        data: {
+          ownerId: sarah.id,
+          ownerName: sarah.displayName,
+          status: "Resolved",
+          itPriority: "URGENT",
+          requestedPriority: "URGENT",
+          resolutionSummary: "Renewed client SSL certificate and configured split-tunnel routing.",
+          updatedAt: new Date(),
+        },
+      });
     }
 
     const existingActions3 = await prisma.actionTaken.count({ where: { ticketId: tkt3.id } });
