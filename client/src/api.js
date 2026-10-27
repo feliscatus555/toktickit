@@ -367,19 +367,30 @@ export async function updateTicketPriority(ticketId, itPriority) {
     }
     return data;
 }
-export async function updateTicketStatus(ticketId, status, resolutionSummary) {
+export async function updateTicketStatus(ticketId, status, resolutionSummary, version) {
+    const payload = { status };
+    if (resolutionSummary !== undefined) {
+        payload.resolutionSummary = resolutionSummary;
+    }
+    if (version !== undefined) {
+        payload.version = version;
+    }
     const res = await fetch(`${API_URL}/api/staff/tickets/${ticketId}/status`, {
         method: "PATCH",
         headers: {
             "Content-Type": "application/json",
             ...getAuthHeaders(),
         },
-        body: JSON.stringify({ status, resolutionSummary }),
+        body: JSON.stringify(payload),
     });
     const data = await res.json();
     if (!res.ok) {
-        const err = new Error(data?.error?.message || "Failed to update status");
+        const errorMessage = data?.error?.message ||
+            (typeof data?.error === "string" ? data.error : null) ||
+            "Failed to update status";
+        const err = new Error(errorMessage);
         err.status = res.status;
+        err.data = data;
         throw err;
     }
     return data;
@@ -447,7 +458,7 @@ export async function createTicketNote(ticketId, content) {
     return data;
 }
 export async function indicateProblemResolved(ticketId) {
-    const res = await fetch(`${API_URL}/api/tickets/${ticketId}/resolve-indication`, {
+    const res = await fetch(`${API_URL}/api/tickets/${ticketId}/problem-resolved`, {
         method: "PATCH",
         headers: {
             "Content-Type": "application/json",
@@ -547,6 +558,81 @@ export async function resetUserPassword(id, newInitialPassword) {
     const data = await res.json();
     if (!res.ok) {
         const err = new Error(data?.error?.message || "Failed to reset password");
+        err.status = res.status;
+        err.data = data;
+        throw err;
+    }
+    return data;
+}
+export async function fetchActionsTaken(ticketId) {
+    const res = await fetch(`${API_URL}/api/tickets/${ticketId}/actions-taken`, {
+        headers: getAuthHeaders(),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        const err = new Error(data?.error?.message || data?.error || "Failed to fetch actions taken");
+        err.status = res.status;
+        err.data = data;
+        throw err;
+    }
+    return data;
+}
+export async function createActionTaken(ticketId, input) {
+    const res = await fetch(`${API_URL}/api/tickets/${ticketId}/actions-taken`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            ...getAuthHeaders(),
+        },
+        body: JSON.stringify(input),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        const err = new Error(data?.error?.message || data?.error || "Failed to create action taken");
+        err.status = res.status;
+        err.data = data;
+        throw err;
+    }
+    return data;
+}
+export async function updateActionTaken(ticketId, actionId, input) {
+    const res = await fetch(`${API_URL}/api/tickets/${ticketId}/actions-taken/${actionId}`, {
+        method: "PATCH",
+        headers: {
+            "Content-Type": "application/json",
+            ...getAuthHeaders(),
+        },
+        body: JSON.stringify(input),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        const err = new Error(data?.error?.message || data?.error || "Failed to update action taken");
+        err.status = res.status;
+        err.data = data;
+        throw err;
+    }
+    return data;
+}
+export async function fetchStaffDashboard() {
+    const res = await fetch(`${API_URL}/api/staff/dashboard`, {
+        headers: getAuthHeaders(),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        const err = new Error(data?.error?.message || data?.error || "Failed to fetch staff dashboard metrics");
+        err.status = res.status;
+        err.data = data;
+        throw err;
+    }
+    return data;
+}
+export async function fetchRequesterDashboard() {
+    const res = await fetch(`${API_URL}/api/requester/dashboard`, {
+        headers: getAuthHeaders(),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        const err = new Error(data?.error?.message || data?.error || "Failed to fetch requester dashboard metrics");
         err.status = res.status;
         err.data = data;
         throw err;

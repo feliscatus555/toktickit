@@ -1,7 +1,7 @@
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { useState, useEffect, useId } from "react";
 import { fetchCategories, fetchStaffTickets, } from "./api.js";
-export default function StaffTicketQueue({ onSelectTicket, currentUser, }) {
+export default function StaffTicketQueue({ onSelectTicket, currentUser, initialStatusFilter, initialOwnerFilter, initialSearchFilter, }) {
     const searchInputId = useId();
     const categorySelectId = useId();
     const statusSelectId = useId();
@@ -12,12 +12,12 @@ export default function StaffTicketQueue({ onSelectTicket, currentUser, }) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     // Filter and Query state
-    const [search, setSearch] = useState("");
+    const [search, setSearch] = useState(initialSearchFilter || "");
     const [searchValidation, setSearchValidation] = useState(null);
     const [category, setCategory] = useState("");
-    const [status, setStatus] = useState("");
+    const [status, setStatus] = useState(initialStatusFilter || "");
     const [priority, setPriority] = useState("");
-    const [owner, setOwner] = useState("");
+    const [owner, setOwner] = useState(initialOwnerFilter || "");
     // Sort state
     const [sortBy, setSortBy] = useState("createdAt");
     const [sortOrder, setSortOrder] = useState("desc");
@@ -26,6 +26,19 @@ export default function StaffTicketQueue({ onSelectTicket, currentUser, }) {
     const [totalPages, setTotalPages] = useState(1);
     const [totalItems, setTotalItems] = useState(0);
     const limit = 10;
+    // Sync initial filter props to state
+    useEffect(() => {
+        if (initialStatusFilter !== undefined)
+            setStatus(initialStatusFilter);
+    }, [initialStatusFilter]);
+    useEffect(() => {
+        if (initialOwnerFilter !== undefined)
+            setOwner(initialOwnerFilter);
+    }, [initialOwnerFilter]);
+    useEffect(() => {
+        if (initialSearchFilter !== undefined)
+            setSearch(initialSearchFilter);
+    }, [initialSearchFilter]);
     // Load categories once
     useEffect(() => {
         fetchCategories()
@@ -385,7 +398,7 @@ export default function StaffTicketQueue({ onSelectTicket, currentUser, }) {
                                             border: "1px solid #D1D5DB",
                                             backgroundColor: "#FFFFFF",
                                             boxSizing: "border-box",
-                                        }, children: [_jsx("option", { value: "", children: "All Statuses" }), _jsx("option", { value: "New", children: "New" }), _jsx("option", { value: "InProgress", children: "In Progress" }), _jsx("option", { value: "Assigned", children: "Assigned" }), _jsx("option", { value: "Pending", children: "Pending" }), _jsx("option", { value: "Resolved", children: "Resolved" }), _jsx("option", { value: "Closed", children: "Closed" })] })] }), _jsxs("div", { children: [_jsx("label", { htmlFor: prioritySelectId, style: {
+                                        }, children: [_jsx("option", { value: "", children: "All Statuses" }), _jsx("option", { value: "New", children: "New" }), _jsx("option", { value: "Open", children: "Open" }), _jsx("option", { value: "InProgress", children: "In Progress" }), _jsx("option", { value: "WaitingForRequester", children: "Waiting for Requester" }), _jsx("option", { value: "Assigned", children: "Assigned" }), _jsx("option", { value: "Pending", children: "Pending" }), _jsx("option", { value: "Resolved", children: "Resolved" }), _jsx("option", { value: "Closed", children: "Closed" })] })] }), _jsxs("div", { children: [_jsx("label", { htmlFor: prioritySelectId, style: {
                                             display: "block",
                                             fontSize: "0.8rem",
                                             fontWeight: 700,

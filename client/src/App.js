@@ -1,4 +1,4 @@
-import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
+import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { useState, useEffect, useRef } from "react";
 import { getStoredAuthUser, getAuthToken, fetchCurrentUser, logout as apiLogout, clearAuthSession, } from "./api.js";
 import Login from "./Login.js";
@@ -8,6 +8,8 @@ import MyTickets from "./MyTickets.js";
 import TicketDetail from "./TicketDetail.js";
 import StaffTicketQueue from "./StaffTicketQueue.js";
 import UserManagement from "./UserManagement.js";
+import StaffDashboard from "./StaffDashboard.js";
+import RequesterDashboard from "./RequesterDashboard.js";
 export default function App() {
     const [currentUser, setCurrentUser] = useState(() => {
         const token = getAuthToken();
@@ -32,9 +34,24 @@ export default function App() {
         return "my-tickets";
     });
     const [selectedTicketId, setSelectedTicketId] = useState(null);
+    const [queueFilterOptions, setQueueFilterOptions] = useState(null);
+    const [myTicketsStatusFilter, setMyTicketsStatusFilter] = useState(null);
     const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
     const [showProfileMenu, setShowProfileMenu] = useState(false);
     const profileMenuRef = useRef(null);
+    function handleDashboardNavigateQueue(options) {
+        if (options?.assignedToMe && !options.owner) {
+            setQueueFilterOptions({ ...options, owner: "me" });
+        }
+        else {
+            setQueueFilterOptions(options || null);
+        }
+        setActiveTab("queue");
+    }
+    function handleRequesterDashboardNavigateMyTickets(statusFilter) {
+        setMyTicketsStatusFilter(statusFilter || null);
+        setActiveTab("my-tickets");
+    }
     useEffect(() => {
         function handleClickOutside(event) {
             if (profileMenuRef.current && !profileMenuRef.current.contains(event.target)) {
@@ -147,22 +164,46 @@ export default function App() {
                     maxWidth: "100%",
                     overflow: "visible",
                     zIndex: 100,
-                }, children: _jsxs("div", { className: "container-fluid px-1 px-md-4", children: [_jsxs("div", { className: "d-flex justify-content-between align-items-center flex-wrap gap-2 py-1", children: [_jsxs("div", { className: "d-flex align-items-center gap-3", children: [_jsxs("h1", { className: "h4 mb-0 fw-bold d-flex align-items-center gap-2", style: { whiteSpace: "nowrap" }, children: [_jsxs("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", stroke: "#FFFFFF", strokeWidth: "2.5", strokeLinecap: "round", strokeLinejoin: "round", children: [_jsx("circle", { cx: "12", cy: "12", r: "10" }), _jsx("polyline", { points: "12 6 12 12 16 14" })] }), _jsx("span", { children: "TokTickIT" })] }), _jsxs("div", { className: "d-none d-md-flex gap-2 ms-2", children: [(currentUser.role === "IT_STAFF" || currentUser.role === "ADMINISTRATOR") && (_jsx("button", { id: "nav-ticket-queue", type: "button", onClick: () => setActiveTab("queue"), className: "btn btn-sm text-white fw-semibold", style: {
-                                                        backgroundColor: activeTab === "queue" ||
-                                                            (activeTab === "ticket-detail" &&
-                                                                (currentUser.role === "IT_STAFF" || currentUser.role === "ADMINISTRATOR"))
-                                                            ? "#0B7A46"
-                                                            : "transparent",
-                                                        border: activeTab === "queue" ||
-                                                            (activeTab === "ticket-detail" &&
-                                                                (currentUser.role === "IT_STAFF" || currentUser.role === "ADMINISTRATOR"))
+                }, children: _jsxs("div", { className: "container-fluid px-1 px-md-4", children: [_jsxs("div", { className: "d-flex justify-content-between align-items-center flex-wrap gap-2 py-1", children: [_jsxs("div", { className: "d-flex align-items-center gap-3", children: [_jsxs("h1", { className: "h4 mb-0 fw-bold d-flex align-items-center gap-2", style: { whiteSpace: "nowrap" }, children: [_jsxs("svg", { width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", stroke: "#FFFFFF", strokeWidth: "2.5", strokeLinecap: "round", strokeLinejoin: "round", children: [_jsx("circle", { cx: "12", cy: "12", r: "10" }), _jsx("polyline", { points: "12 6 12 12 16 14" })] }), _jsx("span", { children: "TokTickIT" })] }), _jsxs("div", { className: "d-none d-md-flex gap-2 ms-2", children: [(currentUser.role === "IT_STAFF" || currentUser.role === "ADMINISTRATOR") && (_jsxs(_Fragment, { children: [_jsx("button", { id: "nav-dashboard", type: "button", onClick: () => setActiveTab("dashboard"), className: "btn btn-sm text-white fw-semibold", style: {
+                                                                backgroundColor: activeTab === "dashboard" ? "#0B7A46" : "transparent",
+                                                                border: activeTab === "dashboard"
+                                                                    ? "1px solid #EAF6EF"
+                                                                    : "1px solid transparent",
+                                                                borderRadius: "6px",
+                                                                padding: "0.4rem 0.85rem",
+                                                                whiteSpace: "nowrap",
+                                                                fontSize: "0.88rem",
+                                                            }, children: "\uD83D\uDCCA Dashboard" }), _jsx("button", { id: "nav-ticket-queue", type: "button", onClick: () => {
+                                                                setQueueFilterOptions(null);
+                                                                setActiveTab("queue");
+                                                            }, className: "btn btn-sm text-white fw-semibold", style: {
+                                                                backgroundColor: activeTab === "queue" ||
+                                                                    (activeTab === "ticket-detail" &&
+                                                                        (currentUser.role === "IT_STAFF" || currentUser.role === "ADMINISTRATOR"))
+                                                                    ? "#0B7A46"
+                                                                    : "transparent",
+                                                                border: activeTab === "queue" ||
+                                                                    (activeTab === "ticket-detail" &&
+                                                                        (currentUser.role === "IT_STAFF" || currentUser.role === "ADMINISTRATOR"))
+                                                                    ? "1px solid #EAF6EF"
+                                                                    : "1px solid transparent",
+                                                                borderRadius: "6px",
+                                                                padding: "0.4rem 0.85rem",
+                                                                whiteSpace: "nowrap",
+                                                                fontSize: "0.88rem",
+                                                            }, children: "\uD83D\uDCCB Ticket Queue" })] })), currentUser.role === "REQUESTER" && (_jsx("button", { id: "nav-requester-dashboard", type: "button", onClick: () => setActiveTab("requester-dashboard"), className: "btn btn-sm text-white fw-semibold", style: {
+                                                        backgroundColor: activeTab === "requester-dashboard" ? "#0B7A46" : "transparent",
+                                                        border: activeTab === "requester-dashboard"
                                                             ? "1px solid #EAF6EF"
                                                             : "1px solid transparent",
                                                         borderRadius: "6px",
                                                         padding: "0.4rem 0.85rem",
                                                         whiteSpace: "nowrap",
                                                         fontSize: "0.88rem",
-                                                    }, children: "\uD83D\uDCCB Ticket Queue" })), currentUser.role !== "IT_STAFF" && (_jsx("button", { id: "nav-my-tickets", type: "button", onClick: () => setActiveTab("my-tickets"), className: "btn btn-sm text-white fw-semibold", style: {
+                                                    }, children: "\uD83D\uDCCA Dashboard" })), currentUser.role !== "IT_STAFF" && (_jsx("button", { id: "nav-my-tickets", type: "button", onClick: () => {
+                                                        setMyTicketsStatusFilter(null);
+                                                        setActiveTab("my-tickets");
+                                                    }, className: "btn btn-sm text-white fw-semibold", style: {
                                                         backgroundColor: activeTab === "my-tickets" || (activeTab === "ticket-detail" && currentUser.role === "REQUESTER")
                                                             ? "#0B7A46"
                                                             : "transparent",
@@ -225,22 +266,46 @@ export default function App() {
                                                         handleLogout();
                                                     }, children: [_jsx("span", { children: "\uD83D\uDEAA" }), _jsx("span", { className: "fw-semibold", children: "Sign Out" })] })] }))] })] }), _jsxs("div", { className: "d-flex flex-wrap d-md-none gap-2 mt-2 pt-2 border-top w-100", style: {
                                 borderColor: "rgba(255, 255, 255, 0.2)",
-                            }, children: [(currentUser.role === "IT_STAFF" || currentUser.role === "ADMINISTRATOR") && (_jsx("button", { id: "mobile-nav-ticket-queue", type: "button", onClick: () => setActiveTab("queue"), className: "btn btn-sm text-white fw-semibold flex-fill text-center", style: {
-                                        backgroundColor: activeTab === "queue" ||
-                                            (activeTab === "ticket-detail" &&
-                                                (currentUser.role === "IT_STAFF" || currentUser.role === "ADMINISTRATOR"))
-                                            ? "#0B7A46"
-                                            : "transparent",
-                                        border: activeTab === "queue" ||
-                                            (activeTab === "ticket-detail" &&
-                                                (currentUser.role === "IT_STAFF" || currentUser.role === "ADMINISTRATOR"))
+                            }, children: [(currentUser.role === "IT_STAFF" || currentUser.role === "ADMINISTRATOR") && (_jsxs(_Fragment, { children: [_jsx("button", { id: "mobile-nav-dashboard", type: "button", onClick: () => setActiveTab("dashboard"), className: "btn btn-sm text-white fw-semibold flex-fill text-center", style: {
+                                                backgroundColor: activeTab === "dashboard" ? "#0B7A46" : "transparent",
+                                                border: activeTab === "dashboard"
+                                                    ? "1px solid #EAF6EF"
+                                                    : "1px solid transparent",
+                                                borderRadius: "6px",
+                                                padding: "0.4rem 0.6rem",
+                                                fontSize: "0.85rem",
+                                                whiteSpace: "nowrap",
+                                            }, children: "\uD83D\uDCCA Dashboard" }), _jsx("button", { id: "mobile-nav-ticket-queue", type: "button", onClick: () => {
+                                                setQueueFilterOptions(null);
+                                                setActiveTab("queue");
+                                            }, className: "btn btn-sm text-white fw-semibold flex-fill text-center", style: {
+                                                backgroundColor: activeTab === "queue" ||
+                                                    (activeTab === "ticket-detail" &&
+                                                        (currentUser.role === "IT_STAFF" || currentUser.role === "ADMINISTRATOR"))
+                                                    ? "#0B7A46"
+                                                    : "transparent",
+                                                border: activeTab === "queue" ||
+                                                    (activeTab === "ticket-detail" &&
+                                                        (currentUser.role === "IT_STAFF" || currentUser.role === "ADMINISTRATOR"))
+                                                    ? "1px solid #EAF6EF"
+                                                    : "1px solid transparent",
+                                                borderRadius: "6px",
+                                                padding: "0.4rem 0.6rem",
+                                                fontSize: "0.85rem",
+                                                whiteSpace: "nowrap",
+                                            }, children: "\uD83D\uDCCB Ticket Queue" })] })), currentUser.role === "REQUESTER" && (_jsx("button", { id: "mobile-nav-requester-dashboard", type: "button", onClick: () => setActiveTab("requester-dashboard"), className: "btn btn-sm text-white fw-semibold flex-fill text-center", style: {
+                                        backgroundColor: activeTab === "requester-dashboard" ? "#0B7A46" : "transparent",
+                                        border: activeTab === "requester-dashboard"
                                             ? "1px solid #EAF6EF"
                                             : "1px solid transparent",
                                         borderRadius: "6px",
                                         padding: "0.4rem 0.6rem",
                                         fontSize: "0.85rem",
                                         whiteSpace: "nowrap",
-                                    }, children: "\uD83D\uDCCB Ticket Queue" })), currentUser.role !== "IT_STAFF" && (_jsx("button", { id: "mobile-nav-my-tickets", type: "button", onClick: () => setActiveTab("my-tickets"), className: "btn btn-sm text-white fw-semibold flex-fill text-center", style: {
+                                    }, children: "\uD83D\uDCCA Dashboard" })), currentUser.role !== "IT_STAFF" && (_jsx("button", { id: "mobile-nav-my-tickets", type: "button", onClick: () => {
+                                        setMyTicketsStatusFilter(null);
+                                        setActiveTab("my-tickets");
+                                    }, className: "btn btn-sm text-white fw-semibold flex-fill text-center", style: {
                                         backgroundColor: activeTab === "my-tickets" || (activeTab === "ticket-detail" && currentUser.role === "REQUESTER")
                                             ? "#0B7A46"
                                             : "transparent",
@@ -269,7 +334,8 @@ export default function App() {
                                         padding: "0.4rem 0.6rem",
                                         fontSize: "0.85rem",
                                         whiteSpace: "nowrap",
-                                    }, children: [_jsx("span", { style: { color: "#FFFFFF", fontWeight: "bold", marginRight: "4px" }, children: "+" }), " ", "Create Ticket"] })] })] }) }), _jsx("main", { className: "container-fluid px-3 px-md-5 py-4", children: activeTab === "user-management" && currentUser.role === "ADMINISTRATOR" ? (_jsx(UserManagement, { currentUser: currentUser })) : activeTab === "queue" ? (_jsx(StaffTicketQueue, { currentUser: currentUser, onSelectTicket: handleSelectTicket })) : activeTab === "my-tickets" ? (_jsx(MyTickets, { activeRequester: currentUser, onCreateTicketClick: () => setActiveTab("create-ticket"), onSelectTicket: handleSelectTicket })) : activeTab === "ticket-detail" && selectedTicketId ? (_jsx(TicketDetail, { ticketId: selectedTicketId, currentRequester: currentUser, onBack: () => setActiveTab(currentUser.role === "IT_STAFF" || currentUser.role === "ADMINISTRATOR"
+                                    }, children: [_jsx("span", { style: { color: "#FFFFFF", fontWeight: "bold", marginRight: "4px" }, children: "+" }), " ", "Create Ticket"] })] })] }) }), _jsx("main", { className: "container-fluid px-3 px-md-5 py-4", children: activeTab === "requester-dashboard" && currentUser.role === "REQUESTER" ? (_jsx(RequesterDashboard, { currentUser: currentUser, onNavigateMyTickets: handleRequesterDashboardNavigateMyTickets, onNavigateCreateTicket: () => setActiveTab("create-ticket"), onSelectTicket: handleSelectTicket })) : activeTab === "dashboard" &&
+                    (currentUser.role === "IT_STAFF" || currentUser.role === "ADMINISTRATOR") ? (_jsx(StaffDashboard, { currentUser: currentUser, onNavigateQueue: handleDashboardNavigateQueue, onSelectTicket: handleSelectTicket, onCreateTicketClick: () => setActiveTab("create-ticket") })) : activeTab === "user-management" && currentUser.role === "ADMINISTRATOR" ? (_jsx(UserManagement, { currentUser: currentUser })) : activeTab === "queue" ? (_jsx(StaffTicketQueue, { currentUser: currentUser, onSelectTicket: handleSelectTicket, initialStatusFilter: queueFilterOptions?.status, initialOwnerFilter: queueFilterOptions?.owner, initialSearchFilter: queueFilterOptions?.search })) : activeTab === "my-tickets" ? (_jsx(MyTickets, { activeRequester: currentUser, onCreateTicketClick: () => setActiveTab("create-ticket"), onSelectTicket: handleSelectTicket, initialStatusFilter: myTicketsStatusFilter || undefined })) : activeTab === "ticket-detail" && selectedTicketId ? (_jsx(TicketDetail, { ticketId: selectedTicketId, currentRequester: currentUser, onBack: () => setActiveTab(currentUser.role === "IT_STAFF" || currentUser.role === "ADMINISTRATOR"
                         ? "queue"
                         : "my-tickets") })) : (_jsx(CreateTicket, { activeRequester: currentUser, onSuccess: () => setActiveTab(currentUser.role === "IT_STAFF" || currentUser.role === "ADMINISTRATOR"
                         ? "queue"

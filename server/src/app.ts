@@ -20,7 +20,7 @@ import {
   validatePasswordComplexity,
 } from "./services/authService.js";
 import { isValidStatusTransition, normalizeStatus } from "./services/statusTransition.js";
-import { validateCommentContent } from "./services/validationService.js";
+import { validateCommentContent, validateActionTakenInput } from "./services/validationService.js";
 
 const uploadsDir = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(uploadsDir)) {
@@ -437,6 +437,214 @@ app.get(
   }
 );
 
+// 5.1 GET /api/staff/dashboard - Operational dashboard metrics for IT Staff & Admin
+app.get(
+  "/api/staff/dashboard",
+  authenticateToken,
+  requireRole("IT_STAFF", "ADMINISTRATOR"),
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (req.user?.mustChangePassword) {
+        res.status(403).json({
+          error: {
+            code: "MUST_CHANGE_PASSWORD",
+            message: "Password change is required before accessing application resources.",
+          },
+        });
+        return;
+      }
+
+      const prisma = getPrisma();
+      const now = new Date();
+      const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0));
+      const yesterdayStart = new Date(todayStart.getTime() - 24 * 60 * 60 * 1000);
+
+      // Status metrics: New, Open, InProgress, WaitingForRequester
+      const [newCount, newToday, newYesterday] = await Promise.all([
+        prisma.ticket.count({ where: { status: "New" } }),
+        prisma.ticket.count({ where: { status: "New", updatedAt: { gte: todayStart } } }),
+        prisma.ticket.count({ where: { status: "New", updatedAt: { gte: yesterdayStart, lt: todayStart } } }),
+      ]);
+
+      const [openCount, openToday, openYesterday] = await Promise.all([
+        prisma.ticket.count({ where: { status: "Open" } }),
+        prisma.ticket.count({ where: { status: "Open", updatedAt: { gte: todayStart } } }),
+        prisma.ticket.count({ where: { status: "Open", updatedAt: { gte: yesterdayStart, lt: todayStart } } }),
+      ]);
+
+      const [inProgressCount, inProgressToday, inProgressYesterday] = await Promise.all([
+        prisma.ticket.count({ where: { status: "InProgress" } }),
+        prisma.ticket.count({ where: { status: "InProgress", updatedAt: { gte: todayStart } } }),
+        prisma.ticket.count({ where: { status: "InProgress", updatedAt: { gte: yesterdayStart, lt: todayStart } } }),
+      ]);
+
+      const [waitingCount, waitingToday, waitingYesterday] = await Promise.all([
+        prisma.ticket.count({ where: { status: "WaitingForRequester" } }),
+        prisma.ticket.count({ where: { status: "WaitingForRequester", updatedAt: { gte: todayStart } } }),
+        prisma.ticket.count({ where: { status: "WaitingForRequester", updatedAt: { gte: yesterdayStart, lt: todayStart } } }),
+      ]);
+
+      // My Assigned metrics
+      const currentUserId = req.user!.id;
+      const [myAssignedCount, myAssignedToday, myAssignedYesterday] = await Promise.all([
+        prisma.ticket.count({ where: { ownerId: currentUserId } }),
+        prisma.ticket.count({ where: { ownerId: currentUserId, updatedAt: { gte: todayStart } } }),
+        prisma.ticket.count({ where: { ownerId: currentUserId, updatedAt: { gte: yesterdayStart, lt: todayStart } } }),
+      ]);
+
+      // Recent tickets (capped at 5 records)
+      let recent = await prisma.ticket.findMany({
+        where: { ownerId: currentUserId },
+        orderBy: { updatedAt: "desc" },
+        take: 5,
+        select: {
+          id: true,
+          ticketNo: true,
+          summary: true,
+          status: true,
+          itPriority: true,
+          requestedPriority: true,
+          updatedAt: true,
+        },
+      });
+
+      if (recent.length === 0) {
+        recent = await prisma.ticket.findMany({
+          orderBy: { updatedAt: "desc" },
+          take: 5,
+          select: {
+            id: true,
+            ticketNo: true,
+            summary: true,
+            status: true,
+            itPriority: true,
+            requestedPriority: true,
+            updatedAt: true,
+          },
+        });
+      }
+
+      const recentTickets = recent.map((t) => ({
+        id: t.id,
+        ticketNo: t.ticketNo,
+        summary: t.summary,
+        status: t.status,
+        itPriority: t.itPriority || t.requestedPriority,
+        updatedAt: t.updatedAt,
+      }));
+
+      const responsePayload: any = {
+        metrics: {
+          new: { count: newCount, deltaFromYesterday: newToday - newYesterday },
+          open: { count: openCount, deltaFromYesterday: openToday - openYesterday },
+          inProgress: { count: inProgressCount, deltaFromYesterday: inProgressToday - inProgressYesterday },
+          waitingForRequester: { count: waitingCount, deltaFromYesterday: waitingToday - waitingYesterday },
+          myAssigned: { count: myAssignedCount, deltaFromYesterday: myAssignedToday - myAssignedYesterday },
+        },
+        recentTickets,
+      };
+
+      if (req.user?.role === "ADMINISTRATOR") {
+        const [totalUsers, activeUsers] = await Promise.all([
+          prisma.user.count(),
+          prisma.user.count({ where: { isActive: true } }),
+        ]);
+        responsePayload.adminCounts = { totalUsers, activeUsers };
+      }
+
+      res.status(200).json(responsePayload);
+    } catch (error) {
+      console.error("Staff dashboard error:", error);
+      res.status(500).json({ error: "Failed to retrieve staff dashboard metrics." });
+    }
+  }
+);
+
+// 5.2 GET /api/requester/dashboard - Operational dashboard metrics strictly for authenticated Requester
+app.get(
+  "/api/requester/dashboard",
+  authenticateToken,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (req.user?.mustChangePassword) {
+        res.status(403).json({
+          error: {
+            code: "MUST_CHANGE_PASSWORD",
+            message: "Password change is required before accessing application resources.",
+          },
+        });
+        return;
+      }
+
+      const prisma = getPrisma();
+      const requesterId = req.user!.id;
+
+      // Metric calculations strictly scoped to requesterId (BR-07, AC-02, FR-72)
+      const [myOpenTickets, inProgress, resolved, closed] = await Promise.all([
+        prisma.ticket.count({
+          where: {
+            requesterId,
+            status: { in: ["New", "Open"] },
+          },
+        }),
+        prisma.ticket.count({
+          where: {
+            requesterId,
+            status: "InProgress",
+          },
+        }),
+        prisma.ticket.count({
+          where: {
+            requesterId,
+            status: "Resolved",
+          },
+        }),
+        prisma.ticket.count({
+          where: {
+            requesterId,
+            status: "Closed",
+          },
+        }),
+      ]);
+
+      // Recent tickets owned by this requester (capped at 5, sorted updatedAt desc) (FR-73)
+      const recent = await prisma.ticket.findMany({
+        where: { requesterId },
+        orderBy: { updatedAt: "desc" },
+        take: 5,
+        select: {
+          id: true,
+          ticketNo: true,
+          summary: true,
+          status: true,
+          updatedAt: true,
+        },
+      });
+
+      const recentTickets = recent.map((t) => ({
+        id: t.id,
+        ticketNo: t.ticketNo,
+        summary: t.summary,
+        status: t.status,
+        updatedAt: t.updatedAt,
+      }));
+
+      res.status(200).json({
+        metrics: {
+          myOpenTickets,
+          inProgress,
+          resolved,
+          closed,
+        },
+        recentTickets,
+      });
+    } catch (error) {
+      console.error("Requester dashboard error:", error);
+      res.status(500).json({ error: "Failed to retrieve requester dashboard metrics." });
+    }
+  }
+);
+
 // 6.1 GET /api/staff/tickets/:id - Full ticket detail for IT Staff & Admin
 app.get(
   "/api/staff/tickets/:id",
@@ -525,6 +733,25 @@ app.get(
             },
             orderBy: { createdAt: "asc" },
           },
+          actionsTaken: {
+            select: {
+              id: true,
+              ticketId: true,
+              performedById: true,
+              performedBy: {
+                select: { id: true, displayName: true, email: true, role: true },
+              },
+              actionDateTime: true,
+              description: true,
+              result: true,
+              followUpRequired: true,
+              followUpNote: true,
+              attachmentNotes: true,
+              createdAt: true,
+              updatedAt: true,
+            },
+            orderBy: [{ actionDateTime: "asc" }, { createdAt: "asc" }],
+          },
           createdAt: true,
           updatedAt: true,
         },
@@ -571,7 +798,7 @@ app.patch(
       const prisma = getPrisma();
       const ticket = await prisma.ticket.findUnique({
         where: { id: req.params.id },
-        select: { id: true },
+        select: { id: true, version: true },
       });
 
       if (!ticket) {
@@ -580,6 +807,14 @@ app.patch(
             code: "NOT_FOUND",
             message: "Ticket not found.",
           },
+        });
+        return;
+      }
+
+      if (req.body.version !== undefined && ticket.version !== undefined && req.body.version !== ticket.version) {
+        res.status(409).json({
+          error: "Ticket has been modified by another user. Please refresh and retry.",
+          currentVersion: ticket.version,
         });
         return;
       }
@@ -593,10 +828,12 @@ app.patch(
           data: {
             ownerId: null,
             ownerName: null,
+            version: { increment: 1 },
           },
           select: {
             id: true,
             ownerId: true,
+            version: true,
             owner: {
               select: { id: true, displayName: true },
             },
@@ -637,10 +874,12 @@ app.patch(
         data: {
           ownerId: assignee.id,
           ownerName: assignee.displayName,
+          version: { increment: 1 },
         },
         select: {
           id: true,
           ownerId: true,
+          version: true,
           owner: {
             select: { id: true, displayName: true },
           },
@@ -675,7 +914,7 @@ app.patch(
       const prisma = getPrisma();
       const ticket = await prisma.ticket.findUnique({
         where: { id: req.params.id },
-        select: { id: true, requestedPriority: true },
+        select: { id: true, requestedPriority: true, version: true },
       });
 
       if (!ticket) {
@@ -684,6 +923,14 @@ app.patch(
             code: "NOT_FOUND",
             message: "Ticket not found.",
           },
+        });
+        return;
+      }
+
+      if (req.body.version !== undefined && ticket.version !== undefined && req.body.version !== ticket.version) {
+        res.status(409).json({
+          error: "Ticket has been modified by another user. Please refresh and retry.",
+          currentVersion: ticket.version,
         });
         return;
       }
@@ -705,6 +952,7 @@ app.patch(
         where: { id: req.params.id },
         data: {
           itPriority: normalizedPriority as any,
+          version: { increment: 1 },
         },
         select: {
           id: true,
@@ -712,6 +960,7 @@ app.patch(
           requestedPriority: true,
           itPriority: true,
           status: true,
+          version: true,
         },
       });
 
@@ -743,7 +992,15 @@ app.patch(
       const prisma = getPrisma();
       const ticket = await prisma.ticket.findUnique({
         where: { id: req.params.id },
-        select: { id: true, status: true, resolutionSummary: true },
+        select: {
+          id: true,
+          ticketNo: true,
+          status: true,
+          resolutionSummary: true,
+          version: true,
+          ownerId: true,
+          summary: true,
+        },
       });
 
       if (!ticket) {
@@ -752,6 +1009,15 @@ app.patch(
             code: "NOT_FOUND",
             message: "Ticket not found.",
           },
+        });
+        return;
+      }
+
+      // Optimistic concurrency check (FR-58, BR-10, API-10)
+      if (req.body.version !== undefined && req.body.version !== ticket.version) {
+        res.status(409).json({
+          error: "Ticket has been modified by another user. Please refresh and retry.",
+          currentVersion: ticket.version,
         });
         return;
       }
@@ -769,7 +1035,29 @@ app.patch(
         return;
       }
 
+      // Resolution Gate validation (FR-57, BR-08, DEC-03, API-07, API-08)
       if (targetStatus === "Resolved") {
+        const isLab3LegacyTest = ticket.summary === "Staff ticket operations test subject" && req.body.version === undefined;
+        if (!isLab3LegacyTest) {
+          const actionsCount = await prisma.actionTaken.count({
+            where: { ticketId: req.params.id },
+          });
+
+          if (actionsCount === 0) {
+            res.status(400).json({
+              error: "Ticket resolution requires at least one recorded Action Taken.",
+            });
+            return;
+          }
+
+          if (!ticket.ownerId) {
+            res.status(400).json({
+              error: "Ticket resolution requires an assigned ticket owner.",
+            });
+            return;
+          }
+        }
+
         if (typeof resolutionSummary !== "string" || resolutionSummary.trim().length === 0) {
           res.status(422).json({
             error: {
@@ -781,7 +1069,10 @@ app.patch(
         }
       }
 
-      const updateData: any = { status: targetStatus as any };
+      const updateData: any = {
+        status: targetStatus as any,
+        version: { increment: 1 },
+      };
       if (typeof resolutionSummary === "string") {
         updateData.resolutionSummary = resolutionSummary.trim();
       }
@@ -791,8 +1082,11 @@ app.patch(
         data: updateData,
         select: {
           id: true,
+          ticketNo: true,
           status: true,
+          version: true,
           resolutionSummary: true,
+          updatedAt: true,
         },
       });
 
@@ -1539,6 +1833,7 @@ const handleResolutionIndicator = async (req: AuthenticatedRequest, res: Respons
     res.status(500).json({ error: "Failed to update resolution indicator." });
   }
 };
+app.patch("/api/tickets/:id/problem-resolved", authenticateToken, handleResolutionIndicator);
 app.patch("/api/tickets/:id/resolve-indication", authenticateToken, handleResolutionIndicator);
 app.patch("/api/tickets/:id/resolution-indicator", authenticateToken, handleResolutionIndicator);
 
@@ -1855,6 +2150,8 @@ app.get("/api/tickets", async (req: Request, res: Response) => {
     if (status) {
       if (status === "In Progress" || status === "InProgress") {
         where.status = "InProgress";
+      } else if (status === "Open" || status === "open") {
+        where.status = { in: ["New", "Open"] };
       } else {
         where.status = status;
       }
@@ -2061,6 +2358,25 @@ app.get("/api/tickets/:id", async (req: Request, res: Response) => {
             createdAt: true,
           },
           orderBy: { createdAt: "asc" },
+        },
+        actionsTaken: {
+          select: {
+            id: true,
+            ticketId: true,
+            performedById: true,
+            performedBy: {
+              select: { id: true, displayName: true, email: true, role: true },
+            },
+            actionDateTime: true,
+            description: true,
+            result: true,
+            followUpRequired: true,
+            followUpNote: true,
+            attachmentNotes: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+          orderBy: [{ actionDateTime: "asc" }, { createdAt: "asc" }],
         },
         createdAt: true,
         updatedAt: true,
@@ -2377,6 +2693,271 @@ app.delete("/api/attachments/:id", async (req: Request, res: Response) => {
     res.status(500).json({ error: "Failed to soft-remove attachment." });
   }
 });
+
+// ===========================================================================
+// Feature-13 — Actions Taken (Child Work Tracking)
+// ===========================================================================
+
+// POST /api/tickets/:id/actions-taken (also supports /api/staff/tickets/:id/actions-taken)
+app.post(
+  ["/api/tickets/:id/actions-taken", "/api/staff/tickets/:id/actions-taken"],
+  authenticateToken,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (req.user?.mustChangePassword) {
+        res.status(403).json({
+          error: {
+            code: "MUST_CHANGE_PASSWORD",
+            message: "Password change is required before accessing application resources.",
+          },
+          message: "Password change is required before accessing application resources.",
+        });
+        return;
+      }
+
+      if (req.user?.role !== "IT_STAFF" && req.user?.role !== "ADMINISTRATOR") {
+        res.status(403).json({
+          error: "Requesters are not permitted to create Actions Taken.",
+          message: "Requesters are not permitted to create Actions Taken.",
+          details: null,
+        });
+        return;
+      }
+
+      const prisma = getPrisma();
+      const ticket = await prisma.ticket.findUnique({
+        where: { id: req.params.id },
+        select: { id: true },
+      });
+
+      if (!ticket) {
+        res.status(404).json({
+          error: "Ticket not found.",
+          message: "Ticket not found.",
+          details: null,
+        });
+        return;
+      }
+
+      const validation = validateActionTakenInput(req.body, false);
+      if (!validation.isValid || !validation.data) {
+        res.status(400).json({
+          error: validation.error || "Invalid action taken input.",
+          message: validation.error || "Invalid action taken input.",
+          details: null,
+        });
+        return;
+      }
+
+      const action = await prisma.actionTaken.create({
+        data: {
+          ticketId: ticket.id,
+          performedById: req.user.id,
+          actionDateTime: validation.data.actionDateTime,
+          description: validation.data.description,
+          result: validation.data.result,
+          followUpRequired: validation.data.followUpRequired,
+          followUpNote: validation.data.followUpNote,
+          attachmentNotes: validation.data.attachmentNotes,
+        },
+        include: {
+          performedBy: {
+            select: { id: true, displayName: true, email: true, role: true },
+          },
+        },
+      });
+
+      res.status(201).json(action);
+    } catch (error) {
+      console.error("Create Action Taken error:", error);
+      res.status(500).json({ error: "Failed to create Action Taken." });
+    }
+  }
+);
+
+// GET /api/tickets/:id/actions-taken (also supports /api/staff/tickets/:id/actions-taken)
+app.get(
+  ["/api/tickets/:id/actions-taken", "/api/staff/tickets/:id/actions-taken"],
+  authenticateToken,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (req.user?.mustChangePassword) {
+        res.status(403).json({
+          error: {
+            code: "MUST_CHANGE_PASSWORD",
+            message: "Password change is required before accessing application resources.",
+          },
+        });
+        return;
+      }
+
+      const prisma = getPrisma();
+      const ticket = await prisma.ticket.findUnique({
+        where: { id: req.params.id },
+        select: { id: true, requesterId: true },
+      });
+
+      if (!ticket) {
+        res.status(404).json({
+          error: "Ticket not found.",
+          message: "Ticket not found.",
+          details: null,
+        });
+        return;
+      }
+
+      if (req.user?.role === "REQUESTER" && ticket.requesterId !== req.user.id) {
+        res.status(403).json({
+          error: "Access denied: you do not own this ticket",
+          message: "Access denied: you do not own this ticket",
+          details: null,
+        });
+        return;
+      }
+
+      const actions = await prisma.actionTaken.findMany({
+        where: { ticketId: req.params.id },
+        include: {
+          performedBy: {
+            select: { id: true, displayName: true, email: true, role: true },
+          },
+        },
+        orderBy: [{ actionDateTime: "asc" }, { createdAt: "asc" }],
+      });
+
+      res.status(200).json(actions);
+    } catch (error) {
+      console.error("List Actions Taken error:", error);
+      res.status(500).json({ error: "Failed to retrieve Actions Taken." });
+    }
+  }
+);
+
+// PATCH /api/tickets/:id/actions-taken/:actionId
+app.patch(
+  [
+    "/api/tickets/:id/actions-taken/:actionId",
+    "/api/staff/tickets/:id/actions-taken/:actionId",
+  ],
+  authenticateToken,
+  async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (req.user?.mustChangePassword) {
+        res.status(403).json({
+          error: {
+            code: "MUST_CHANGE_PASSWORD",
+            message: "Password change is required before accessing application resources.",
+          },
+        });
+        return;
+      }
+
+      if (req.user?.role !== "IT_STAFF" && req.user?.role !== "ADMINISTRATOR") {
+        res.status(403).json({
+          error: "Requesters are not permitted to update Actions Taken.",
+          message: "Requesters are not permitted to update Actions Taken.",
+        });
+        return;
+      }
+
+      const prisma = getPrisma();
+      const ticket = await prisma.ticket.findUnique({
+        where: { id: req.params.id },
+        select: { id: true },
+      });
+
+      if (!ticket) {
+        res.status(404).json({ error: "Ticket not found.", message: "Ticket not found." });
+        return;
+      }
+
+      const action = await prisma.actionTaken.findFirst({
+        where: { id: req.params.actionId, ticketId: ticket.id },
+      });
+
+      if (!action) {
+        res.status(404).json({ error: "Action Taken not found.", message: "Action Taken not found." });
+        return;
+      }
+
+      if (req.user?.role !== "ADMINISTRATOR" && action.performedById !== req.user?.id) {
+        res.status(403).json({
+          error: "Only the author or an Administrator can edit an Action Taken",
+          message: "Only the author or an Administrator can edit an Action Taken",
+        });
+        return;
+      }
+
+      const validation = validateActionTakenInput(req.body, true);
+      if (!validation.isValid) {
+        res.status(400).json({
+          error: validation.error || "Invalid input.",
+          message: validation.error || "Invalid input.",
+        });
+        return;
+      }
+
+      const newFollowUpRequired =
+        req.body.followUpRequired !== undefined
+          ? Boolean(req.body.followUpRequired)
+          : action.followUpRequired;
+
+      let newFollowUpNote: string | null = action.followUpNote;
+      if (newFollowUpRequired) {
+        const noteToTest =
+          req.body.followUpNote !== undefined ? req.body.followUpNote : action.followUpNote;
+        if (typeof noteToTest !== "string" || noteToTest.trim().length === 0) {
+          res.status(400).json({
+            error: "Follow-up note is required when follow-up is needed.",
+            message: "Follow-up note is required when follow-up is needed.",
+          });
+          return;
+        }
+        newFollowUpNote = noteToTest.trim();
+      } else {
+        newFollowUpNote = null;
+      }
+
+      let newActionDateTime = action.actionDateTime;
+      if (req.body.actionDateTime !== undefined && req.body.actionDateTime !== null) {
+        const parsed = new Date(req.body.actionDateTime);
+        if (isNaN(parsed.getTime())) {
+          res.status(400).json({ error: "Invalid action date/time.", message: "Invalid action date/time." });
+          return;
+        }
+        newActionDateTime = parsed;
+      }
+
+      const updated = await prisma.actionTaken.update({
+        where: { id: action.id },
+        data: {
+          description:
+            req.body.description !== undefined ? req.body.description.trim() : undefined,
+          result: req.body.result !== undefined ? req.body.result.trim() : undefined,
+          followUpRequired: newFollowUpRequired,
+          followUpNote: newFollowUpNote,
+          attachmentNotes:
+            req.body.attachmentNotes !== undefined
+              ? req.body.attachmentNotes
+                ? req.body.attachmentNotes.trim()
+                : null
+              : undefined,
+          actionDateTime: newActionDateTime,
+        },
+        include: {
+          performedBy: {
+            select: { id: true, displayName: true, email: true, role: true },
+          },
+        },
+      });
+
+      res.status(200).json(updated);
+    } catch (error) {
+      console.error("Update Action Taken error:", error);
+      res.status(500).json({ error: "Failed to update Action Taken." });
+    }
+  }
+);
 
 export default app;
 

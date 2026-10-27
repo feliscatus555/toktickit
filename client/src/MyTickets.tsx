@@ -7,16 +7,18 @@ import {
   fetchMyTickets,
 } from "./api.js";
 
-interface MyTicketsProps {
+export interface MyTicketsProps {
   activeRequester: RequesterUser;
   onCreateTicketClick?: () => void;
   onSelectTicket?: (ticketId: string) => void;
+  initialStatusFilter?: string;
 }
 
 export default function MyTickets({
   activeRequester,
   onCreateTicketClick,
   onSelectTicket,
+  initialStatusFilter,
 }: MyTicketsProps) {
   const [tickets, setTickets] = useState<TicketListItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -26,12 +28,19 @@ export default function MyTickets({
   // Filter & Pagination States
   const [search, setSearch] = useState<string>("");
   const [categoryId, setCategoryId] = useState<string>("");
-  const [status, setStatus] = useState<string>("");
+  const [status, setStatus] = useState<string>(initialStatusFilter || "");
   const [priority, setPriority] = useState<string>("");
   const [itPriority, setItPriority] = useState<string>("");
   const [sortOption, setSortOption] = useState<string>("createdAt:desc");
   const [page, setPage] = useState<number>(1);
   const limit = 10;
+
+  useEffect(() => {
+    if (initialStatusFilter !== undefined) {
+      setStatus(initialStatusFilter);
+      setPage(1);
+    }
+  }, [initialStatusFilter]);
 
   // Metadata
   const [totalItems, setTotalItems] = useState<number>(0);
@@ -553,6 +562,8 @@ export default function MyTickets({
               Status
             </label>
             <select
+              id="my-tickets-status-filter"
+              aria-label="Filter by status"
               value={status}
               onChange={(e) => {
                 setStatus(e.target.value);
@@ -569,8 +580,10 @@ export default function MyTickets({
             >
               <option value="">All Statuses</option>
               <option value="New">New</option>
-              <option value="Assigned">Assigned</option>
+              <option value="Open">Open</option>
               <option value="InProgress">In Progress</option>
+              <option value="WaitingForRequester">Waiting for Requester</option>
+              <option value="Assigned">Assigned</option>
               <option value="Pending">Pending</option>
               <option value="Resolved">Resolved</option>
               <option value="Closed">Closed</option>
