@@ -626,3 +626,16 @@ export async function fetchStaffDashboard() {
     }
     return data;
 }
+export async function fetchRequesterDashboard() {
+    const res = await fetch(`${API_URL}/api/requester/dashboard`, {
+        headers: getAuthHeaders(),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        const err = new Error(data?.error?.message || data?.error || "Failed to fetch requester dashboard metrics");
+        err.status = res.status;
+        err.data = data;
+        throw err;
+    }
+    return data;
+}

@@ -6,7 +6,11 @@
   "scripts": {
     "test:server": "npm --prefix server test",
     "test:client": "npm --prefix client test",
-    "test:e2e": "playwright test --config=e2e/playwright.config.ts"
+    "test:e2e": "playwright test --config=e2e/playwright.config.ts",
+    "verify:metrics": "node scripts/verify_metrics_db_match.mjs",
+    "evidence:screenshots": "node scripts/capture_staff_dashboard_complete_evidence.mjs",
+    "evidence:actions-taken": "node scripts/capture_actions_taken_complete_evidence.mjs",
+    "evidence:workflow": "node scripts/capture_ticket_workflow_complete_evidence.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.50.0",

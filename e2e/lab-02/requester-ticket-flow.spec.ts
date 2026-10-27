@@ -3,6 +3,12 @@ import { test, expect } from "@playwright/test";
 test.describe("Playwright End-to-End — Lab 02 Requester Workflows", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("http://localhost:5173");
+    if (await page.locator("#login-email").isVisible({ timeout: 1500 }).catch(() => false)) {
+      await page.locator("#login-email").fill("somchai.p@kmutt.ac.th");
+      await page.locator("#login-password").fill("Password123!");
+      await page.getByRole("button", { name: /Sign In/i }).click();
+      await page.waitForSelector("#nav-my-tickets", { timeout: 10000 });
+    }
   });
 
   test("E2E-01: Complete ticket creation & lookup flow", async ({ page }) => {
@@ -28,27 +34,31 @@ test.describe("Playwright End-to-End — Lab 02 Requester Workflows", () => {
   });
 
   test("E2E-02: Multi-requester isolation workflow", async ({ page }) => {
-    // 1. Click "Change Requester" button in header to open Requester Selector Modal
+    // 1. If simulated development requester selector exists (Lab 2 mode), test it;
+    // otherwise verify authenticated session isolation by switching user (Lab 3/4 mode)
     const switchBtn = page.getByRole("button", { name: /Change Requester|Select Requester/i });
-    await expect(switchBtn).toBeVisible();
-    await switchBtn.click();
+    if (await switchBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
+      await switchBtn.click();
+      const requesterSelect = page.locator("#requester-select");
+      await expect(requesterSelect).toBeVisible();
+      await requesterSelect.selectOption({ index: 1 });
+      const confirmBtn = page.getByRole("button", { name: /Continue/i });
+      await confirmBtn.click();
+    } else {
+      await page.locator("#profile-dropdown-trigger").click();
+      await page.locator("#logout-button").click();
+      await expect(page.locator("#login-email")).toBeVisible();
+      await page.locator("#login-email").fill("ananya.s@kmutt.ac.th");
+      await page.locator("#login-password").fill("Password123!");
+      await page.getByRole("button", { name: /Sign In/i }).click();
+      await expect(page.locator("#user-identity-badge")).toContainText("Ananya Srisuk");
+    }
 
-    // 2. Expect requester select dropdown to be visible inside modal
-    const requesterSelect = page.locator("#requester-select");
-    await expect(requesterSelect).toBeVisible();
-
-    // 3. Select Requester 2 (index 1 in available options)
-    await requesterSelect.selectOption({ index: 1 });
-
-    // 4. Confirm selection by clicking Continue button
-    const confirmBtn = page.getByRole("button", { name: /Continue/i });
-    await confirmBtn.click();
-
-    // 5. Navigate to My Tickets tab to view tickets under selected requester
+    // 2. Navigate to My Tickets tab to view tickets under selected requester
     const myTicketsBtn = page.getByRole("button", { name: /My Tickets/i }).first();
     await myTicketsBtn.click();
 
-    // 6. Verify active tab shows My Submitted Tickets
+    // 3. Verify active tab shows My Submitted Tickets
     await expect(page.getByText("My Submitted Tickets")).toBeVisible();
   });
 

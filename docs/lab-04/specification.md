@@ -318,26 +318,26 @@ Full endpoint shapes are specified in `docs/lab-04/api-spec.md`. The table below
 ## 11. Product Definition of Done (DoD)
 
 ### Part 1: Product Completion Checklist (`SE_Lab_4.pdf`, Section 13)
-* [ ] Database schema evolved with `ActionTaken` model and migration executed cleanly.
-* [ ] Idempotent seed data populates tickets with 0, 1, and multiple Actions Taken.
-* [ ] All 8 canonical statuses enforced; legacy statuses sanitized.
-* [ ] Resolution gate strictly verified by backend logic.
-* [ ] Optimistic locking verified against stale concurrent writes.
-* [ ] IT Staff and Requester dashboards operational with accurate server-computed metrics.
-* [ ] Ticket Detail renders responsive Actions Taken table/card views with create/edit modes.
-* [ ] Zen Green design language maintained across all views without layout bugs.
-* [ ] 100% test pass rate across unit, API, component, and E2E suites.
+* [x] Database schema evolved with `ActionTaken` model and migration executed cleanly.
+* [x] Idempotent seed data populates tickets with 0, 1, and multiple Actions Taken.
+* [x] All 8 canonical statuses enforced; legacy statuses sanitized.
+* [x] Resolution gate strictly verified by backend logic.
+* [x] Optimistic locking verified against stale concurrent writes.
+* [x] IT Staff and Requester dashboards operational with accurate server-computed metrics.
+* [x] Ticket Detail renders responsive Actions Taken table/card views with create/edit modes.
+* [x] Zen Green design language maintained across all views without layout bugs.
+* [x] 100% test pass rate across unit, API, component, and E2E suites.
 
 ### Part 2: Course Submission Checklist (`SE_Lab_4.pdf`, Section 14)
-* [ ] Part 1: Git workflow evidence with feature branches merged into `lab4-staging` and `main`.
-* [ ] Part 2: Rendered `docs/lab-04/specification.md` linked and complete.
-* [ ] Part 3: Rendered `docs/lab-04/tests.md` linked with full passing test outputs.
-* [ ] Part 4: Rendered `docs/lab-04/ai-use.md` with LLM prompts and reflection.
-* [ ] Part 5: Working IT Staff Dashboard UI screenshots and DB match evidence.
-* [ ] Part 6: Working Actions Taken UI screenshots showing list, create, edit, validation.
-* [ ] Part 7: Working Ticket Workflow screenshots showing permitted transitions and gate.
-* [ ] Part 8: Working Requester Dashboard and regression screenshots.
-* [ ] Part 9: Zen Green UI responsive & accessibility checklist verified.
+* [x] Part 1: Git workflow evidence with feature branches merged into `lab4-staging` and `main`.
+* [x] Part 2: Rendered `docs/lab-04/specification.md` linked and complete.
+* [x] Part 3: Rendered `docs/lab-04/tests.md` linked with full passing test outputs.
+* [x] Part 4: Rendered `docs/lab-04/ai-use.md` with LLM prompts and reflection.
+* [x] Part 5: Working IT Staff Dashboard UI screenshots and DB match evidence.
+* [x] Part 6: Working Actions Taken UI screenshots showing list, create, edit, validation.
+* [x] Part 7: Working Ticket Workflow screenshots showing permitted transitions and gate.
+* [x] Part 8: Working Requester Dashboard and regression screenshots.
+* [x] Part 9: Zen Green UI responsive & accessibility checklist verified.
 
 ---
 

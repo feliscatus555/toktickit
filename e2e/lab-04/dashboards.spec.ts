@@ -162,4 +162,109 @@ test.describe("Playwright End-to-End — Lab 04 Staff & Role Dashboards (Feature
     await expect(page.locator("#nav-dashboard")).toHaveCount(0);
     await expect(page.locator("#mobile-nav-dashboard")).toHaveCount(0);
   });
+
+  test("E2E-03d: Requester accesses Requester Dashboard with 4 scoped operational metric cards, recent tickets, and drill-downs (Feature-16, FR-71..76, AC-16, AC-17)", async ({
+    page,
+  }) => {
+    // =========================================================================
+    // Part 1: Requester login & navigate to Requester Dashboard
+    // =========================================================================
+    await page.locator("#login-email").fill("somchai.p@kmutt.ac.th");
+    await page.locator("#login-password").fill("Password123!");
+    await page.getByRole("button", { name: /Sign In/i }).click();
+
+    await expect(page.locator("#user-identity-badge")).toBeVisible();
+    await expect(page.getByText("👤 Requester")).toBeVisible();
+
+    // Verify Requester Dashboard nav button is visible and click it
+    const reqDashboardNavBtn = page.locator("#nav-requester-dashboard");
+    await expect(reqDashboardNavBtn).toBeVisible();
+    await reqDashboardNavBtn.click();
+
+    // =========================================================================
+    // Part 2: Verify Dashboard layout, personalized header, and 4 metric cards
+    // =========================================================================
+    await expect(page.locator("#requester-dashboard-container")).toBeVisible();
+    await expect(page.locator("#requester-dashboard-welcome-msg")).toContainText("Welcome, Somchai Pattana!");
+
+    // Verify manual Refresh button
+    const refreshBtn = page.locator("#requester-dashboard-refresh-btn");
+    await expect(refreshBtn).toBeVisible();
+    await refreshBtn.click();
+
+    // Verify 4 metric cards
+    const cardOpen = page.locator("#req-metric-card-open");
+    const cardInProgress = page.locator("#req-metric-card-inprogress");
+    const cardResolved = page.locator("#req-metric-card-resolved");
+    const cardClosed = page.locator("#req-metric-card-closed");
+
+    await expect(cardOpen).toBeVisible();
+    await expect(cardInProgress).toBeVisible();
+    await expect(cardResolved).toBeVisible();
+    await expect(cardClosed).toBeVisible();
+
+    // Verify metric counts are numeric
+    const openCountText = await page.locator("#req-metric-count-open").innerText();
+    expect(Number.parseInt(openCountText, 10)).toBeGreaterThanOrEqual(0);
+
+    const inProgressCountText = await page.locator("#req-metric-count-inprogress").innerText();
+    expect(Number.parseInt(inProgressCountText, 10)).toBeGreaterThanOrEqual(0);
+
+    const resolvedCountText = await page.locator("#req-metric-count-resolved").innerText();
+    expect(Number.parseInt(resolvedCountText, 10)).toBeGreaterThanOrEqual(0);
+
+    const closedCountText = await page.locator("#req-metric-count-closed").innerText();
+    expect(Number.parseInt(closedCountText, 10)).toBeGreaterThanOrEqual(0);
+
+    // Verify Quick Actions panel
+    await expect(page.locator("#req-qa-create-ticket")).toBeVisible();
+    await expect(page.locator("#req-qa-my-tickets")).toBeVisible();
+
+    // =========================================================================
+    // Part 3: Metric Card Drill-Down — My Open Tickets (Open)
+    // =========================================================================
+    await cardOpen.click();
+    const statusSelect = page.locator("#my-tickets-status-filter");
+    await expect(statusSelect).toBeVisible();
+    await expect(statusSelect).toHaveValue("Open");
+
+    // =========================================================================
+    // Part 4: Metric Card Drill-Down — In Progress Tickets
+    // =========================================================================
+    await page.locator("#nav-requester-dashboard").click();
+    await expect(page.locator("#requester-dashboard-container")).toBeVisible();
+    await page.locator("#req-metric-card-inprogress").click();
+    await expect(statusSelect).toBeVisible();
+    await expect(statusSelect).toHaveValue("InProgress");
+
+    // =========================================================================
+    // Part 5: Metric Card Drill-Down — Resolved Tickets
+    // =========================================================================
+    await page.locator("#nav-requester-dashboard").click();
+    await expect(page.locator("#requester-dashboard-container")).toBeVisible();
+    await page.locator("#req-metric-card-resolved").click();
+    await expect(statusSelect).toBeVisible();
+    await expect(statusSelect).toHaveValue("Resolved");
+
+    // =========================================================================
+    // Part 6: Quick Actions — "+ Create Ticket" and "View My Tickets"
+    // =========================================================================
+    await page.locator("#nav-requester-dashboard").click();
+    await expect(page.locator("#requester-dashboard-container")).toBeVisible();
+    await page.locator("#req-qa-create-ticket").click();
+    await expect(page.getByRole("heading", { name: /Create IT Support Ticket/i })).toBeVisible();
+
+    await page.locator("#nav-requester-dashboard").click();
+    await expect(page.locator("#requester-dashboard-container")).toBeVisible();
+    await page.locator("#req-qa-my-tickets").click();
+    await expect(statusSelect).toBeVisible();
+
+    // =========================================================================
+    // Part 7: Sign Out Requester
+    // =========================================================================
+    await page.locator("#profile-dropdown-trigger").click();
+    await page.locator("#logout-button").click();
+    await expect(page.getByText("Sign in to your account")).toBeVisible();
+  });
 });
+

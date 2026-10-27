@@ -15,8 +15,16 @@ import TicketDetail from "./TicketDetail.js";
 import StaffTicketQueue from "./StaffTicketQueue.js";
 import UserManagement from "./UserManagement.js";
 import StaffDashboard, { QueueFilterOptions } from "./StaffDashboard.js";
+import RequesterDashboard from "./RequesterDashboard.js";
 
-type ActiveTab = "dashboard" | "my-tickets" | "queue" | "create-ticket" | "ticket-detail" | "user-management";
+type ActiveTab =
+  | "dashboard"
+  | "requester-dashboard"
+  | "my-tickets"
+  | "queue"
+  | "create-ticket"
+  | "ticket-detail"
+  | "user-management";
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => {
@@ -44,6 +52,7 @@ export default function App() {
   });
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
   const [queueFilterOptions, setQueueFilterOptions] = useState<QueueFilterOptions | null>(null);
+  const [myTicketsStatusFilter, setMyTicketsStatusFilter] = useState<string | null>(null);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState<boolean>(false);
   const [showProfileMenu, setShowProfileMenu] = useState<boolean>(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
@@ -55,6 +64,11 @@ export default function App() {
       setQueueFilterOptions(options || null);
     }
     setActiveTab("queue");
+  }
+
+  function handleRequesterDashboardNavigateMyTickets(statusFilter?: string) {
+    setMyTicketsStatusFilter(statusFilter || null);
+    setActiveTab("my-tickets");
   }
 
   useEffect(() => {
@@ -299,11 +313,36 @@ export default function App() {
                     </button>
                   </>
                 )}
+                {currentUser.role === "REQUESTER" && (
+                  <button
+                    id="nav-requester-dashboard"
+                    type="button"
+                    onClick={() => setActiveTab("requester-dashboard")}
+                    className="btn btn-sm text-white fw-semibold"
+                    style={{
+                      backgroundColor:
+                        activeTab === "requester-dashboard" ? "#0B7A46" : "transparent",
+                      border:
+                        activeTab === "requester-dashboard"
+                          ? "1px solid #EAF6EF"
+                          : "1px solid transparent",
+                      borderRadius: "6px",
+                      padding: "0.4rem 0.85rem",
+                      whiteSpace: "nowrap",
+                      fontSize: "0.88rem",
+                    }}
+                  >
+                    📊 Dashboard
+                  </button>
+                )}
                 {currentUser.role !== "IT_STAFF" && (
                   <button
                     id="nav-my-tickets"
                     type="button"
-                    onClick={() => setActiveTab("my-tickets")}
+                    onClick={() => {
+                      setMyTicketsStatusFilter(null);
+                      setActiveTab("my-tickets");
+                    }}
                     className="btn btn-sm text-white fw-semibold"
                     style={{
                       backgroundColor:
@@ -547,11 +586,36 @@ export default function App() {
                 </button>
               </>
             )}
+            {currentUser.role === "REQUESTER" && (
+              <button
+                id="mobile-nav-requester-dashboard"
+                type="button"
+                onClick={() => setActiveTab("requester-dashboard")}
+                className="btn btn-sm text-white fw-semibold flex-fill text-center"
+                style={{
+                  backgroundColor:
+                    activeTab === "requester-dashboard" ? "#0B7A46" : "transparent",
+                  border:
+                    activeTab === "requester-dashboard"
+                      ? "1px solid #EAF6EF"
+                      : "1px solid transparent",
+                  borderRadius: "6px",
+                  padding: "0.4rem 0.6rem",
+                  fontSize: "0.85rem",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                📊 Dashboard
+              </button>
+            )}
             {currentUser.role !== "IT_STAFF" && (
               <button
                 id="mobile-nav-my-tickets"
                 type="button"
-                onClick={() => setActiveTab("my-tickets")}
+                onClick={() => {
+                  setMyTicketsStatusFilter(null);
+                  setActiveTab("my-tickets");
+                }}
                 className="btn btn-sm text-white fw-semibold flex-fill text-center"
                 style={{
                   backgroundColor:
@@ -619,7 +683,14 @@ export default function App() {
 
       {/* Main Content Body */}
       <main className="container-fluid px-3 px-md-5 py-4">
-        {activeTab === "dashboard" &&
+        {activeTab === "requester-dashboard" && currentUser.role === "REQUESTER" ? (
+          <RequesterDashboard
+            currentUser={currentUser}
+            onNavigateMyTickets={handleRequesterDashboardNavigateMyTickets}
+            onNavigateCreateTicket={() => setActiveTab("create-ticket")}
+            onSelectTicket={handleSelectTicket}
+          />
+        ) : activeTab === "dashboard" &&
         (currentUser.role === "IT_STAFF" || currentUser.role === "ADMINISTRATOR") ? (
           <StaffDashboard
             currentUser={currentUser}
@@ -642,6 +713,7 @@ export default function App() {
             activeRequester={currentUser}
             onCreateTicketClick={() => setActiveTab("create-ticket")}
             onSelectTicket={handleSelectTicket}
+            initialStatusFilter={myTicketsStatusFilter || undefined}
           />
         ) : activeTab === "ticket-detail" && selectedTicketId ? (
           <TicketDetail
