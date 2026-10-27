@@ -94,6 +94,11 @@ async function main() {
   const softwareCat = await prisma.category.findUnique({ where: { name: "Software" } });
   const accountCat = await prisma.category.findUnique({ where: { name: "Account and Access" } });
 
+  const wifiSys = await prisma.relatedSystem.findUnique({ where: { name: "Campus Wi-Fi" } });
+  const printerSys = await prisma.relatedSystem.findUnique({ where: { name: "Printer" } });
+  const vpnSys = await prisma.relatedSystem.findUnique({ where: { name: "VPN" } });
+  const leb2Sys = await prisma.relatedSystem.findUnique({ where: { name: "LEB2 App" } });
+
   if (somchai && ananya && sarah && john && networkCat && hardwareCat && softwareCat && accountCat) {
     // 1. Ticket with 0 Actions Taken (New)
     let tkt1 = await prisma.ticket.findUnique({ where: { ticketNo: "TKT-2026-00001" } });
@@ -107,6 +112,7 @@ async function main() {
           requestedPriority: "MEDIUM",
           requesterId: somchai.id,
           categoryId: networkCat.id,
+          relatedSystemId: wifiSys ? wifiSys.id : 2,
         },
       });
     }
@@ -126,6 +132,7 @@ async function main() {
           ownerName: sarah.displayName,
           requesterId: somchai.id,
           categoryId: hardwareCat.id,
+          relatedSystemId: printerSys ? printerSys.id : 6,
         },
       });
     }
@@ -159,6 +166,7 @@ async function main() {
           ownerName: sarah.displayName,
           requesterId: somchai.id,
           categoryId: softwareCat.id,
+          relatedSystemId: vpnSys ? vpnSys.id : 3,
           resolutionSummary: "Renewed client SSL certificate and configured split-tunnel routing.",
         },
       });
@@ -218,6 +226,7 @@ async function main() {
           ownerName: sarah.displayName,
           requesterId: ananya.id,
           categoryId: accountCat.id,
+          relatedSystemId: leb2Sys ? leb2Sys.id : 4,
         },
       });
     }
@@ -236,7 +245,6 @@ async function main() {
       });
     }
 
-    const wifiSys = await prisma.relatedSystem.findUnique({ where: { name: "Campus Wi-Fi" } });
 
     // 5. Ticket with 0 Actions Taken (InProgress) for resolution gate verification
     let tkt5 = await prisma.ticket.findUnique({ where: { ticketNo: "TKT-2026-00005" } });
